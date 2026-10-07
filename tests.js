@@ -35,3 +35,67 @@ probar('barajar conserva los elementos y no modifica la original', () => {
   assert(original.join() === '1,2,3,4,5', 'modificó la original');
   assert([...b].sort().join() === '1,2,3,4,5', `quedó ${b}`);
 });
+
+// --- calculo.js ---
+import { generarOperacion, generarOpciones } from './games/calculo.js';
+
+probar('cálculo: 0-4 aciertos solo sumas de 1 a 10', () => {
+  for (let i = 0; i < 500; i++) {
+    const op = generarOperacion(0);
+    const m = op.texto.match(/^(\d+) \+ (\d+)$/);
+    assert(m, `operación inesperada: ${op.texto}`);
+    const [a, b] = [Number(m[1]), Number(m[2])];
+    assert(a >= 1 && a <= 10 && b >= 1 && b <= 10, op.texto);
+    assert(op.resultado === a + b, op.texto);
+  }
+});
+
+probar('cálculo: 5-9 aciertos sumas y restas hasta 20, resultado >= 0', () => {
+  for (let i = 0; i < 500; i++) {
+    const op = generarOperacion(7);
+    const m = op.texto.match(/^(\d+) ([+−]) (\d+)$/);
+    assert(m, `operación inesperada: ${op.texto}`);
+    const [a, b] = [Number(m[1]), Number(m[3])];
+    assert(a <= 20 && b <= 20, op.texto);
+    assert(op.resultado === (m[2] === '+' ? a + b : a - b), op.texto);
+    assert(op.resultado >= 0, op.texto);
+  }
+});
+
+probar('cálculo: 10-14 aciertos incluye multiplicaciones de 2 a 9', () => {
+  let hayMulti = false;
+  for (let i = 0; i < 500; i++) {
+    const op = generarOperacion(12);
+    const m = op.texto.match(/^(\d+) × (\d+)$/);
+    if (!m) continue;
+    hayMulti = true;
+    const [a, b] = [Number(m[1]), Number(m[2])];
+    assert(a >= 2 && a <= 9 && b >= 2 && b <= 9, op.texto);
+    assert(op.resultado === a * b, op.texto);
+  }
+  assert(hayMulti, 'no salió ninguna multiplicación');
+});
+
+probar('cálculo: 15+ aciertos números hasta 100 y multiplicaciones hasta 12×12', () => {
+  for (let i = 0; i < 500; i++) {
+    const op = generarOperacion(20);
+    const m = op.texto.match(/^(\d+) ([+−×]) (\d+)$/);
+    assert(m, `operación inesperada: ${op.texto}`);
+    const [a, b] = [Number(m[1]), Number(m[3])];
+    const max = m[2] === '×' ? 12 : 100;
+    assert(a <= max && b <= max, op.texto);
+    assert(op.resultado >= 0, op.texto);
+  }
+});
+
+probar('cálculo: 4 opciones distintas, no negativas, cercanas, con la correcta', () => {
+  for (const resultado of [0, 1, 2, 7, 50, 144]) {
+    for (let i = 0; i < 100; i++) {
+      const opciones = generarOpciones(resultado);
+      assert(opciones.length === 4, `${opciones}`);
+      assert(new Set(opciones).size === 4, `repetidas: ${opciones}`);
+      assert(opciones.includes(resultado), `falta ${resultado}: ${opciones}`);
+      assert(opciones.every((n) => n >= 0 && Math.abs(n - resultado) <= 5), `${opciones}`);
+    }
+  }
+});

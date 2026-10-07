@@ -2,7 +2,11 @@
 
 // Cada juego: { id, nombre, instrucciones, juego }, donde `juego` es un módulo con start(pantalla, alTerminar).
 // Para añadir un juego: crear el archivo en games/, importarlo arriba y añadir su entrada aquí.
-const JUEGOS = [];
+import * as calculo from './games/calculo.js';
+
+const JUEGOS = [
+  { id: 'calculo', nombre: 'Cálculo', instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
+];
 
 const $ = (id) => document.getElementById(id);
 let actual = null;
