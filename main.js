@@ -4,10 +4,12 @@
 // Para añadir un juego: crear el archivo en games/, importarlo arriba y añadir su entrada aquí.
 import * as calculo from './games/calculo.js';
 import * as atencion from './games/atencion.js';
+import * as memoria from './games/memoria.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
   { id: 'atencion', nombre: 'Atención', instrucciones: 'Toca el color de la tinta, no lo que dice la palabra.', juego: atencion },
+  { id: 'memoria', nombre: 'Memoria', instrucciones: 'Mira la secuencia de colores y repítela. Cada ronda, uno más.', juego: memoria },
 ];
 
 const $ = (id) => document.getElementById(id);

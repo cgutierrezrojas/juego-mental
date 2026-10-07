@@ -124,3 +124,30 @@ probar('stroop: puntuación = aciertos - errores, mínimo 0', () => {
   assert(puntuacion(2, 5) === 0);
   assert(puntuacion(0, 0) === 0);
 });
+
+// --- memoria.js ---
+import { alargar, pausa } from './games/memoria.js';
+
+probar('simon: alargar añade un color 0-3 sin modificar la original', () => {
+  const original = [2, 0];
+  const nueva = alargar(original);
+  assert(original.join() === '2,0', 'modificó la original');
+  assert(nueva.length === 3 && nueva[0] === 2 && nueva[1] === 0, `${nueva}`);
+  assert(nueva[2] >= 0 && nueva[2] < 4, `${nueva}`);
+  assert(alargar([], () => 0.999)[0] === 3);
+});
+
+probar('simon: la secuencia crece de 1 en 1 desde 1', () => {
+  let s = [];
+  for (let i = 1; i <= 10; i++) {
+    s = alargar(s);
+    assert(s.length === i, `longitud ${s.length}`);
+  }
+});
+
+probar('simon: velocidad igual hasta la ronda 4, más rápida desde la 5, con mínimo', () => {
+  assert(pausa(1) === pausa(4), 'cambió antes de la ronda 5');
+  assert(pausa(5) < pausa(4), 'no acelera en la ronda 5');
+  assert(pausa(10) < pausa(5), 'no sigue acelerando');
+  assert(pausa(100) >= 250, 'demasiado rápida');
+});
