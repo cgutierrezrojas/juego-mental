@@ -99,3 +99,28 @@ probar('cálculo: 4 opciones distintas, no negativas, cercanas, con la correcta'
     }
   }
 });
+
+// --- atencion.js ---
+import { COLORES, generarRonda, puntuacion } from './games/atencion.js';
+
+probar('stroop: 4 colores', () => {
+  assert(COLORES.map((c) => c.nombre).join() === 'ROJO,AZUL,VERDE,AMARILLO');
+});
+
+probar('stroop: palabra y tinta coinciden en torno a 1/4 de las veces', () => {
+  let coinciden = 0;
+  const veces = 8000;
+  for (let i = 0; i < veces; i++) {
+    const r = generarRonda();
+    assert(r.palabra >= 0 && r.palabra < 4 && r.tinta >= 0 && r.tinta < 4, JSON.stringify(r));
+    if (r.palabra === r.tinta) coinciden++;
+  }
+  const p = coinciden / veces;
+  assert(p > 0.2 && p < 0.3, `proporción ${p}`);
+});
+
+probar('stroop: puntuación = aciertos - errores, mínimo 0', () => {
+  assert(puntuacion(10, 3) === 7);
+  assert(puntuacion(2, 5) === 0);
+  assert(puntuacion(0, 0) === 0);
+});
