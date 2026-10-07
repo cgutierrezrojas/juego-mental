@@ -65,8 +65,10 @@ En Colorido, los colores de juego tienen un contraste de al menos 3:1 con el fon
 index.html          + script de tema en <head>, botones de esquina, botón ✕
 styles.css          temas, transiciones, anillo, confeti, cuenta atrás, aviso de tiempo
 main.js             tema, ajustes de la esquina, cuenta atrás, salir, confeti
-games/efectos.js    NUEVO: sonidos, vibración y ajustes de sonido y vibración
-games/comun.js      destello() dispara además sonido y vibración; temporizador() con parar()
+games/efectos.js    NUEVO: destello() (anillo + sonido + vibración), sonidos, vibración y ajustes 🔊/📳
+games/comun.js      leer()/guardar() de localStorage, pintarReloj(), temporizador() con parar();
+                    destello() se muda a efectos.js (así efectos.js puede usar leer/guardar sin que
+                    los dos archivos se importen mutuamente)
 games/calculo.js    nuevo reparto de opciones; devuelve parar; aviso de tiempo
 games/atencion.js   devuelve parar; aviso de tiempo; sin fondo fijo en la palabra
 games/memoria.js    devuelve parar; notas por color
