@@ -69,3 +69,6 @@ for (const j of JUEGOS) {
 $('btn-jugar').onclick = jugar;
 $('btn-repetir').onclick = jugar;
 for (const b of document.querySelectorAll('.btn-menu')) b.onclick = () => mostrar('menu');
+
+// Funcionamiento sin conexión. Solo va en localhost o HTTPS; si falla, la app sigue igual.
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
