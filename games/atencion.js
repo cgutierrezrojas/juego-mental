@@ -27,6 +27,7 @@ export function start(pantalla, alTerminar) {
   const marcador = el('div', 'marcador');
   marcador.append(tiempo, puntos);
   const enunciado = el('div', 'enunciado');
+  enunciado.style.background = '#222';
   const rejilla = el('div', 'rejilla');
   rejilla.append(...COLORES.map((c, i) => {
     const b = el('button', 'grande', c.nombre);
