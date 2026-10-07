@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Juego Mental</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main>
+    <section id="menu">
+      <h1>Juego Mental</h1>
+      <div id="lista-juegos"></div>
+    </section>
+
+    <section id="previa" hidden>
+      <h2 id="previa-nombre"></h2>
+      <p id="previa-instrucciones"></p>
+      <p>Récord: <span id="previa-record"></span></p>
+      <button id="btn-jugar" class="grande">Jugar</button>
+      <button class="btn-menu">Menú</button>
+    </section>
+
+    <section id="juego" hidden></section>
+
+    <section id="final" hidden>
+      <h2>Puntuación: <span id="final-puntos"></span></h2>
+      <p id="final-record" hidden>¡Nuevo récord!</p>
+      <button id="btn-repetir" class="grande">Repetir</button>
+      <button class="btn-menu">Menú</button>
+    </section>
+  </main>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

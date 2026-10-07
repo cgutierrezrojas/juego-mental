@@ -1,0 +1,104 @@
+:root {
+  --fondo: #121212;
+  --texto: #f2f2f2;
+  --boton: #2a2a2a;
+  --ok: #2ecc71;
+  --mal: #e74c3c;
+  --rojo: #e74c3c;
+  --azul: #3498db;
+  --verde: #27ae60;
+  --amarillo: #f1c40f;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --fondo: #f4f4f4;
+    --texto: #111;
+    --boton: #ddd;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: system-ui, sans-serif;
+}
+
+main {
+  max-width: 480px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+}
+
+section[hidden] { display: none; }
+
+#lista-juegos {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+button {
+  font: inherit;
+  font-size: 1.2rem;
+  padding: 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--boton);
+  color: var(--texto);
+  cursor: pointer;
+  touch-action: manipulation; /* evita el zoom por doble toque en el móvil */
+}
+
+button.grande {
+  font-size: 1.5rem;
+  padding: 20px;
+}
+
+.rejilla {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.marcador {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.2rem;
+}
+
+.enunciado {
+  margin: 24px 0;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 2.5rem;
+  font-weight: bold;
+}
+
+/* Simon: botones apagados hasta que se encienden */
+.simon button {
+  aspect-ratio: 1;
+  opacity: 0.4;
+}
+.simon button.encendido { opacity: 1; }
+
+.ok { animation: destello-ok 0.3s; }
+.mal { animation: destello-mal 0.3s; }
+
+@keyframes destello-ok {
+  50% { background: var(--ok); opacity: 1; }
+}
+@keyframes destello-mal {
+  50% { background: var(--mal); opacity: 1; }
+}
