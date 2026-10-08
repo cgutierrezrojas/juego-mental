@@ -25,6 +25,7 @@ function leerRecord(id) {
 
 function mostrar(id) {
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== id;
+  $('btn-salir').hidden = id !== 'juego';
 }
 
 function abrirPrevia(j) {

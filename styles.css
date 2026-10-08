@@ -104,14 +104,20 @@ button.color {
   box-shadow: 0 0 10px var(--c);
 }
 
-/* Botones pequeños de ajustes, arriba a la derecha del menú */
-#esquina {
+/* Barra de arriba, en todas las pantallas: ✕ a la izquierda (solo jugando), ajustes a la derecha */
+#barra {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
-#esquina button {
+#esquina {
+  display: flex;
+  gap: 8px;
+  margin-left: auto; /* siempre a la derecha, aunque ✕ esté oculto */
+}
+
+#barra button {
   font-size: 1.1rem;
   padding: 8px 10px;
 }
@@ -158,13 +164,6 @@ button.color {
 }
 @keyframes anillo-mal {
   50% { box-shadow: 0 0 0 6px var(--mal); opacity: 1; }
-}
-
-/* Pantalla de juego: ✕ arriba a la izquierda y el juego debajo */
-#btn-salir {
-  align-self: flex-start;
-  font-size: 1.1rem;
-  padding: 6px 12px;
 }
 
 #tablero {

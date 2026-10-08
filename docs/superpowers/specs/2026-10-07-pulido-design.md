@@ -31,7 +31,7 @@ En Colorido, los colores de juego tienen un contraste de al menos 3:1 con el fon
 - **Menú:** cada juego tiene su color (Cálculo `rojo`, Atención `azul`, Memoria `verde`). La entrada de `JUEGOS` en `main.js` gana un campo `color` con el nombre de la variable.
 - **Simon:** en Colorido, los botones están rellenos, apagados al 40 % de opacidad y encendidos al 100 %. En Neón, apagados solo tienen el borde de color; encendidos se rellenan y brillan.
 - **Primer tema:** si hay `ajuste:tema` guardado en `localStorage`, se usa ese. Si no, se sigue `prefers-color-scheme`. Un `<script>` pequeño en el `<head>` aplica el tema antes de pintar, para que no se vea un parpadeo del tema equivocado.
-- **Botón ☀️/🌙:** en la esquina superior del menú. Cambia de tema y lo guarda.
+- **Botón ☀️/🌙:** en la barra de arriba, visible en todas las pantallas (también jugando). Cambia de tema y lo guarda.
 
 ## Sensación
 
@@ -42,7 +42,7 @@ En Colorido, los colores de juego tienen un contraste de al menos 3:1 con el fon
 
 ## Sonido y vibración
 
-- **Botones:** en la esquina del menú, junto a ☀️/🌙, hay un botón 🔊/🔇 (sonido) y otro 📳 (vibración). Los dos empiezan encendidos y se guardan en `ajuste:sonido` y `ajuste:vibracion` (`"1"` u `"0"`).
+- **Botones:** en la barra de arriba (todas las pantallas), junto a ☀️/🌙, hay un botón 🔊/🔇 (sonido) y otro 📳 (vibración). Los dos empiezan encendidos y se guardan en `ajuste:sonido` y `ajuste:vibracion` (`"1"` u `"0"`).
 - **Sin vibración:** si el navegador no tiene `navigator.vibrate` (Safari en iPhone), el botón 📳 no se muestra.
 - **Sonidos:** se generan con la Web Audio API, sin archivos.
   - Acierto: pitido agudo y corto.
@@ -55,7 +55,7 @@ En Colorido, los colores de juego tienen un contraste de al menos 3:1 con el fon
 
 ## Arreglos
 
-- **Salir a mitad de partida:** durante la cuenta atrás y el juego hay un botón ✕ arriba que vuelve al menú sin guardar la puntuación. Para que funcione, `start(pantalla, alTerminar)` devuelve una función `parar()`. Al llamarla se detienen los relojes, las secuencias y los temporizadores pendientes, y `alTerminar` ya no se llamará. `temporizador()` gana un `parar()`.
+- **Salir a mitad de partida:** durante la cuenta atrás y el juego hay un botón ✕ a la izquierda de la barra de arriba que vuelve al menú sin guardar la puntuación. Para que funcione, `start(pantalla, alTerminar)` devuelve una función `parar()`. Al llamarla se detienen los relojes, las secuencias y los temporizadores pendientes, y `alTerminar` ya no se llamará. `temporizador()` gana un `parar()`.
 - **Destello visible siempre:** la respuesta visual pasa a ser un anillo verde (`--ok`) o rojo (`--mal`) alrededor del elemento, animado con `box-shadow` (0,3 s), en lugar de cambiar el fondo. Se ve sobre cualquier color y en los dos temas.
 - **Cálculo sin pistas:** si se ordenan las 4 opciones, la correcta ocupa cualquiera de las 4 posiciones con la misma probabilidad. La excepción es cuando no hay suficientes números no negativos por debajo; ahí se desplaza hacia abajo lo justo. Se mantienen las reglas de la v1: distractores cercanos (±5 como mucho), distintos entre sí y no negativos.
 

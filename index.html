@@ -17,12 +17,17 @@
 </head>
 <body>
   <main>
-    <section id="menu">
+    <!-- Barra fija en todas las pantallas: ✕ (solo jugando) a la izquierda, ajustes a la derecha -->
+    <header id="barra">
+      <button id="btn-salir" aria-label="Salir al menú" hidden>✕</button>
       <div id="esquina">
         <button id="btn-sonido" aria-label="Sonido"></button>
         <button id="btn-vibracion" aria-label="Vibración">📳</button>
         <button id="btn-tema" aria-label="Cambiar tema"></button>
       </div>
+    </header>
+
+    <section id="menu">
       <h1>Juego Mental</h1>
       <div id="lista-juegos"></div>
     </section>
@@ -36,7 +41,6 @@
     </section>
 
     <section id="juego" hidden>
-      <button id="btn-salir" aria-label="Salir al menú">✕</button>
       <div id="tablero"></div>
     </section>
 
