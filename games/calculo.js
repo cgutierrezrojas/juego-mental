@@ -31,13 +31,18 @@ export function generarOperacion(aciertos, rnd = Math.random) {
   return tipos[azar(tipos.length, rnd)]();
 }
 
+// Números enteros de `desde` a `hasta`, ambos incluidos (vacío si desde > hasta).
+const rango = (desde, hasta) => Array.from({ length: Math.max(0, hasta - desde + 1) }, (_, i) => desde + i);
+
 // La correcta y 3 distractores a ±5 como mucho, distintos y no negativos, en orden aleatorio.
+// Se elige al azar cuántos quedan por debajo de la correcta (0 a 3), así la correcta puede ser
+// la más baja, la más alta o una del medio con la misma probabilidad. Con resultados pequeños
+// no caben tantos por debajo y se ponen los que caben.
 export function generarOpciones(resultado, rnd = Math.random) {
-  const cercanos = [];
-  for (let d = -5; d <= 5; d++) {
-    if (d !== 0 && resultado + d >= 0) cercanos.push(resultado + d);
-  }
-  return barajar([resultado, ...barajar(cercanos, rnd).slice(0, 3)], rnd);
+  const debajo = Math.min(azar(4, rnd), resultado);
+  const menores = barajar(rango(Math.max(0, resultado - 5), resultado - 1), rnd).slice(0, debajo);
+  const mayores = barajar(rango(resultado + 1, resultado + 5), rnd).slice(0, 3 - debajo);
+  return barajar([resultado, ...menores, ...mayores], rnd);
 }
 
 export function start(pantalla, alTerminar) {

@@ -157,3 +157,13 @@ probar('simon: velocidad igual hasta la ronda 4, más rápida desde la 5, con m�
 probar('leer devuelve null si la clave no existe (o no hay localStorage)', () => {
   assert(leer('prueba:no-existe') === null);
 });
+
+probar('cálculo: la correcta sale en cada posición (ordenadas) en torno a 1/4 de las veces', () => {
+  const veces = [0, 0, 0, 0];
+  const n = 8000;
+  for (let i = 0; i < n; i++) {
+    const ordenadas = generarOpciones(50).sort((a, b) => a - b);
+    veces[ordenadas.indexOf(50)]++;
+  }
+  for (const v of veces) assert(v / n > 0.2 && v / n < 0.3, `reparto ${veces}`);
+});
