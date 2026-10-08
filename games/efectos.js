@@ -20,13 +20,14 @@ export const puedeVibrar = () => typeof navigator !== 'undefined' && 'vibrate' i
 // --- Sonido ---
 
 let audio = null; // se crea la primera vez que suena algo (siempre tras un toque del jugador)
+const sonando = new Set(); // notas en curso, para poder cortarlas con callar()
 
 // Una nota: frecuencia en Hz, duración y retraso en segundos.
 function nota(frecuencia, duracion, retraso = 0, forma = 'sine') {
   if (!activo('sonido')) return;
   try {
     audio ??= new AudioContext();
-    if (audio.state === 'suspended') audio.resume();
+    if (audio.state === 'suspended') audio.resume().catch(() => {});
     const inicio = audio.currentTime + retraso;
     const oscilador = audio.createOscillator();
     const volumen = audio.createGain();
@@ -37,9 +38,23 @@ function nota(frecuencia, duracion, retraso = 0, forma = 'sine') {
     oscilador.connect(volumen).connect(audio.destination);
     oscilador.start(inicio);
     oscilador.stop(inicio + duracion);
+    sonando.add(oscilador);
+    oscilador.onended = () => sonando.delete(oscilador);
   } catch {
     // sin Web Audio: se juega en silencio
   }
+}
+
+// Corta en seco todo lo que esté sonando (al salir a mitad de partida).
+export function callar() {
+  for (const oscilador of sonando) {
+    try {
+      oscilador.stop();
+    } catch {
+      // ya estaba parado
+    }
+  }
+  sonando.clear();
 }
 
 export function sonar(tipo) {

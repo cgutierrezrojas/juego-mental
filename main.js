@@ -7,7 +7,7 @@ import * as calculo from './games/calculo.js';
 import * as atencion from './games/atencion.js';
 import * as memoria from './games/memoria.js';
 import { el, leer, guardar } from './games/comun.js';
-import { sonar, activo, alternar, puedeVibrar } from './games/efectos.js';
+import { sonar, callar, activo, alternar, puedeVibrar } from './games/efectos.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', color: 'rojo', instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -74,6 +74,7 @@ function terminar(puntos) {
 
 // Lluvia de confeti con los colores del tema. Cada pieza se borra al acabar de caer.
 function confeti() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return; // el sistema pide menos movimiento
   const colores = ['--rojo', '--azul', '--verde', '--amarillo', '--acento'];
   for (let i = 0; i < 40; i++) {
     const pieza = el('div', 'confeti');
@@ -137,6 +138,7 @@ for (const b of document.querySelectorAll('.btn-menu')) b.onclick = () => mostra
 $('btn-salir').onclick = () => {
   if (parar) parar();
   parar = null;
+  callar();
   mostrar('menu');
 };
 

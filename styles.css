@@ -223,3 +223,11 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 
 /* Ajuste de la esquina apagado (📳) */
 #esquina button.apagado { opacity: 0.35; }
+
+/* Si el sistema pide menos movimiento: sin deslizamientos, sin latido, sin zoom en la cuenta atrás.
+   (El anillo de acierto/fallo se mantiene: es corto y es la respuesta del juego.) */
+@media (prefers-reduced-motion: reduce) {
+  section:not([hidden]),
+  .cuenta,
+  .aviso { animation: none; }
+}
