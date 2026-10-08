@@ -103,9 +103,9 @@ pintarTema();
 // Ajustes 🔊 y 📳 (se guardan en efectos.js).
 function pintarAjustes() {
   $('btn-sonido').textContent = activo('sonido') ? '🔊' : '🔇';
-  $('btn-sonido').ariaPressed = activo('sonido');
+  $('btn-sonido').setAttribute('aria-pressed', activo('sonido'));
   $('btn-vibracion').classList.toggle('apagado', !activo('vibracion'));
-  $('btn-vibracion').ariaPressed = activo('vibracion');
+  $('btn-vibracion').setAttribute('aria-pressed', activo('vibracion'));
 }
 
 $('btn-sonido').onclick = () => {

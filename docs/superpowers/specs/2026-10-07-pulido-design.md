@@ -18,7 +18,7 @@ Colores:
 | `--fondo` | `#fff7ec` | `#0b0f2a` |
 | `--texto` | `#2b2b2b` | `#e8ecff` |
 | `--superficie` (botones neutros) | `#ffffff` | `transparent` con borde `--texto` |
-| `--acento` (título) | `#ff6b3d` | `#7df9ff` |
+| `--acento` (título) | `#e8552a` | `#7df9ff` |
 | `--rojo` | `#e63946` | `#ff4f6d` |
 | `--azul` | `#1f6feb` | `#7df9ff` |
 | `--verde` | `#2b9348` | `#5dff9b` |
