@@ -4,14 +4,23 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Juego Mental</title>
+  <script>
+    // Pone el tema antes de pintar, para que no parpadee el equivocado:
+    // el guardado con el botón ☀️/🌙 o, si no hay, el del sistema.
+    try { var tema = localStorage.getItem('ajuste:tema'); } catch (e) {}
+    document.documentElement.dataset.tema = tema || (matchMedia('(prefers-color-scheme: dark)').matches ? 'oscuro' : 'claro');
+  </script>
   <link rel="stylesheet" href="styles.css">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.svg">
-  <meta name="theme-color" content="#121212">
+  <meta name="theme-color" content="#fff7ec">
 </head>
 <body>
   <main>
     <section id="menu">
+      <div id="esquina">
+        <button id="btn-tema" aria-label="Cambiar tema"></button>
+      </div>
       <h1>Juego Mental</h1>
       <div id="lista-juegos"></div>
     </section>
@@ -20,7 +29,7 @@
       <h2 id="previa-nombre"></h2>
       <p id="previa-instrucciones"></p>
       <p>Récord: <span id="previa-record"></span></p>
-      <button id="btn-jugar" class="grande">Jugar</button>
+      <button id="btn-jugar" class="grande color" style="--c: var(--acento)">Jugar</button>
       <button class="btn-menu">Menú</button>
     </section>
 
@@ -29,7 +38,7 @@
     <section id="final" hidden>
       <h2>Puntuación: <span id="final-puntos"></span></h2>
       <p id="final-record" hidden>¡Nuevo récord!</p>
-      <button id="btn-repetir" class="grande">Repetir</button>
+      <button id="btn-repetir" class="grande color" style="--c: var(--acento)">Repetir</button>
       <button class="btn-menu">Menú</button>
     </section>
   </main>

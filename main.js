@@ -1,34 +1,24 @@
-// Menú, navegación entre pantallas y récords.
+// Menú, navegación entre pantallas, récords y tema.
 
-// Cada juego: { id, nombre, instrucciones, juego }, donde `juego` es un módulo con start(pantalla, alTerminar).
+// Cada juego: { id, nombre, color, instrucciones, juego }. `juego` es un módulo con start(pantalla, alTerminar)
+// y `color` el nombre de su variable CSS.
 // Para añadir un juego: crear el archivo en games/, importarlo arriba y añadir su entrada aquí.
 import * as calculo from './games/calculo.js';
 import * as atencion from './games/atencion.js';
 import * as memoria from './games/memoria.js';
+import { leer, guardar } from './games/comun.js';
 
 const JUEGOS = [
-  { id: 'calculo', nombre: 'Cálculo', instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
-  { id: 'atencion', nombre: 'Atención', instrucciones: 'Toca el color de la tinta, no lo que dice la palabra.', juego: atencion },
-  { id: 'memoria', nombre: 'Memoria', instrucciones: 'Mira la secuencia de colores y repítela. Cada ronda, uno más.', juego: memoria },
+  { id: 'calculo', nombre: 'Cálculo', color: 'rojo', instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
+  { id: 'atencion', nombre: 'Atención', color: 'azul', instrucciones: 'Toca el color de la tinta, no lo que dice la palabra.', juego: atencion },
+  { id: 'memoria', nombre: 'Memoria', color: 'verde', instrucciones: 'Mira la secuencia de colores y repítela. Cada ronda, uno más.', juego: memoria },
 ];
 
 const $ = (id) => document.getElementById(id);
 let actual = null;
 
 function leerRecord(id) {
-  try {
-    return Number(localStorage.getItem('record:' + id)) || 0;
-  } catch {
-    return 0; // sin localStorage (modo privado): se juega sin récord
-  }
-}
-
-function guardarRecord(id, puntos) {
-  try {
-    localStorage.setItem('record:' + id, puntos);
-  } catch {
-    // sin localStorage: no se guarda
-  }
+  return Number(leer('record:' + id)) || 0;
 }
 
 function mostrar(id) {
@@ -52,15 +42,31 @@ function jugar() {
 
 function terminar(puntos) {
   const nuevo = puntos > leerRecord(actual.id);
-  if (nuevo) guardarRecord(actual.id, puntos);
+  if (nuevo) guardar('record:' + actual.id, puntos);
   $('final-puntos').textContent = puntos;
   $('final-record').hidden = !nuevo;
   mostrar('final');
 }
 
+// Tema: el <script> del <head> ya puso data-tema; aquí se cambia con el botón ☀️/🌙.
+function pintarTema() {
+  const oscuro = document.documentElement.dataset.tema === 'oscuro';
+  $('btn-tema').textContent = oscuro ? '☀️' : '🌙';
+  document.querySelector('meta[name="theme-color"]').content = oscuro ? '#0b0f2a' : '#fff7ec';
+}
+
+$('btn-tema').onclick = () => {
+  const tema = document.documentElement.dataset.tema === 'oscuro' ? 'claro' : 'oscuro';
+  document.documentElement.dataset.tema = tema;
+  guardar('ajuste:tema', tema);
+  pintarTema();
+};
+pintarTema();
+
 for (const j of JUEGOS) {
   const b = document.createElement('button');
-  b.className = 'grande';
+  b.className = 'grande color';
+  b.style.setProperty('--c', `var(--${j.color})`);
   b.textContent = j.nombre;
   b.onclick = () => abrirPrevia(j);
   $('lista-juegos').append(b);

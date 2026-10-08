@@ -22,8 +22,8 @@ export function start(pantalla, alTerminar) {
   const estado = el('p', 'marcador');
   const rejilla = el('div', 'rejilla simon');
   const botones = COLORES.map((c, i) => {
-    const b = el('button', 'grande');
-    b.style.background = `var(--${c})`;
+    const b = el('button', 'grande color');
+    b.style.setProperty('--c', `var(--${c})`);
     b.ariaLabel = c;
     b.onclick = () => tocar(i);
     return b;

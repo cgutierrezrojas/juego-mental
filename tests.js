@@ -1,5 +1,5 @@
 // Pruebas de la lógica pura. Se ejecutan con `node tests.js` o abriendo tests.html.
-import { azar, barajar } from './games/comun.js';
+import { azar, barajar, leer } from './games/comun.js';
 
 function probar(nombre, fn) {
   let linea;
@@ -150,4 +150,10 @@ probar('simon: velocidad igual hasta la ronda 4, más rápida desde la 5, con m�
   assert(pausa(5) < pausa(4), 'no acelera en la ronda 5');
   assert(pausa(10) < pausa(5), 'no sigue acelerando');
   assert(pausa(100) >= 250, 'demasiado rápida');
+});
+
+// --- almacenamiento ---
+
+probar('leer devuelve null si la clave no existe (o no hay localStorage)', () => {
+  assert(leer('prueba:no-existe') === null);
 });

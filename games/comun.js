@@ -22,6 +22,23 @@ export function el(tag, clase = '', texto = '') {
   return e;
 }
 
+// localStorage puede fallar (modo privado) o no existir (Node): entonces no se guarda y se lee null.
+export function leer(clave) {
+  try {
+    return localStorage.getItem(clave);
+  } catch {
+    return null;
+  }
+}
+
+export function guardar(clave, valor) {
+  try {
+    localStorage.setItem(clave, valor);
+  } catch {
+    // sin localStorage: no se guarda
+  }
+}
+
 // Destello verde (ok) o rojo (mal) sobre un elemento.
 export function destello(elemento, ok) {
   elemento.classList.remove('ok', 'mal');

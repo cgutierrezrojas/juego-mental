@@ -1,21 +1,31 @@
+/* Tema Colorido (claro): el de por defecto */
 :root {
-  --fondo: #121212;
-  --texto: #f2f2f2;
-  --boton: #2a2a2a;
-  --ok: #2ecc71;
-  --mal: #e74c3c;
-  --rojo: #e74c3c;
-  --azul: #3498db;
-  --verde: #27ae60;
-  --amarillo: #f1c40f;
+  --fondo: #fff7ec;
+  --texto: #2b2b2b;
+  --superficie: #ffffff;
+  --acento: #ff6b3d;
+  --rojo: #e63946;
+  --azul: #1f6feb;
+  --verde: #2b9348;
+  --amarillo: #b8860b;
+  --ok: #2b9348;
+  --mal: #e63946;
+  --relieve: 0 4px 0 rgba(0, 0, 0, 0.18); /* sombra sólida debajo: botón "en relieve" */
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --fondo: #f4f4f4;
-    --texto: #111;
-    --boton: #ddd;
-  }
+/* Tema Neón (oscuro) */
+[data-tema="oscuro"] {
+  --fondo: #0b0f2a;
+  --texto: #e8ecff;
+  --superficie: transparent;
+  --acento: #7df9ff;
+  --rojo: #ff4f6d;
+  --azul: #7df9ff;
+  --verde: #5dff9b;
+  --amarillo: #ffe66d;
+  --ok: #5dff9b;
+  --mal: #ff4f6d;
+  --relieve: none;
 }
 
 * { box-sizing: border-box; }
@@ -43,6 +53,17 @@ section {
 
 section[hidden] { display: none; }
 
+h1 {
+  color: var(--acento);
+  font-weight: 900;
+}
+
+[data-tema="oscuro"] h1 {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 0 0 12px var(--acento);
+}
+
 #lista-juegos {
   display: flex;
   flex-direction: column;
@@ -52,18 +73,47 @@ section[hidden] { display: none; }
 button {
   font: inherit;
   font-size: 1.2rem;
+  font-weight: 700;
   padding: 14px;
-  border: 0;
-  border-radius: 12px;
-  background: var(--boton);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: var(--superficie);
   color: var(--texto);
+  box-shadow: var(--relieve);
   cursor: pointer;
   touch-action: manipulation; /* evita el zoom por doble toque en el móvil */
 }
 
+[data-tema="oscuro"] button { border-color: rgba(232, 236, 255, 0.4); }
+
 button.grande {
   font-size: 1.5rem;
   padding: 20px;
+}
+
+/* Botón con el color de un juego: class="color" style="--c: var(--rojo)" */
+button.color {
+  background: var(--c);
+  color: #fff;
+}
+
+[data-tema="oscuro"] button.color {
+  background: transparent;
+  color: var(--c);
+  border-color: var(--c);
+  box-shadow: 0 0 10px var(--c);
+}
+
+/* Botones pequeños de ajustes, arriba a la derecha del menú */
+#esquina {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#esquina button {
+  font-size: 1.1rem;
+  padding: 8px 10px;
 }
 
 .rejilla {
@@ -91,14 +141,21 @@ button.grande {
   aspect-ratio: 1;
   opacity: 0.4;
 }
+
 .simon button.encendido { opacity: 1; }
 
-.ok { animation: destello-ok 0.3s; }
-.mal { animation: destello-mal 0.3s; }
-
-@keyframes destello-ok {
-  50% { background: var(--ok); opacity: 1; }
+[data-tema="oscuro"] .simon button.encendido {
+  background: var(--c);
+  box-shadow: 0 0 24px var(--c);
 }
-@keyframes destello-mal {
-  50% { background: var(--mal); opacity: 1; }
+
+/* Respuesta: anillo verde o rojo alrededor del elemento (se ve sobre cualquier color) */
+.ok { animation: anillo-ok 0.3s; }
+.mal { animation: anillo-mal 0.3s; }
+
+@keyframes anillo-ok {
+  50% { box-shadow: 0 0 0 6px var(--ok); opacity: 1; }
+}
+@keyframes anillo-mal {
+  50% { box-shadow: 0 0 0 6px var(--mal); opacity: 1; }
 }
