@@ -1,5 +1,6 @@
 // Pruebas de la lógica pura. Se ejecutan con `node tests.js` o abriendo tests.html.
 import { azar, barajar, leer, temporizador } from './games/comun.js';
+import { encendido } from './games/efectos.js';
 
 function probar(nombre, fn) {
   let linea;
@@ -179,4 +180,12 @@ probar('temporizador: después de parar() no avisa ni termina', () => {
   reloj.restar(100);
   assert(!fin, 'llamó a alFin tras parar');
   assert(avisos === antes, 'llamó a alCambiar tras parar');
+});
+
+// --- efectos.js ---
+
+probar('ajustes: sonido y vibración encendidos salvo que se hayan apagado', () => {
+  assert(encendido(null) === true, 'sin nada guardado debe estar encendido');
+  assert(encendido('1') === true);
+  assert(encendido('0') === false);
 });

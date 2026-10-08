@@ -2,7 +2,7 @@
 const CACHE = 'juego-mental';
 const ARCHIVOS = [
   './', 'index.html', 'styles.css', 'main.js', 'manifest.json', 'icon.svg',
-  'games/comun.js', 'games/calculo.js', 'games/atencion.js', 'games/memoria.js',
+  'games/comun.js', 'games/efectos.js', 'games/calculo.js', 'games/atencion.js', 'games/memoria.js',
 ];
 
 self.addEventListener('install', (e) => {

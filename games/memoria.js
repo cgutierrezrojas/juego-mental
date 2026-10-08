@@ -1,5 +1,6 @@
 // Memoria (Simon): repite la secuencia de colores. Cada ronda añade uno. Un error termina.
-import { azar, el, destello } from './comun.js';
+import { azar, el } from './comun.js';
+import { destello, tono } from './efectos.js';
 
 const COLORES = ['rojo', 'azul', 'verde', 'amarillo'];
 
@@ -41,6 +42,7 @@ export function start(pantalla, alTerminar) {
     for (const i of secuencia) {
       if (parado) return;
       botones[i].classList.add('encendido');
+      tono(i, ms / 1000);
       await esperar(ms);
       botones[i].classList.remove('encendido');
       await esperar(ms / 3);
@@ -54,7 +56,8 @@ export function start(pantalla, alTerminar) {
   function tocar(i) {
     if (!turno) return;
     const ok = i === secuencia[pos];
-    destello(botones[i], ok);
+    if (ok) tono(i);
+    destello(botones[i], ok, !ok); // al acertar suena la nota del color en vez del pitido
     if (!ok) {
       turno = false;
       // Puntuación = la secuencia más larga repetida entera (la anterior a esta).

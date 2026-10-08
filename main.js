@@ -7,6 +7,7 @@ import * as calculo from './games/calculo.js';
 import * as atencion from './games/atencion.js';
 import * as memoria from './games/memoria.js';
 import { el, leer, guardar } from './games/comun.js';
+import { sonar, activo, alternar, puedeVibrar } from './games/efectos.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', color: 'rojo', instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -49,6 +50,7 @@ function jugar() {
       return;
     }
     tablero.replaceChildren(el('div', 'cuenta', n));
+    sonar('tic');
     n--;
     id = setTimeout(paso, 1000);
   }
@@ -63,7 +65,10 @@ function terminar(puntos) {
   $('final-puntos').textContent = puntos;
   $('final-record').hidden = !nuevo;
   mostrar('final');
-  if (nuevo) confeti();
+  if (nuevo) {
+    confeti();
+    sonar('record');
+  }
 }
 
 // Lluvia de confeti con los colores del tema. Cada pieza se borra al acabar de caer.
@@ -94,6 +99,25 @@ $('btn-tema').onclick = () => {
   pintarTema();
 };
 pintarTema();
+
+// Ajustes 🔊 y 📳 (se guardan en efectos.js).
+function pintarAjustes() {
+  $('btn-sonido').textContent = activo('sonido') ? '🔊' : '🔇';
+  $('btn-sonido').ariaPressed = activo('sonido');
+  $('btn-vibracion').classList.toggle('apagado', !activo('vibracion'));
+  $('btn-vibracion').ariaPressed = activo('vibracion');
+}
+
+$('btn-sonido').onclick = () => {
+  alternar('sonido');
+  pintarAjustes();
+};
+$('btn-vibracion').onclick = () => {
+  alternar('vibracion');
+  pintarAjustes();
+};
+$('btn-vibracion').hidden = !puedeVibrar();
+pintarAjustes();
 
 for (const j of JUEGOS) {
   const b = document.createElement('button');

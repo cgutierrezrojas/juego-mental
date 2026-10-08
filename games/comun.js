@@ -39,13 +39,6 @@ export function guardar(clave, valor) {
   }
 }
 
-// Destello verde (ok) o rojo (mal) sobre un elemento.
-export function destello(elemento, ok) {
-  elemento.classList.remove('ok', 'mal');
-  void elemento.offsetWidth; // fuerza al navegador a reiniciar la animación
-  elemento.classList.add(ok ? 'ok' : 'mal');
-}
-
 // Cuenta atrás. Llama a alCambiar(restantes) en cada cambio y a alFin() una sola vez al llegar a 0.
 // parar() la detiene sin llamar a alFin.
 export function temporizador(segundos, alCambiar, alFin) {

@@ -221,3 +221,6 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 @keyframes latir {
   50% { transform: scale(1.25); }
 }
+
+/* Ajuste de la esquina apagado (📳) */
+#esquina button.apagado { opacity: 0.35; }

@@ -1,5 +1,6 @@
 // Atención (Stroop): toca el color de la TINTA, no lo que dice la palabra. 60 segundos.
-import { azar, el, destello, temporizador, pintarReloj } from './comun.js';
+import { azar, el, temporizador, pintarReloj } from './comun.js';
+import { destello } from './efectos.js';
 
 export const COLORES = [
   { nombre: 'ROJO', css: 'var(--rojo)' },

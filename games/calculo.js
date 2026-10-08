@@ -1,5 +1,6 @@
 // Cálculo: 60 segundos para resolver operaciones eligiendo entre 4 respuestas.
-import { azar, barajar, el, destello, temporizador, pintarReloj } from './comun.js';
+import { azar, barajar, el, temporizador, pintarReloj } from './comun.js';
+import { destello } from './efectos.js';
 
 const entre = (min, max, rnd) => min + azar(max - min + 1, rnd);
 
