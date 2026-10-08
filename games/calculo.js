@@ -82,4 +82,5 @@ export function start(pantalla, alTerminar) {
   }
 
   nueva();
+  return reloj.parar;
 }

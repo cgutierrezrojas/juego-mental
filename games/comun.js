@@ -47,6 +47,7 @@ export function destello(elemento, ok) {
 }
 
 // Cuenta atrás. Llama a alCambiar(restantes) en cada cambio y a alFin() una sola vez al llegar a 0.
+// parar() la detiene sin llamar a alFin.
 export function temporizador(segundos, alCambiar, alFin) {
   let restantes = segundos;
   const id = setInterval(() => cambiar(-1), 1000);
@@ -62,5 +63,12 @@ export function temporizador(segundos, alCambiar, alFin) {
   }
 
   alCambiar(restantes);
-  return { restar: (s) => cambiar(-s) };
+  return {
+    restar: (s) => cambiar(-s),
+    // Para el reloj sin llamar a alFin (al salir a mitad de partida).
+    parar: () => {
+      restantes = 0;
+      clearInterval(id);
+    },
+  };
 }

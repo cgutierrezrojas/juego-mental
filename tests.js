@@ -1,5 +1,5 @@
 // Pruebas de la lógica pura. Se ejecutan con `node tests.js` o abriendo tests.html.
-import { azar, barajar, leer } from './games/comun.js';
+import { azar, barajar, leer, temporizador } from './games/comun.js';
 
 function probar(nombre, fn) {
   let linea;
@@ -166,4 +166,17 @@ probar('cálculo: la correcta sale en cada posición (ordenadas) en torno a 1/4 
     veces[ordenadas.indexOf(50)]++;
   }
   for (const v of veces) assert(v / n > 0.2 && v / n < 0.3, `reparto ${veces}`);
+});
+
+// --- comun: parar ---
+
+probar('temporizador: después de parar() no avisa ni termina', () => {
+  let avisos = 0;
+  let fin = false;
+  const reloj = temporizador(60, () => avisos++, () => { fin = true; });
+  reloj.parar();
+  const antes = avisos;
+  reloj.restar(100);
+  assert(!fin, 'llamó a alFin tras parar');
+  assert(avisos === antes, 'llamó a alCambiar tras parar');
 });

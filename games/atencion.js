@@ -36,7 +36,7 @@ export function start(pantalla, alTerminar) {
   }));
   pantalla.append(marcador, enunciado, rejilla);
 
-  temporizador(60, (s) => { tiempo.textContent = `⏱ ${s}`; }, () => alTerminar(puntuacion(aciertos, errores)));
+  const reloj = temporizador(60, (s) => { tiempo.textContent = `⏱ ${s}`; }, () => alTerminar(puntuacion(aciertos, errores)));
 
   function nueva() {
     ronda = generarRonda();
@@ -54,4 +54,5 @@ export function start(pantalla, alTerminar) {
   }
 
   nueva();
+  return reloj.parar;
 }

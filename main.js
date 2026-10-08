@@ -1,7 +1,7 @@
 // Menú, navegación entre pantallas, récords y tema.
 
-// Cada juego: { id, nombre, color, instrucciones, juego }. `juego` es un módulo con start(pantalla, alTerminar)
-// y `color` el nombre de su variable CSS.
+// Cada juego: { id, nombre, color, instrucciones, juego }. `juego` es un módulo con start(pantalla, alTerminar),
+// que devuelve una función parar(); `color` es el nombre de su variable CSS.
 // Para añadir un juego: crear el archivo en games/, importarlo arriba y añadir su entrada aquí.
 import * as calculo from './games/calculo.js';
 import * as atencion from './games/atencion.js';
@@ -16,6 +16,7 @@ const JUEGOS = [
 
 const $ = (id) => document.getElementById(id);
 let actual = null;
+let parar = null; // detiene el juego en curso (la devuelve start)
 
 function leerRecord(id) {
   return Number(leer('record:' + id)) || 0;
@@ -34,13 +35,14 @@ function abrirPrevia(j) {
 }
 
 function jugar() {
-  const pantalla = $('juego');
-  pantalla.replaceChildren();
+  const tablero = $('tablero');
+  tablero.replaceChildren();
   mostrar('juego');
-  actual.juego.start(pantalla, terminar);
+  parar = actual.juego.start(tablero, terminar);
 }
 
 function terminar(puntos) {
+  parar = null;
   const nuevo = puntos > leerRecord(actual.id);
   if (nuevo) guardar('record:' + actual.id, puntos);
   $('final-puntos').textContent = puntos;
@@ -75,6 +77,13 @@ for (const j of JUEGOS) {
 $('btn-jugar').onclick = jugar;
 $('btn-repetir').onclick = jugar;
 for (const b of document.querySelectorAll('.btn-menu')) b.onclick = () => mostrar('menu');
+
+// ✕: vuelve al menú sin guardar la puntuación.
+$('btn-salir').onclick = () => {
+  if (parar) parar();
+  parar = null;
+  mostrar('menu');
+};
 
 // Funcionamiento sin conexión. Solo va en localhost o HTTPS; si falla, la app sigue igual.
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

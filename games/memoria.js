@@ -18,6 +18,7 @@ export function start(pantalla, alTerminar) {
   let secuencia = [];
   let pos = 0;
   let turno = false; // true cuando el jugador puede tocar
+  let parado = false; // true tras parar(): ya no se enciende nada ni se termina la partida
 
   const estado = el('p', 'marcador');
   const rejilla = el('div', 'rejilla simon');
@@ -38,11 +39,13 @@ export function start(pantalla, alTerminar) {
     const ms = pausa(secuencia.length);
     await esperar(600);
     for (const i of secuencia) {
+      if (parado) return;
       botones[i].classList.add('encendido');
       await esperar(ms);
       botones[i].classList.remove('encendido');
       await esperar(ms / 3);
     }
+    if (parado) return;
     pos = 0;
     turno = true;
     estado.textContent = `Ronda ${secuencia.length} — Repite`;
@@ -55,7 +58,7 @@ export function start(pantalla, alTerminar) {
     if (!ok) {
       turno = false;
       // Puntuación = la secuencia más larga repetida entera (la anterior a esta).
-      setTimeout(() => alTerminar(secuencia.length - 1), 600);
+      setTimeout(() => { if (!parado) alTerminar(secuencia.length - 1); }, 600);
       return;
     }
     pos++;
@@ -63,4 +66,8 @@ export function start(pantalla, alTerminar) {
   }
 
   ronda();
+  return () => {
+    parado = true;
+    turno = false;
+  };
 }
