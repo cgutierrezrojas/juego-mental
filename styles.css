@@ -172,3 +172,52 @@ button.color {
   flex-direction: column;
   gap: 12px;
 }
+
+/* Cada pantalla entra con un fundido y un pequeño deslizamiento */
+section:not([hidden]) { animation: entrar 0.25s ease-out; }
+
+@keyframes entrar {
+  from { opacity: 0; transform: translateY(12px); }
+}
+
+/* Cuenta atrás 3-2-1 */
+.cuenta {
+  margin-top: 25vh;
+  font-size: 6rem;
+  font-weight: 900;
+  color: var(--acento);
+  animation: aparecer-numero 0.4s ease-out;
+}
+
+@keyframes aparecer-numero {
+  from { opacity: 0; transform: scale(1.8); }
+}
+
+/* Confeti del nuevo récord */
+.confeti {
+  position: fixed;
+  top: -16px;
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+  pointer-events: none;
+  animation-name: caer;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes caer {
+  to { transform: translateY(105vh) rotate(720deg); }
+}
+
+/* Últimos 10 segundos: el reloj se pone rojo y late */
+.aviso {
+  display: inline-block;
+  color: var(--mal);
+  font-weight: 900;
+  animation: latir 1s infinite;
+}
+
+@keyframes latir {
+  50% { transform: scale(1.25); }
+}

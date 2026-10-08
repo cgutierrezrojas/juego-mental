@@ -6,7 +6,7 @@
 import * as calculo from './games/calculo.js';
 import * as atencion from './games/atencion.js';
 import * as memoria from './games/memoria.js';
-import { leer, guardar } from './games/comun.js';
+import { el, leer, guardar } from './games/comun.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', color: 'rojo', instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -34,11 +34,26 @@ function abrirPrevia(j) {
   mostrar('previa');
 }
 
+// Cuenta atrás 3-2-1 y después empieza el juego. Mientras, ✕ la cancela con parar().
 function jugar() {
   const tablero = $('tablero');
-  tablero.replaceChildren();
   mostrar('juego');
-  parar = actual.juego.start(tablero, terminar);
+  let n = 3;
+  let id;
+  parar = () => clearTimeout(id);
+
+  function paso() {
+    if (n === 0) {
+      tablero.replaceChildren();
+      parar = actual.juego.start(tablero, terminar);
+      return;
+    }
+    tablero.replaceChildren(el('div', 'cuenta', n));
+    n--;
+    id = setTimeout(paso, 1000);
+  }
+
+  paso();
 }
 
 function terminar(puntos) {
@@ -48,6 +63,21 @@ function terminar(puntos) {
   $('final-puntos').textContent = puntos;
   $('final-record').hidden = !nuevo;
   mostrar('final');
+  if (nuevo) confeti();
+}
+
+// Lluvia de confeti con los colores del tema. Cada pieza se borra al acabar de caer.
+function confeti() {
+  const colores = ['--rojo', '--azul', '--verde', '--amarillo', '--acento'];
+  for (let i = 0; i < 40; i++) {
+    const pieza = el('div', 'confeti');
+    pieza.style.left = Math.random() * 100 + 'vw';
+    pieza.style.background = `var(${colores[i % colores.length]})`;
+    pieza.style.animationDelay = Math.random() * 0.5 + 's';
+    pieza.style.animationDuration = 1.2 + Math.random() * 0.8 + 's';
+    pieza.onanimationend = () => pieza.remove();
+    document.body.append(pieza);
+  }
 }
 
 // Tema: el <script> del <head> ya puso data-tema; aquí se cambia con el botón ☀️/🌙.

@@ -1,5 +1,5 @@
 // Atención (Stroop): toca el color de la TINTA, no lo que dice la palabra. 60 segundos.
-import { azar, el, destello, temporizador } from './comun.js';
+import { azar, el, destello, temporizador, pintarReloj } from './comun.js';
 
 export const COLORES = [
   { nombre: 'ROJO', css: 'var(--rojo)' },
@@ -36,7 +36,7 @@ export function start(pantalla, alTerminar) {
   }));
   pantalla.append(marcador, enunciado, rejilla);
 
-  const reloj = temporizador(60, (s) => { tiempo.textContent = `⏱ ${s}`; }, () => alTerminar(puntuacion(aciertos, errores)));
+  const reloj = temporizador(60, (s) => pintarReloj(tiempo, s), () => alTerminar(puntuacion(aciertos, errores)));
 
   function nueva() {
     ronda = generarRonda();

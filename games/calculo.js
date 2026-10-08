@@ -1,5 +1,5 @@
 // Cálculo: 60 segundos para resolver operaciones eligiendo entre 4 respuestas.
-import { azar, barajar, el, destello, temporizador } from './comun.js';
+import { azar, barajar, el, destello, temporizador, pintarReloj } from './comun.js';
 
 const entre = (min, max, rnd) => min + azar(max - min + 1, rnd);
 
@@ -57,7 +57,7 @@ export function start(pantalla, alTerminar) {
   const rejilla = el('div', 'rejilla');
   pantalla.append(marcador, enunciado, rejilla);
 
-  const reloj = temporizador(60, (s) => { tiempo.textContent = `⏱ ${s}`; }, () => alTerminar(aciertos));
+  const reloj = temporizador(60, (s) => pintarReloj(tiempo, s), () => alTerminar(aciertos));
 
   function nueva() {
     operacion = generarOperacion(aciertos);

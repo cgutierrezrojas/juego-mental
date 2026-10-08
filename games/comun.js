@@ -72,3 +72,9 @@ export function temporizador(segundos, alCambiar, alFin) {
     },
   };
 }
+
+// Pinta el reloj de los juegos por tiempo; en los últimos 10 segundos se pone rojo y late.
+export function pintarReloj(span, segundos) {
+  span.textContent = `⏱ ${segundos}`;
+  span.classList.toggle('aviso', segundos <= 10);
+}
