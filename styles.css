@@ -486,3 +486,41 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   text-align: left;
   font-size: 0.95rem;
 }
+
+/* Previa: botones para elegir modo y dificultad */
+#previa-modos {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.chips button {
+  font-size: 0.9rem;
+  padding: 8px 12px;
+}
+
+.chips button[aria-pressed="true"] {
+  background: var(--acento);
+  color: #fff;
+}
+
+[data-tema="oscuro"] .chips button[aria-pressed="true"] {
+  background: transparent;
+  color: var(--acento);
+  border-color: var(--acento);
+  box-shadow: 0 0 8px var(--acento);
+}
+
+#final-modo {
+  margin: 0;
+  opacity: 0.75;
+}
+
+#final-modo:empty { display: none; }

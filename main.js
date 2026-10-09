@@ -3,6 +3,7 @@
 // Cada juego: { id, nombre, categoria, icono, color, habilidad, referencia, instrucciones, juego } y, si hace falta, `unidad`
 // (texto tras la puntuación) y `menorEsMejor` (récord = puntuación más baja). `habilidad` es la barra del perfil a la que cuenta y `referencia` la puntuación que vale 100 en esa barra.
 // `juego` es un módulo con start(pantalla, alTerminar), que devuelve una función parar(); `color` es el nombre de su variable CSS.
+// `modos`: los que tiene ese juego (por defecto solo 'normal'); `sinDificultad`: no se elige Fácil/Normal/Difícil.
 // Para añadir un juego: crear el archivo en games/, importarlo arriba y añadir su entrada aquí.
 import * as calculo from './games/calculo.js';
 import * as atencion from './games/atencion.js';
@@ -18,15 +19,16 @@ import {
   anotar, fechaLocal, puntosGrafica, entrenoDelDia, jugadosEn, entrenoCompleto, racha,
   mejorRacha, entrenosCompletados, perfil,
 } from './games/estadisticas.js';
+import { MODOS, DIFICULTADES, claveRecord, esDe, filtrar, etiqueta } from './games/modos.js';
 
 const JUEGOS = [
-  { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
-  { id: 'atencion', nombre: 'Atención', categoria: 'Clásicos', icono: '👁', color: 'azul', habilidad: 'Atención', referencia: 40, instrucciones: 'Toca el color de la tinta, no lo que dice la palabra.', juego: atencion },
+  { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
+  { id: 'atencion', nombre: 'Atención', categoria: 'Clásicos', icono: '👁', color: 'azul', habilidad: 'Atención', referencia: 40, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Toca el color de la tinta, no lo que dice la palabra.', juego: atencion },
   { id: 'memoria', nombre: 'Memoria', categoria: 'Clásicos', icono: '🧠', color: 'verde', habilidad: 'Memoria', referencia: 12, instrucciones: 'Mira la secuencia de colores y repítela. Cada ronda, uno más.', juego: memoria },
-  { id: 'series', nombre: 'Series', categoria: 'Lógica', icono: '🔢', color: 'amarillo', habilidad: 'Lógica', referencia: 20, instrucciones: '¿Qué número sigue? Descubre la regla de cada serie. 60 segundos.', juego: series },
-  { id: 'sobra', nombre: '¿Cuál sobra?', categoria: 'Lógica', icono: '🔍', color: 'rojo', habilidad: 'Lógica', referencia: 20, instrucciones: 'Tres números siguen una regla y uno no: toca el que sobra. 60 segundos.', juego: sobra },
+  { id: 'series', nombre: 'Series', categoria: 'Lógica', icono: '🔢', color: 'amarillo', habilidad: 'Lógica', referencia: 20, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: '¿Qué número sigue? Descubre la regla de cada serie. 60 segundos.', juego: series },
+  { id: 'sobra', nombre: '¿Cuál sobra?', categoria: 'Lógica', icono: '🔍', color: 'rojo', habilidad: 'Lógica', referencia: 20, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Tres números siguen una regla y uno no: toca el que sobra. 60 segundos.', juego: sobra },
   { id: 'puzzle', nombre: 'Puzzle', categoria: 'Lógica', icono: '🧩', color: 'azul', habilidad: 'Lógica', referencia: 30, unidad: 'movimientos', menorEsMejor: true, instrucciones: 'Ordena las fichas del 1 al 8 con los menos movimientos posibles.', juego: puzzle },
-  { id: 'rayo', nombre: 'Rayo', categoria: 'Reacción', icono: '⚡', color: 'amarillo', habilidad: 'Reacción', referencia: 250, unidad: 'ms', menorEsMejor: true, instrucciones: 'Cuando se ponga verde, ¡toca! 5 intentos; cuenta tu tiempo medio.', juego: rayo },
+  { id: 'rayo', nombre: 'Rayo', categoria: 'Reacción', icono: '⚡', color: 'amarillo', habilidad: 'Reacción', referencia: 250, unidad: 'ms', menorEsMejor: true, sinDificultad: true, instrucciones: 'Cuando se ponga verde, ¡toca! 5 intentos; cuenta tu tiempo medio.', juego: rayo },
   { id: 'topos', nombre: 'Topos', categoria: 'Reacción', icono: '🔨', color: 'verde', habilidad: 'Reacción', referencia: 40, instrucciones: 'Toca cada topo antes de que se esconda. Tocar una casilla vacía resta. 30 segundos.', juego: topos },
 ];
 
@@ -41,15 +43,23 @@ const $ = (id) => document.getElementById(id);
 let actual = null;
 let parar = null; // detiene el juego en curso (la devuelve start)
 let inicio = 0; // cuándo empezó el juego en curso (tras la cuenta atrás), para medir su duración
+let eleccion = { modo: 'normal', dificultad: 'normal' }; // modo y dificultad elegidos para el juego abierto
 
-function leerRecord(id) {
-  return Number(leer('record:' + id)) || 0;
+const leerRecord = (clave) => Number(leer(clave)) || 0;
+
+// Última elección de modo y dificultad de un juego ("modo|dificultad"); si no vale para él, Normal + Normal.
+function leerEleccion(j) {
+  const [modo, dificultad] = (leer('eleccion:' + j.id) || '').split('|');
+  return {
+    modo: (j.modos ?? ['normal']).includes(modo) ? modo : 'normal',
+    dificultad: !j.sinDificultad && dificultad in DIFICULTADES ? dificultad : 'normal',
+  };
 }
 
 // "245 ms", "12 movimientos" o solo "7" si el juego no tiene unidad.
 const conUnidad = (j, n) => (j.unidad ? `${n} ${j.unidad}` : `${n}`);
 
-// Historial de partidas terminadas: `historial:<id>` = JSON [{ fecha, cuando, puntos, ms }]. Si está roto, vacío.
+// Historial de partidas terminadas: `historial:<id>` = JSON [{ fecha, cuando, puntos, ms, modo, dificultad }]. Si está roto, vacío.
 function leerHistorial(id) {
   try {
     const historial = JSON.parse(leer('historial:' + id));
@@ -72,7 +82,7 @@ function guardarPartida(id, partida) {
 // Gráfica de las últimas 20 partidas (la línea sube al mejorar) y media de las últimas 10.
 function pintarHistorial(j) {
   const caja = $('previa-historial');
-  const ultimas = leerHistorial(j.id).slice(-20).map((p) => p.puntos);
+  const ultimas = leerHistorial(j.id).filter((p) => esDe(p, eleccion.modo, eleccion.dificultad)).slice(-20).map((p) => p.puntos);
   if (!ultimas.length) return caja.replaceChildren(el('p', 'sin-datos', 'Aún no hay partidas'));
   const svg = 'http://www.w3.org/2000/svg';
   const grafica = document.createElementNS(svg, 'svg');
@@ -130,7 +140,8 @@ function pintarEstadisticas() {
   }
 
   const barras = el('div', 'perfil');
-  for (const { habilidad, valor } of perfil(JUEGOS, hist, HABILIDADES)) {
+  // El perfil compara partidas iguales: solo Normal + Normal.
+  for (const { habilidad, valor } of perfil(JUEGOS, filtrar(hist, 'normal', 'normal'), HABILIDADES)) {
     const fila = el('div', 'fila-perfil');
     const barra = el('div', 'barra');
     const relleno = el('div');
@@ -142,7 +153,7 @@ function pintarEstadisticas() {
 
   const records = el('ul', 'records');
   for (const j of JUEGOS) {
-    const r = leerRecord(j.id);
+    const r = leerRecord(claveRecord(j.id));
     records.append(el('li', '', `${j.icono} ${j.nombre}: ${r ? conUnidad(j, r) : '—'}`));
   }
 
@@ -164,12 +175,44 @@ function mostrar(id) {
 
 function abrirPrevia(j) {
   actual = j;
+  eleccion = leerEleccion(j);
+  pintarPrevia(j);
+  mostrar('previa');
+}
+
+// Nombre, instrucciones, botones de modo/dificultad, y récord y gráfica de la elección actual.
+function pintarPrevia(j) {
   $('previa-nombre').textContent = j.nombre;
   $('previa-instrucciones').textContent = j.instrucciones;
-  const record = leerRecord(j.id);
+  pintarModos(j);
+  const record = leerRecord(claveRecord(j.id, eleccion.modo, eleccion.dificultad));
   $('previa-record').textContent = record ? conUnidad(j, record) : '—';
   pintarHistorial(j);
-  mostrar('previa');
+}
+
+// Filas de botones: Modo (si el juego tiene más de uno) y Dificultad (salvo Rayo).
+function pintarModos(j) {
+  const fila = (opciones, elegido, alElegir) => {
+    const caja = el('div', 'chips');
+    for (const [valor, texto] of opciones) {
+      const b = el('button', '', texto);
+      b.setAttribute('aria-pressed', valor === elegido);
+      b.onclick = () => alElegir(valor);
+      caja.append(b);
+    }
+    return caja;
+  };
+  const filas = [];
+  const modos = j.modos ?? ['normal'];
+  if (modos.length > 1) filas.push(fila(modos.map((m) => [m, MODOS[m]]), eleccion.modo, (modo) => elegir(j, { ...eleccion, modo })));
+  if (!j.sinDificultad) filas.push(fila(Object.entries(DIFICULTADES), eleccion.dificultad, (dificultad) => elegir(j, { ...eleccion, dificultad })));
+  $('previa-modos').replaceChildren(...filas);
+}
+
+function elegir(j, e) {
+  eleccion = e;
+  guardar('eleccion:' + j.id, `${e.modo}|${e.dificultad}`);
+  pintarPrevia(j);
 }
 
 // Cuenta atrás 3-2-1 y después empieza el juego. Mientras, ✕ la cancela con parar().
@@ -184,7 +227,7 @@ function jugar() {
     if (n === 0) {
       tablero.replaceChildren();
       inicio = Date.now();
-      parar = actual.juego.start(tablero, terminar);
+      parar = actual.juego.start(tablero, terminar, eleccion);
       return;
     }
     tablero.replaceChildren(el('div', 'cuenta', n));
@@ -200,14 +243,16 @@ function terminar(puntos) {
   parar = null;
   const hoy = fechaLocal();
   const entrenoAntes = entrenoCompleto(hoy, idsPorCategoria, historiales());
-  guardarPartida(actual.id, { fecha: hoy, cuando: Date.now(), puntos, ms: Date.now() - inicio });
+  guardarPartida(actual.id, { fecha: hoy, cuando: Date.now(), puntos, ms: Date.now() - inicio, ...eleccion });
   // ¿Esta partida es la que completa el entrenamiento de hoy?
   const entrenoHoy = !entrenoAntes && entrenoCompleto(hoy, idsPorCategoria, historiales());
-  const nuevo = esRecord(puntos, leerRecord(actual.id), actual.menorEsMejor);
-  if (nuevo) guardar('record:' + actual.id, puntos);
+  const clave = claveRecord(actual.id, eleccion.modo, eleccion.dificultad);
+  const nuevo = esRecord(puntos, leerRecord(clave), actual.menorEsMejor);
+  if (nuevo) guardar(clave, puntos);
   $('final-puntos').textContent = conUnidad(actual, puntos);
   $('final-record').hidden = !nuevo;
   $('final-entreno').hidden = !entrenoHoy;
+  $('final-modo').textContent = etiqueta(eleccion.modo, eleccion.dificultad);
   mostrar('final');
   if (nuevo || entrenoHoy) {
     confeti();
