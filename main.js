@@ -42,7 +42,8 @@ const conUnidad = (j, n) => (j.unidad ? `${n} ${j.unidad}` : `${n}`);
 // Historial de partidas terminadas: `historial:<id>` = JSON [{ fecha, cuando, puntos, ms }]. Si está roto, vacío.
 function leerHistorial(id) {
   try {
-    return JSON.parse(leer('historial:' + id)) || [];
+    const historial = JSON.parse(leer('historial:' + id));
+    return Array.isArray(historial) ? historial : [];
   } catch {
     return [];
   }
