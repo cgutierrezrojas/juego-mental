@@ -32,6 +32,7 @@ const JUEGOS = [
 
 const CATEGORIAS = ['Clásicos', 'Lógica', 'Reacción'];
 // Ids de los juegos de cada categoría, en el orden de CATEGORIAS (para el entrenamiento diario).
+// ponytail: añadir o reordenar juegos cambia qué pedían los entrenamientos pasados (y las rachas); guardar los días completados si importa.
 const idsPorCategoria = CATEGORIAS.map((c) => JUEGOS.filter((j) => j.categoria === c).map((j) => j.id));
 
 const HABILIDADES = ['Memoria', 'Cálculo', 'Atención', 'Lógica', 'Reacción'];
@@ -52,7 +53,8 @@ const conUnidad = (j, n) => (j.unidad ? `${n} ${j.unidad}` : `${n}`);
 function leerHistorial(id) {
   try {
     const historial = JSON.parse(leer('historial:' + id));
-    return Array.isArray(historial) ? historial : [];
+    // Solo entradas válidas: un dato roto no debe romper el menú ni las gráficas.
+    return Array.isArray(historial) ? historial.filter((p) => p && typeof p === 'object' && Number.isFinite(p.puntos)) : [];
   } catch {
     return [];
   }

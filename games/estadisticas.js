@@ -21,7 +21,7 @@ export function diaAnterior(fecha) {
 function hash(texto) {
   let h = 2166136261;
   for (const c of texto) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
-  return h >>> 0;
+  return (h ^ (h >>> 16)) >>> 0; // mezcla los bits altos: sin esto, con % 2 el bit bajo casi alterna día a día
 }
 
 // Los 3 juegos del día: uno de cada categoría.

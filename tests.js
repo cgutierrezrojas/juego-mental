@@ -345,9 +345,14 @@ probar('estadísticas: entrenamiento del día fijo por fecha, uno por categoría
   assert(a.join() === entrenoDelDia('2026-10-09', CATS).join(), 'misma fecha, mismo resultado');
   assert(a.length === 3 && CATS.every((ids, i) => ids.includes(a[i])), `${a}`);
   const distintos = new Set();
+  const reaccion = [];
   let dia = '2026-10-31';
-  for (let i = 0; i < 30; i++, dia = diaAnterior(dia)) distintos.add(entrenoDelDia(dia, CATS).join());
+  for (let i = 0; i < 30; i++, dia = diaAnterior(dia)) {
+    distintos.add(entrenoDelDia(dia, CATS).join());
+    reaccion.push(entrenoDelDia(dia, CATS)[2]);
+  }
   assert(distintos.size >= 5, `solo ${distintos.size} combinaciones en 30 días`);
+  assert(reaccion.some((x, i) => i > 0 && x === reaccion[i - 1]), 'Reacción no debe alternar día a día');
 });
 
 probar('estadísticas: jugados y entrenamiento completo', () => {
