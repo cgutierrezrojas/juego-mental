@@ -300,3 +300,16 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 
 /* Series: enunciado más pequeño, caben 4 números de hasta 3 cifras */
 .enunciado.serie { font-size: 1.8rem; }
+
+/* Puzzle 3×3 */
+.puzzle {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.puzzle button {
+  aspect-ratio: 1;
+  padding: 0;
+  font-size: 2rem;
+}

@@ -3,7 +3,7 @@ const CACHE = 'juego-mental';
 const ARCHIVOS = [
   './', 'index.html', 'styles.css', 'main.js', 'manifest.json', 'icon.svg', 'apple-touch-icon.png',
   'games/comun.js', 'games/efectos.js', 'games/calculo.js', 'games/atencion.js', 'games/memoria.js',
-  'games/opciones.js', 'games/series.js', 'games/sobra.js',
+  'games/opciones.js', 'games/series.js', 'games/sobra.js', 'games/puzzle.js',
 ];
 
 self.addEventListener('install', (e) => {

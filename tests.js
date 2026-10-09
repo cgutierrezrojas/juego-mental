@@ -264,3 +264,26 @@ probar('sobra: reglas por tramo y "distinto"', () => {
   assert(distinto(pares, [1, 3, 5, 8]) === 8, 'también es raro el único que sí cumple');
   assert(distinto(pares, [2, 4, 7, 9]) === null);
 });
+
+// --- puzzle.js ---
+import { RESUELTO, mover, resuelto, barajarPuzzle } from './games/puzzle.js';
+
+probar('puzzle: mover solo fichas junto al hueco; resuelto reconoce el orden', () => {
+  assert(resuelto(RESUELTO));
+  // Hueco en la esquina inferior derecha (índice 8): se pueden mover el 5 y el 7.
+  assert(mover(RESUELTO, 5).join() === '1,2,3,4,5,0,7,8,6', 'arriba del hueco');
+  assert(mover(RESUELTO, 7).join() === '1,2,3,4,5,6,7,0,8', 'izquierda del hueco');
+  assert(mover(RESUELTO, 0) === null && mover(RESUELTO, 4) === null && mover(RESUELTO, 6) === null, 'no vecinas');
+  assert(RESUELTO.join() === '1,2,3,4,5,6,7,8,0', 'mover no modifica el original');
+  // De la fila de abajo no se salta a la siguiente fila: con el hueco en 3, el 2 no es vecino.
+  assert(mover([1, 2, 3, 0, 4, 5, 6, 7, 8], 2) === null);
+  assert(!resuelto(mover(RESUELTO, 5)));
+});
+
+probar('puzzle: barajar da las 9 piezas y nunca el puzzle resuelto', () => {
+  for (let i = 0; i < 200; i++) {
+    const t = barajarPuzzle();
+    assert([...t].sort().join() === '0,1,2,3,4,5,6,7,8', `${t}`);
+    assert(!resuelto(t), 'salió resuelto');
+  }
+});
