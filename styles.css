@@ -289,3 +289,14 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   .mensaje.fallo,
   .simon button.temblor { animation: none; }
 }
+
+/* Juegos de opciones: pista bajo el enunciado tras un fallo (hueco reservado para que nada salte) */
+.pista {
+  min-height: 1.4rem;
+  margin: -12px 0 0;
+  color: var(--mal);
+  font-weight: 700;
+}
+
+/* Series: enunciado más pequeño, caben 4 números de hasta 3 cifras */
+.enunciado.serie { font-size: 1.8rem; }

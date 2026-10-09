@@ -1,0 +1,62 @@
+// Juegos de 4 opciones (Cálculo, Series, ¿Cuál sobra?): 60 segundos, un enunciado y 4 botones.
+// Acertar suma un acierto; fallar resta 3 segundos y la partida sigue. Puntuación = aciertos.
+import { azar, barajar, el, temporizador, pintarReloj } from './comun.js';
+import { destello } from './efectos.js';
+
+// Números enteros de `desde` a `hasta`, ambos incluidos (vacío si desde > hasta).
+const rango = (desde, hasta) => Array.from({ length: Math.max(0, hasta - desde + 1) }, (_, i) => desde + i);
+
+// La correcta y 3 distractores a ±5 como mucho, distintos y no negativos, en orden aleatorio.
+// Se elige al azar cuántos quedan por debajo de la correcta (0 a 3), así la correcta puede ser
+// la más baja, la más alta o una del medio con la misma probabilidad. Con resultados pequeños
+// no caben tantos por debajo y se ponen los que caben.
+export function generarOpciones(resultado, rnd = Math.random) {
+  const debajo = Math.min(azar(4, rnd), resultado);
+  const menores = barajar(rango(Math.max(0, resultado - 5), resultado - 1), rnd).slice(0, debajo);
+  const mayores = barajar(rango(resultado + 1, resultado + 5), rnd).slice(0, 3 - debajo);
+  return barajar([resultado, ...menores, ...mayores], rnd);
+}
+
+// `generar(aciertos)` devuelve { texto, opciones, correcta } y, si quiere, `pista`:
+// un texto que se enseña bajo el enunciado cuando se falla esa ronda.
+export function jugarConOpciones(pantalla, alTerminar, generar, claseEnunciado = '') {
+  let aciertos = 0;
+  let ronda;
+
+  const tiempo = el('span');
+  const puntos = el('span', '', 'Aciertos: 0');
+  const marcador = el('div', 'marcador');
+  marcador.append(tiempo, puntos);
+  const enunciado = el('div', `enunciado ${claseEnunciado}`.trim());
+  const pista = el('p', 'pista');
+  const rejilla = el('div', 'rejilla');
+  pantalla.append(marcador, enunciado, pista, rejilla);
+
+  const reloj = temporizador(60, (s) => pintarReloj(tiempo, s), () => alTerminar(aciertos));
+
+  function nueva() {
+    ronda = generar(aciertos);
+    enunciado.textContent = ronda.texto;
+    rejilla.replaceChildren(...ronda.opciones.map((n) => {
+      const b = el('button', 'grande', n);
+      b.onclick = () => responder(n);
+      return b;
+    }));
+  }
+
+  function responder(n) {
+    const ok = n === ronda.correcta;
+    destello(enunciado, ok);
+    pista.textContent = ok ? '' : ronda.pista ?? '';
+    if (ok) {
+      aciertos++;
+      puntos.textContent = `Aciertos: ${aciertos}`;
+    } else {
+      reloj.restar(3);
+    }
+    nueva();
+  }
+
+  nueva();
+  return reloj.parar;
+}

@@ -15,6 +15,9 @@ export function barajar(lista, rnd = Math.random) {
   return a;
 }
 
+// Entero al azar entre min y max, ambos incluidos.
+export const entre = (min, max, rnd = Math.random) => min + azar(max - min + 1, rnd);
+
 export function el(tag, clase = '', texto = '') {
   const e = document.createElement(tag);
   e.className = clase;

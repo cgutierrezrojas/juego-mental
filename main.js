@@ -7,6 +7,7 @@
 import * as calculo from './games/calculo.js';
 import * as atencion from './games/atencion.js';
 import * as memoria from './games/memoria.js';
+import * as series from './games/series.js';
 import { el, leer, guardar, esRecord } from './games/comun.js';
 import { sonar, callar, activo, alternar, puedeVibrar } from './games/efectos.js';
 
@@ -14,6 +15,7 @@ const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
   { id: 'atencion', nombre: 'Atención', categoria: 'Clásicos', icono: '👁', color: 'azul', instrucciones: 'Toca el color de la tinta, no lo que dice la palabra.', juego: atencion },
   { id: 'memoria', nombre: 'Memoria', categoria: 'Clásicos', icono: '🧠', color: 'verde', instrucciones: 'Mira la secuencia de colores y repítela. Cada ronda, uno más.', juego: memoria },
+  { id: 'series', nombre: 'Series', categoria: 'Lógica', icono: '🔢', color: 'amarillo', instrucciones: '¿Qué número sigue? Descubre la regla de cada serie. 60 segundos.', juego: series },
 ];
 
 const $ = (id) => document.getElementById(id);

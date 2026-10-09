@@ -38,7 +38,8 @@ probar('barajar conserva los elementos y no modifica la original', () => {
 });
 
 // --- calculo.js ---
-import { generarOperacion, generarOpciones } from './games/calculo.js';
+import { generarOperacion } from './games/calculo.js';
+import { generarOpciones } from './games/opciones.js';
 
 probar('cálculo: 0-4 aciertos solo sumas de 1 a 10', () => {
   for (let i = 0; i < 500; i++) {
@@ -202,4 +203,37 @@ probar('récords: mayor es mejor, menor es mejor, sin récord y puntuación 0', 
   assert(esRecord(7, 0) === true);
   assert(esRecord(0, 0) === false, '0 nunca es récord');
   assert(esRecord(0, 5, true) === false, '0 nunca es récord, tampoco en menor es mejor');
+});
+
+// --- series.js ---
+import { generarSerie } from './games/series.js';
+
+// ¿Qué tipos de serie encajan con estos 5 números?
+function tiposDeSerie(s) {
+  const d = s.slice(1).map((n, i) => n - s[i]);
+  const tipos = [];
+  if (d.every((x) => x === d[0] && x > 0)) tipos.push('suma');
+  if (d.every((x) => x === d[0] && x < 0)) tipos.push('resta');
+  if (s[0] > 0 && [2, 3].some((r) => s.slice(1).every((n, i) => n === s[i] * r))) tipos.push('multiplica');
+  if (d[0] === d[2] && d[1] === d[3] && d[0] !== d[1]) tipos.push('alterna');
+  if (s.every((n, i) => Math.sqrt(n) === Math.sqrt(s[0]) + i)) tipos.push('cuadrados');
+  if (s.slice(2).every((n, i) => n === s[i] + s[i + 1])) tipos.push('fibonacci');
+  return tipos;
+}
+
+probar('series: 5 enteros >= 0 que siguen un tipo permitido en cada tramo', () => {
+  const permitidos = [
+    [0, ['suma']],
+    [7, ['suma', 'resta', 'multiplica']],
+    [12, ['resta', 'multiplica', 'alterna', 'cuadrados']],
+    [20, ['multiplica', 'alterna', 'cuadrados', 'fibonacci']],
+  ];
+  for (const [aciertos, tipos] of permitidos) {
+    for (let i = 0; i < 500; i++) {
+      const { numeros } = generarSerie(aciertos);
+      assert(numeros.length === 5, `${numeros}`);
+      assert(numeros.every((n) => Number.isInteger(n) && n >= 0), `negativo o no entero: ${numeros}`);
+      assert(tiposDeSerie(numeros).some((t) => tipos.includes(t)), `aciertos ${aciertos}: ${numeros} no es ${tipos}`);
+    }
+  }
 });
