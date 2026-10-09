@@ -14,7 +14,7 @@ import * as rayo from './games/rayo.js';
 import * as topos from './games/topos.js';
 import { el, leer, guardar, esRecord } from './games/comun.js';
 import { sonar, callar, activo, alternar, puedeVibrar } from './games/efectos.js';
-import { anotar, fechaLocal, puntosGrafica } from './games/estadisticas.js';
+import { anotar, fechaLocal, puntosGrafica, entrenoDelDia, jugadosEn, entrenoCompleto, racha } from './games/estadisticas.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -26,6 +26,10 @@ const JUEGOS = [
   { id: 'rayo', nombre: 'Rayo', categoria: 'Reacción', icono: '⚡', color: 'amarillo', habilidad: 'Reacción', referencia: 250, unidad: 'ms', menorEsMejor: true, instrucciones: 'Cuando se ponga verde, ¡toca! 5 intentos; cuenta tu tiempo medio.', juego: rayo },
   { id: 'topos', nombre: 'Topos', categoria: 'Reacción', icono: '🔨', color: 'verde', habilidad: 'Reacción', referencia: 40, instrucciones: 'Toca cada topo antes de que se esconda. Tocar una casilla vacía resta. 30 segundos.', juego: topos },
 ];
+
+const CATEGORIAS = ['Clásicos', 'Lógica', 'Reacción'];
+// Ids de los juegos de cada categoría, en el orden de CATEGORIAS (para el entrenamiento diario).
+const idsPorCategoria = CATEGORIAS.map((c) => JUEGOS.filter((j) => j.categoria === c).map((j) => j.id));
 
 const $ = (id) => document.getElementById(id);
 let actual = null;
@@ -79,9 +83,31 @@ function pintarHistorial(j) {
   caja.replaceChildren(grafica, el('p', '', `Media de las últimas ${diez.length}: ${conUnidad(j, media)}`));
 }
 
+// Tarjeta "Entrenamiento de hoy": los 3 juegos del día (✓ si ya hay una partida hoy) y la racha.
+function pintarEntreno() {
+  const hoy = fechaLocal();
+  const hist = historiales();
+  const hechos = jugadosEn(hoy, hist);
+  const ids = entrenoDelDia(hoy, idsPorCategoria);
+  const titulo = el('div', 'entreno-titulo');
+  titulo.append(el('span', '', 'Entrenamiento de hoy'), el('span', '', `🔥 ${racha(hoy, idsPorCategoria, hist)}`));
+  const lista = el('div', 'entreno-juegos');
+  for (const id of ids) {
+    const j = JUEGOS.find((x) => x.id === id);
+    const hecho = hechos.has(id);
+    const b = el('button', hecho ? 'hecho' : '', `${hecho ? '✓' : '○'} ${j.icono} ${j.nombre}`);
+    b.onclick = () => abrirPrevia(j);
+    lista.append(b);
+  }
+  const partes = [titulo, lista];
+  if (ids.every((id) => hechos.has(id))) partes.push(el('p', 'entreno-completo', '✓ ¡Entrenamiento completado!'));
+  $('entreno').replaceChildren(...partes);
+}
+
 function mostrar(id) {
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== id;
   $('btn-salir').hidden = id !== 'juego';
+  if (id === 'menu') pintarEntreno();
 }
 
 function abrirPrevia(j) {
@@ -120,13 +146,18 @@ function jugar() {
 
 function terminar(puntos) {
   parar = null;
-  guardarPartida(actual.id, { fecha: fechaLocal(), cuando: Date.now(), puntos, ms: Date.now() - inicio });
+  const hoy = fechaLocal();
+  const entrenoAntes = entrenoCompleto(hoy, idsPorCategoria, historiales());
+  guardarPartida(actual.id, { fecha: hoy, cuando: Date.now(), puntos, ms: Date.now() - inicio });
+  // ¿Esta partida es la que completa el entrenamiento de hoy?
+  const entrenoHoy = !entrenoAntes && entrenoCompleto(hoy, idsPorCategoria, historiales());
   const nuevo = esRecord(puntos, leerRecord(actual.id), actual.menorEsMejor);
   if (nuevo) guardar('record:' + actual.id, puntos);
   $('final-puntos').textContent = conUnidad(actual, puntos);
   $('final-record').hidden = !nuevo;
+  $('final-entreno').hidden = !entrenoHoy;
   mostrar('final');
-  if (nuevo) {
+  if (nuevo || entrenoHoy) {
     confeti();
     sonar('record');
   }
@@ -182,7 +213,7 @@ $('btn-vibracion').hidden = !puedeVibrar();
 pintarAjustes();
 
 // Menú: tarjetas en cuadrícula, agrupadas por categoría (las categorías sin juegos no se dibujan).
-for (const categoria of ['Clásicos', 'Lógica', 'Reacción']) {
+for (const categoria of CATEGORIAS) {
   const juegos = JUEGOS.filter((j) => j.categoria === categoria);
   if (!juegos.length) continue;
   const rejilla = el('div', 'rejilla');
@@ -195,6 +226,8 @@ for (const categoria of ['Clásicos', 'Lógica', 'Reacción']) {
   }
   $('lista-juegos').append(el('h3', 'categoria', categoria), rejilla);
 }
+
+pintarEntreno();
 
 $('btn-jugar').onclick = jugar;
 $('btn-repetir').onclick = jugar;
