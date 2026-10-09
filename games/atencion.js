@@ -59,7 +59,7 @@ export function start(pantalla, alTerminar, opciones = {}) {
     const ok = i === ronda.tinta;
     destello(enunciado, ok);
     if (ok) aciertos++;
-    else if (dificultad !== 'facil') errores++;
+    else if (dificultad !== 'facil' && modo !== 'sinfallo') errores++; // en Hasta fallar el fallo solo termina
     puntos.textContent = `Puntos: ${puntuacion(aciertos, errores)}`;
     if (!ok && modo === 'sinfallo') {
       terminado = true;
