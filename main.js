@@ -10,6 +10,7 @@ import * as memoria from './games/memoria.js';
 import * as series from './games/series.js';
 import * as sobra from './games/sobra.js';
 import * as puzzle from './games/puzzle.js';
+import * as rayo from './games/rayo.js';
 import { el, leer, guardar, esRecord } from './games/comun.js';
 import { sonar, callar, activo, alternar, puedeVibrar } from './games/efectos.js';
 
@@ -20,6 +21,7 @@ const JUEGOS = [
   { id: 'series', nombre: 'Series', categoria: 'Lógica', icono: '🔢', color: 'amarillo', instrucciones: '¿Qué número sigue? Descubre la regla de cada serie. 60 segundos.', juego: series },
   { id: 'sobra', nombre: '¿Cuál sobra?', categoria: 'Lógica', icono: '🧩', color: 'rojo', instrucciones: 'Tres números siguen una regla y uno no: toca el que sobra. 60 segundos.', juego: sobra },
   { id: 'puzzle', nombre: 'Puzzle', categoria: 'Lógica', icono: '🟦', color: 'azul', unidad: 'movimientos', menorEsMejor: true, instrucciones: 'Ordena las fichas del 1 al 8 con los menos movimientos posibles.', juego: puzzle },
+  { id: 'rayo', nombre: 'Rayo', categoria: 'Reacción', icono: '⚡', color: 'amarillo', unidad: 'ms', menorEsMejor: true, instrucciones: 'Cuando se ponga verde, ¡toca! 5 intentos; cuenta tu tiempo medio.', juego: rayo },
 ];
 
 const $ = (id) => document.getElementById(id);

@@ -313,3 +313,19 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   padding: 0;
   font-size: 2rem;
 }
+
+/* Rayo: zona grande que pasa de gris (espera) a verde (¡ya!) o rojo (demasiado pronto) */
+.zona-rayo {
+  min-height: 50vh;
+  font-size: 2rem;
+}
+
+.zona-rayo.ya {
+  background: var(--verde);
+  color: #fff;
+}
+
+.zona-rayo.pronto {
+  background: var(--mal);
+  color: #fff;
+}

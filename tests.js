@@ -287,3 +287,17 @@ probar('puzzle: barajar da las 9 piezas y nunca el puzzle resuelto', () => {
     assert(!resuelto(t), 'salió resuelto');
   }
 });
+
+// --- rayo.js ---
+import { media, espera } from './games/rayo.js';
+
+probar('rayo: media redondeada y espera entre 1,5 y 4 s', () => {
+  assert(media([300, 310, 320]) === 310);
+  assert(media([250, 251]) === 251, 'redondea 250.5 hacia arriba');
+  assert(espera(() => 0) === 1500);
+  assert(espera(() => 0.99999) === 4000);
+  for (let i = 0; i < 1000; i++) {
+    const ms = espera();
+    assert(Number.isInteger(ms) && ms >= 1500 && ms <= 4000, `${ms}`);
+  }
+});
