@@ -52,9 +52,9 @@ export function generarRonda(aciertos, rnd = Math.random) {
   }
 }
 
-export function start(pantalla, alTerminar) {
+export function start(pantalla, alTerminar, opciones = {}) {
   return jugarConOpciones(pantalla, alTerminar, (aciertos) => {
     const { numeros, sobra, regla } = generarRonda(aciertos);
     return { texto: '¿Cuál sobra?', opciones: numeros, correcta: sobra, pista: `Eran ${regla.nombre}` };
-  });
+  }, '', opciones);
 }

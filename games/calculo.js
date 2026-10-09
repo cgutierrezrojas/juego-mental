@@ -30,9 +30,9 @@ export function generarOperacion(aciertos, rnd = Math.random) {
   return tipos[azar(tipos.length, rnd)]();
 }
 
-export function start(pantalla, alTerminar) {
+export function start(pantalla, alTerminar, opciones = {}) {
   return jugarConOpciones(pantalla, alTerminar, (aciertos) => {
     const { texto, resultado } = generarOperacion(aciertos);
     return { texto, opciones: generarOpciones(resultado), correcta: resultado };
-  });
+  }, '', opciones);
 }

@@ -2,6 +2,7 @@
 // Acertar suma un acierto; fallar resta 3 segundos y la partida sigue. Puntuación = aciertos.
 import { azar, barajar, el, temporizador, pintarReloj } from './comun.js';
 import { destello } from './efectos.js';
+import { aciertosSegun } from './modos.js';
 
 // Números enteros de `desde` a `hasta`, ambos incluidos (vacío si desde > hasta).
 const rango = (desde, hasta) => Array.from({ length: Math.max(0, hasta - desde + 1) }, (_, i) => desde + i);
@@ -19,9 +20,14 @@ export function generarOpciones(resultado, rnd = Math.random) {
 
 // `generar(aciertos)` devuelve { texto, opciones, correcta } y, si quiere, `pista`:
 // un texto que se enseña bajo el enunciado cuando se falla esa ronda.
-export function jugarConOpciones(pantalla, alTerminar, generar, claseEnunciado = '') {
+// `opciones.modo`: 'normal' (60 s), 'rapido' (30 s) o 'sinfallo' (sin reloj; el primer fallo termina).
+// `opciones.dificultad`: ajusta los aciertos que ve `generar` (ver aciertosSegun).
+export function jugarConOpciones(pantalla, alTerminar, generar, claseEnunciado = '', opciones = {}) {
+  const { modo = 'normal', dificultad = 'normal' } = opciones;
   let aciertos = 0;
   let ronda;
+  let terminado = false;
+  let id;
 
   const tiempo = el('span');
   const puntos = el('span', '', 'Aciertos: 0');
@@ -32,10 +38,12 @@ export function jugarConOpciones(pantalla, alTerminar, generar, claseEnunciado =
   const rejilla = el('div', 'rejilla');
   pantalla.append(marcador, enunciado, pista, rejilla);
 
-  const reloj = temporizador(60, (s) => pintarReloj(tiempo, s), () => alTerminar(aciertos));
+  let reloj = null;
+  if (modo === 'sinfallo') tiempo.textContent = '❌ Hasta fallar';
+  else reloj = temporizador(modo === 'rapido' ? 30 : 60, (s) => pintarReloj(tiempo, s), () => alTerminar(aciertos));
 
   function nueva() {
-    ronda = generar(aciertos);
+    ronda = generar(aciertosSegun(aciertos, dificultad));
     enunciado.textContent = ronda.texto;
     rejilla.replaceChildren(...ronda.opciones.map((n) => {
       const b = el('button', 'grande', n);
@@ -45,18 +53,28 @@ export function jugarConOpciones(pantalla, alTerminar, generar, claseEnunciado =
   }
 
   function responder(n) {
+    if (terminado) return;
     const ok = n === ronda.correcta;
     destello(enunciado, ok);
     pista.textContent = ok ? '' : ronda.pista ?? '';
     if (ok) {
       aciertos++;
       puntos.textContent = `Aciertos: ${aciertos}`;
-    } else {
+    } else if (reloj) {
       reloj.restar(3);
+    } else {
+      // Hasta fallar: se deja ver el anillo rojo (y la pista) y se termina.
+      terminado = true;
+      id = setTimeout(() => alTerminar(aciertos), 600);
+      return;
     }
     nueva();
   }
 
   nueva();
-  return reloj.parar;
+  return () => {
+    terminado = true;
+    clearTimeout(id);
+    reloj?.parar();
+  };
 }

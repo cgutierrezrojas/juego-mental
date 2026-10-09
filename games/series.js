@@ -51,10 +51,10 @@ export function generarSerie(aciertos, rnd = Math.random) {
   return { numeros: tipos[azar(tipos.length, rnd)](rnd) };
 }
 
-export function start(pantalla, alTerminar) {
+export function start(pantalla, alTerminar, opciones = {}) {
   return jugarConOpciones(pantalla, alTerminar, (aciertos) => {
     const { numeros } = generarSerie(aciertos);
     const siguiente = numeros[4];
     return { texto: `${numeros.slice(0, 4).join(', ')}, ?`, opciones: generarOpciones(siguiente), correcta: siguiente };
-  }, 'serie');
+  }, 'serie', opciones);
 }
