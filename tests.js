@@ -414,3 +414,36 @@ probar('estadísticas: puntos de la gráfica (mejor arriba)', () => {
   assert(puntosGrafica([5, 5, 5], 100, 40) === '0,20 50,20 100,20', 'todas iguales: plana');
   assert(puntosGrafica([], 100, 40) === '');
 });
+
+// --- modos.js ---
+import { claveRecord, esDe, filtrar, aciertosSegun, etiqueta } from './games/modos.js';
+
+probar('modos: clave de récord y etiqueta', () => {
+  assert(claveRecord('calculo') === 'record:calculo');
+  assert(claveRecord('calculo', 'normal', 'normal') === 'record:calculo', 'Normal + Normal conserva la clave de siempre');
+  assert(claveRecord('calculo', 'rapido', 'normal') === 'record:calculo:rapido:normal');
+  assert(claveRecord('puzzle', 'normal', 'dificil') === 'record:puzzle:normal:dificil');
+  assert(etiqueta('normal', 'normal') === '');
+  assert(etiqueta('rapido', 'dificil') === 'Rápido · Difícil');
+  assert(etiqueta('normal', 'facil') === 'Normal · Fácil');
+});
+
+probar('modos: la dificultad ajusta los aciertos que ven los generadores', () => {
+  assert(aciertosSegun(3, 'facil') === 3 && aciertosSegun(25, 'facil') === 9, 'Fácil topa en 9');
+  assert(aciertosSegun(7, 'normal') === 7);
+  assert(aciertosSegun(0, 'dificil') === 10 && aciertosSegun(6, 'dificil') === 16);
+});
+
+probar('modos: partidas antiguas cuentan como Normal + Normal; filtrar por modo y dificultad', () => {
+  assert(esDe({ puntos: 1 }, 'normal', 'normal'), 'sin campos = Normal + Normal');
+  assert(!esDe({ puntos: 1 }, 'rapido', 'normal'));
+  assert(esDe({ modo: 'rapido', dificultad: 'facil' }, 'rapido', 'facil'));
+  assert(!esDe({ modo: 'rapido', dificultad: 'facil' }, 'rapido', 'normal'));
+  const h = {
+    calculo: [{ puntos: 1 }, { puntos: 2, modo: 'rapido', dificultad: 'normal' }, { puntos: 3, modo: 'normal', dificultad: 'normal' }],
+    rayo: [{ puntos: 300, modo: 'normal', dificultad: 'dificil' }],
+  };
+  const n = filtrar(h, 'normal', 'normal');
+  assert(n.calculo.map((p) => p.puntos).join() === '1,3' && n.rayo.length === 0, JSON.stringify(n));
+  assert(h.calculo.length === 3, 'no modifica el original');
+});
