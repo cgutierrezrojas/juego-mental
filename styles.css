@@ -58,6 +58,9 @@ h1 {
   font-weight: 900;
 }
 
+/* Menú: título con menos margen para que los 8 juegos quepan en la pantalla del móvil */
+#menu h1 { margin: 4px 0; }
+
 [data-tema="oscuro"] h1 {
   text-transform: uppercase;
   letter-spacing: 2px;
@@ -86,7 +89,7 @@ button.tarjeta {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 14px 8px;
+  padding: 12px 8px;
   font-size: 1.1rem;
 }
 
@@ -344,3 +347,15 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 }
 
 .casilla.topo { background: var(--acento); }
+
+/* Neón: texto oscuro sobre el verde y el rojo brillantes (el blanco no se lee) */
+[data-tema="oscuro"] .zona-rayo.ya,
+[data-tema="oscuro"] .zona-rayo.pronto { color: var(--fondo); }
+
+/* Rayo y Topos: una pulsación larga no selecciona texto ni abre el menú del iPhone */
+.zona-rayo,
+.casilla {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}

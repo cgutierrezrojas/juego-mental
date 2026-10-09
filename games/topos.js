@@ -18,7 +18,7 @@ export function start(pantalla, alTerminar) {
   marcador.append(tiempo, puntos);
   const rejilla = el('div', 'topos');
   const casillas = Array.from({ length: 9 }, (_, i) => {
-    const b = el('button', 'grande casilla');
+    const b = el('button', 'casilla');
     b.onpointerdown = () => tocar(i);
     return b;
   });

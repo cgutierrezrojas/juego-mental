@@ -11,7 +11,7 @@ Parte de la app ya publicada (v1 + pulido v2). Añade tres juegos de Lógica (Se
 | Categoría | Juegos (icono, color) |
 |---|---|
 | Clásicos | ➕ Cálculo (rojo) · 👁 Atención (azul) · 🧠 Memoria (verde) |
-| Lógica | 🔢 Series (amarillo) · 🧩 ¿Cuál sobra? (rojo) · 🟦 Puzzle (azul) |
+| Lógica | 🔢 Series (amarillo) · 🔍 ¿Cuál sobra? (rojo) · 🧩 Puzzle (azul) |
 | Reacción | ⚡ Rayo (amarillo) · 🔨 Topos (verde) |
 
 - Cada entrada de `JUEGOS` en `main.js` gana `categoria` e `icono`, y opcionalmente `unidad` (texto tras la puntuación) y `menorEsMejor`.
@@ -43,14 +43,14 @@ Los tres funcionan igual: 60 s, un enunciado y 4 botones. Acertar suma un aciert
 | 10–14 | restar, multiplicar, alterna (+p, +q, +p, +q… con p ≠ q), cuadrados consecutivos |
 | 15+ | multiplicar, alterna, cuadrados, Fibonacci (cada uno es la suma de los dos anteriores) |
 
-### 🧩 ¿Cuál sobra?
+### 🔍 ¿Cuál sobra?
 
 - Se ven 4 números distintos (de 1 en adelante): tres cumplen una regla y uno no. Se toca el que sobra.
 - Reglas según los aciertos: 0–4 pares e impares (números hasta 20); 5–9 además múltiplos de 5 y de 3 (hasta 50); 10+ además cuadrados perfectos y primos (hasta 100).
 - **Sin ambigüedad:** con ninguna regla de la lista completa puede quedar otro número distinto como "el raro". Raro significa que es el único que la cumple, o el único que no la cumple. Si pasa, se genera otra ronda.
 - Pista al fallar: "Eran <regla>", por ejemplo "Eran pares".
 
-## 🟦 Puzzle
+## 🧩 Puzzle
 
 - Tablero 3×3 con las fichas del 1 al 8 y un hueco. Tocar una ficha junto al hueco la mueve al hueco. Tocar otra marca un anillo rojo y no cuenta como movimiento.
 - Se baraja con 100 movimientos válidos al azar desde el puzzle resuelto, así que siempre tiene solución. Si sale resuelto, se vuelve a barajar.
