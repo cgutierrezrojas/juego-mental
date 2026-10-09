@@ -22,6 +22,7 @@ export function start(pantalla, alTerminar) {
   let parado = false; // true tras parar(): ya no se enciende nada ni se termina la partida
 
   const estado = el('p', 'marcador');
+  const mensaje = el('p', 'mensaje'); // ✓ / ✗ grande, arriba: lejos del dedo que tapa el botón
   const rejilla = el('div', 'rejilla simon');
   const botones = COLORES.map((c, i) => {
     const b = el('button', 'grande color');
@@ -31,12 +32,13 @@ export function start(pantalla, alTerminar) {
     return b;
   });
   rejilla.append(...botones);
-  pantalla.append(estado, rejilla);
+  pantalla.append(estado, mensaje, rejilla);
 
   async function ronda() {
     secuencia = alargar(secuencia);
     turno = false;
     estado.textContent = `Ronda ${secuencia.length} — Mira…`;
+    mensaje.textContent = '';
     const ms = pausa(secuencia.length);
     await esperar(600);
     for (const i of secuencia) {
@@ -53,19 +55,45 @@ export function start(pantalla, alTerminar) {
     estado.textContent = `Ronda ${secuencia.length} — Repite`;
   }
 
+  function decir(texto, ok) {
+    mensaje.textContent = texto;
+    mensaje.className = 'mensaje';
+    void mensaje.offsetWidth; // reinicia la animación
+    mensaje.classList.add(ok ? 'bien' : 'fallo');
+  }
+
   function tocar(i) {
     if (!turno) return;
-    const ok = i === secuencia[pos];
-    if (ok) tono(i);
-    destello(botones[i], ok, !ok); // al acertar suena la nota del color en vez del pitido
-    if (!ok) {
-      turno = false;
-      // Puntuación = la secuencia más larga repetida entera (la anterior a esta).
-      setTimeout(() => { if (!parado) alTerminar(secuencia.length - 1); }, 600);
-      return;
-    }
+    if (i !== secuencia[pos]) return fallar(i);
+    // Acierto: el botón se ilumina con su nota, como cuando lo enseña el juego.
+    tono(i);
+    destello(botones[i], true, false); // sin el pitido: ya suena la nota del color
+    botones[i].classList.add('encendido');
+    setTimeout(() => botones[i].classList.remove('encendido'), 250);
     pos++;
-    if (pos === secuencia.length) ronda();
+    if (pos < secuencia.length) return decir('✓', true);
+    turno = false;
+    decir('✓ ¡Ronda superada!', true);
+    setTimeout(() => { if (!parado) ronda(); }, 800);
+  }
+
+  // Fallo: el botón tocado se marca con ✗ y borde rojo y tiembla, el correcto parpadea dos veces y luego se termina.
+  async function fallar(i) {
+    turno = false;
+    destello(botones[i], false); // pitido grave + vibración
+    botones[i].classList.add('temblor');
+    botones[i].textContent = '✗';
+    decir('✗ Era este', false);
+    const correcto = botones[secuencia[pos]];
+    for (let vez = 0; vez < 2; vez++) {
+      correcto.classList.add('encendido');
+      await esperar(300);
+      correcto.classList.remove('encendido');
+      await esperar(200);
+    }
+    await esperar(500);
+    // Puntuación = la secuencia más larga repetida entera (la anterior a esta).
+    if (!parado) alTerminar(secuencia.length - 1);
   }
 
   ronda();

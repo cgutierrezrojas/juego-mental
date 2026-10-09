@@ -231,3 +231,39 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   .cuenta,
   .aviso { animation: none; }
 }
+
+/* Simon: mensaje grande de acierto o fallo, encima de los botones (el dedo tapa el botón tocado) */
+.mensaje {
+  min-height: 2.4rem; /* reserva el hueco: los botones no saltan al aparecer el texto */
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 900;
+}
+
+.mensaje.bien { color: var(--ok); animation: aparecer-mensaje 0.25s ease-out; }
+.mensaje.fallo { color: var(--mal); animation: aparecer-mensaje 0.25s ease-out; }
+
+@keyframes aparecer-mensaje {
+  from { opacity: 0; transform: scale(1.4); }
+}
+
+/* Simon: el botón fallado conserva su color (para no confundirlo con el rojo), con ✗, borde rojo y temblor */
+.simon button.temblor {
+  opacity: 1;
+  outline: 6px solid var(--mal);
+  outline-offset: 3px;
+  color: #fff;
+  font-size: 3.5rem;
+  animation: temblar 0.4s;
+}
+
+@keyframes temblar {
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mensaje.bien,
+  .mensaje.fallo,
+  .simon button.temblor { animation: none; }
+}
