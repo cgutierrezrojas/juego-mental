@@ -14,7 +14,10 @@ import * as rayo from './games/rayo.js';
 import * as topos from './games/topos.js';
 import { el, leer, guardar, esRecord } from './games/comun.js';
 import { sonar, callar, activo, alternar, puedeVibrar } from './games/efectos.js';
-import { anotar, fechaLocal, puntosGrafica, entrenoDelDia, jugadosEn, entrenoCompleto, racha } from './games/estadisticas.js';
+import {
+  anotar, fechaLocal, puntosGrafica, entrenoDelDia, jugadosEn, entrenoCompleto, racha,
+  mejorRacha, entrenosCompletados, perfil,
+} from './games/estadisticas.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -30,6 +33,8 @@ const JUEGOS = [
 const CATEGORIAS = ['Clásicos', 'Lógica', 'Reacción'];
 // Ids de los juegos de cada categoría, en el orden de CATEGORIAS (para el entrenamiento diario).
 const idsPorCategoria = CATEGORIAS.map((c) => JUEGOS.filter((j) => j.categoria === c).map((j) => j.id));
+
+const HABILIDADES = ['Memoria', 'Cálculo', 'Atención', 'Lógica', 'Reacción'];
 
 const $ = (id) => document.getElementById(id);
 let actual = null;
@@ -104,9 +109,54 @@ function pintarEntreno() {
   $('entreno').replaceChildren(...partes);
 }
 
+// Pantalla 📊: resumen, perfil por habilidad (barras 0–100) y récords de todos los juegos.
+function pintarEstadisticas() {
+  const hist = historiales();
+  const hoy = fechaLocal();
+  const minutos = Math.round((Number(leer('contador:ms')) || 0) / 60000);
+  const resumen = el('div', 'resumen');
+  for (const [valor, texto] of [
+    [Number(leer('contador:partidas')) || 0, 'partidas'],
+    [`${minutos} min`, 'jugando'],
+    [`🔥 ${racha(hoy, idsPorCategoria, hist)}`, 'racha actual'],
+    [`🔥 ${mejorRacha(idsPorCategoria, hist)}`, 'mejor racha'],
+    [entrenosCompletados(idsPorCategoria, hist), 'entrenamientos'],
+  ]) {
+    const dato = el('div', 'dato');
+    dato.append(el('strong', '', valor), el('span', '', texto));
+    resumen.append(dato);
+  }
+
+  const barras = el('div', 'perfil');
+  for (const { habilidad, valor } of perfil(JUEGOS, hist, HABILIDADES)) {
+    const fila = el('div', 'fila-perfil');
+    const barra = el('div', 'barra');
+    const relleno = el('div');
+    relleno.style.width = `${valor ?? 0}%`;
+    barra.append(relleno);
+    fila.append(el('span', '', habilidad), barra, el('span', '', valor ?? 'Sin datos'));
+    barras.append(fila);
+  }
+
+  const records = el('ul', 'records');
+  for (const j of JUEGOS) {
+    const r = leerRecord(j.id);
+    records.append(el('li', '', `${j.icono} ${j.nombre}: ${r ? conUnidad(j, r) : '—'}`));
+  }
+
+  $('estadisticas-contenido').replaceChildren(
+    resumen,
+    el('h3', 'categoria', 'Perfil por habilidad'),
+    barras,
+    el('h3', 'categoria', 'Récords'),
+    records,
+  );
+}
+
 function mostrar(id) {
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== id;
   $('btn-salir').hidden = id !== 'juego';
+  $('btn-estadisticas').hidden = id !== 'menu';
   if (id === 'menu') pintarEntreno();
 }
 
@@ -232,6 +282,11 @@ pintarEntreno();
 $('btn-jugar').onclick = jugar;
 $('btn-repetir').onclick = jugar;
 for (const b of document.querySelectorAll('.btn-menu')) b.onclick = () => mostrar('menu');
+
+$('btn-estadisticas').onclick = () => {
+  pintarEstadisticas();
+  mostrar('estadisticas');
+};
 
 // ✕: vuelve al menú sin guardar la puntuación.
 $('btn-salir').onclick = () => {

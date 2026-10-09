@@ -425,3 +425,64 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   color: var(--ok);
   font-weight: 900;
 }
+
+/* Pantalla 📊 */
+.resumen {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.dato {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 4px;
+  border-radius: 12px;
+  background: var(--superficie);
+  box-shadow: var(--relieve);
+}
+
+[data-tema="oscuro"] .dato { border: 2px solid rgba(232, 236, 255, 0.4); }
+
+.dato strong { font-size: 1.3rem; }
+.dato span { font-size: 0.8rem; opacity: 0.75; }
+
+.perfil {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fila-perfil {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr 4.5rem;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.fila-perfil span:last-child { font-size: 0.85rem; text-align: right; }
+
+.barra {
+  height: 12px;
+  border-radius: 6px;
+  background: rgba(128, 128, 128, 0.25);
+  overflow: hidden;
+}
+
+.barra > div {
+  height: 100%;
+  border-radius: 6px;
+  background: var(--acento);
+}
+
+.records {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+  font-size: 0.95rem;
+}

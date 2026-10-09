@@ -20,6 +20,7 @@
   <main>
     <!-- Barra fija en todas las pantallas: ✕ (solo jugando) a la izquierda, ajustes a la derecha -->
     <header id="barra">
+      <button id="btn-estadisticas" aria-label="Estadísticas">📊</button>
       <button id="btn-salir" aria-label="Salir al menú" hidden>✕</button>
       <div id="esquina">
         <button id="btn-sonido" aria-label="Sonido"></button>
@@ -52,6 +53,12 @@
       <p id="final-record" hidden>¡Nuevo récord!</p>
       <p id="final-entreno" hidden>✓ ¡Entrenamiento de hoy completado!</p>
       <button id="btn-repetir" class="grande color" style="--c: var(--acento)">Repetir</button>
+      <button class="btn-menu">Menú</button>
+    </section>
+
+    <section id="estadisticas" hidden>
+      <h2>Estadísticas</h2>
+      <div id="estadisticas-contenido"></div>
       <button class="btn-menu">Menú</button>
     </section>
   </main>
