@@ -11,6 +11,7 @@ import * as series from './games/series.js';
 import * as sobra from './games/sobra.js';
 import * as puzzle from './games/puzzle.js';
 import * as rayo from './games/rayo.js';
+import * as topos from './games/topos.js';
 import { el, leer, guardar, esRecord } from './games/comun.js';
 import { sonar, callar, activo, alternar, puedeVibrar } from './games/efectos.js';
 
@@ -22,6 +23,7 @@ const JUEGOS = [
   { id: 'sobra', nombre: '¿Cuál sobra?', categoria: 'Lógica', icono: '🧩', color: 'rojo', instrucciones: 'Tres números siguen una regla y uno no: toca el que sobra. 60 segundos.', juego: sobra },
   { id: 'puzzle', nombre: 'Puzzle', categoria: 'Lógica', icono: '🟦', color: 'azul', unidad: 'movimientos', menorEsMejor: true, instrucciones: 'Ordena las fichas del 1 al 8 con los menos movimientos posibles.', juego: puzzle },
   { id: 'rayo', nombre: 'Rayo', categoria: 'Reacción', icono: '⚡', color: 'amarillo', unidad: 'ms', menorEsMejor: true, instrucciones: 'Cuando se ponga verde, ¡toca! 5 intentos; cuenta tu tiempo medio.', juego: rayo },
+  { id: 'topos', nombre: 'Topos', categoria: 'Reacción', icono: '🔨', color: 'verde', instrucciones: 'Toca cada topo antes de que se esconda. Tocar una casilla vacía resta. 30 segundos.', juego: topos },
 ];
 
 const $ = (id) => document.getElementById(id);

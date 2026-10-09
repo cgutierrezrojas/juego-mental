@@ -329,3 +329,18 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   background: var(--mal);
   color: #fff;
 }
+
+/* Topos: cuadrícula 3×3; la casilla con topo se resalta con el color de acento */
+.topos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.casilla {
+  aspect-ratio: 1;
+  padding: 0;
+  font-size: 2.5rem;
+}
+
+.casilla.topo { background: var(--acento); }

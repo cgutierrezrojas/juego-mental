@@ -301,3 +301,13 @@ probar('rayo: media redondeada y espera entre 1,5 y 4 s', () => {
     assert(Number.isInteger(ms) && ms >= 1500 && ms <= 4000, `${ms}`);
   }
 });
+
+// --- topos.js ---
+import { duracionTopo } from './games/topos.js';
+
+probar('topos: cada topo dura 1 s y 25 ms menos por acierto, mínimo 0,45 s', () => {
+  assert(duracionTopo(0) === 1000);
+  assert(duracionTopo(10) === 750);
+  assert(duracionTopo(22) === 450);
+  assert(duracionTopo(100) === 450);
+});
