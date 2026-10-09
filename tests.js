@@ -311,3 +311,101 @@ probar('topos: cada topo dura 1 s y 25 ms menos por acierto, mínimo 0,45 s', ()
   assert(duracionTopo(22) === 450);
   assert(duracionTopo(100) === 450);
 });
+
+// --- estadisticas.js ---
+import {
+  anotar, fechaLocal, diaAnterior, entrenoDelDia, jugadosEn, entrenoCompleto,
+  racha, mejorRacha, entrenosCompletados, nivel, perfil, puntosGrafica,
+} from './games/estadisticas.js';
+
+probar('estadísticas: anotar recorta a 100 y no modifica el original', () => {
+  const h = Array.from({ length: 100 }, (_, i) => ({ puntos: i }));
+  const nuevo = anotar(h, { puntos: 100 });
+  assert(h.length === 100 && nuevo.length === 100, `${h.length} / ${nuevo.length}`);
+  assert(nuevo[0].puntos === 1 && nuevo[99].puntos === 100);
+  assert(anotar([], { puntos: 5 }).length === 1);
+});
+
+probar('estadísticas: fechas locales y día anterior', () => {
+  assert(fechaLocal(new Date(2026, 0, 5, 23, 30)) === '2026-01-05');
+  assert(diaAnterior('2026-03-01') === '2026-02-28');
+  assert(diaAnterior('2026-01-01') === '2025-12-31');
+  assert(diaAnterior('2026-10-09') === '2026-10-08');
+});
+
+// Categorías de prueba y un ayudante que completa el entrenamiento de un día.
+const CATS = [['calculo', 'atencion', 'memoria'], ['series', 'sobra', 'puzzle'], ['rayo', 'topos']];
+function completar(historiales, fecha) {
+  for (const id of entrenoDelDia(fecha, CATS)) (historiales[id] ??= []).push({ fecha, cuando: 0, puntos: 1, ms: 0 });
+  return historiales;
+}
+
+probar('estadísticas: entrenamiento del día fijo por fecha, uno por categoría, variado', () => {
+  const a = entrenoDelDia('2026-10-09', CATS);
+  assert(a.join() === entrenoDelDia('2026-10-09', CATS).join(), 'misma fecha, mismo resultado');
+  assert(a.length === 3 && CATS.every((ids, i) => ids.includes(a[i])), `${a}`);
+  const distintos = new Set();
+  let dia = '2026-10-31';
+  for (let i = 0; i < 30; i++, dia = diaAnterior(dia)) distintos.add(entrenoDelDia(dia, CATS).join());
+  assert(distintos.size >= 5, `solo ${distintos.size} combinaciones en 30 días`);
+});
+
+probar('estadísticas: jugados y entrenamiento completo', () => {
+  const h = completar({}, '2026-10-09');
+  assert(entrenoCompleto('2026-10-09', CATS, h));
+  assert(!entrenoCompleto('2026-10-08', CATS, h));
+  const uno = entrenoDelDia('2026-10-09', CATS)[0];
+  assert(jugadosEn('2026-10-09', { [uno]: [{ fecha: '2026-10-09' }] }).has(uno));
+  assert(!entrenoCompleto('2026-10-09', CATS, { [uno]: [{ fecha: '2026-10-09' }] }), 'con uno solo no está completo');
+});
+
+probar('estadísticas: racha, mejor racha y entrenamientos completados', () => {
+  const h = {};
+  for (const f of ['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-06', '2026-10-07', '2026-10-08']) completar(h, f);
+  assert(racha('2026-10-08', CATS, h) === 3, 'hoy completo: 06, 07, 08');
+  assert(racha('2026-10-09', CATS, h) === 3, 'hoy sin hacer: cuenta hasta ayer');
+  assert(racha('2026-10-10', CATS, h) === 0, 'ayer sin hacer: racha perdida');
+  assert(racha('2026-10-04', CATS, h) === 3, '01, 02, 03');
+  assert(mejorRacha(CATS, h) === 3);
+  completar(h, '2026-10-09');
+  assert(racha('2026-10-09', CATS, h) === 4);
+  assert(mejorRacha(CATS, h) === 4);
+  assert(entrenosCompletados(CATS, h) === 7);
+  // Un día con partidas pero sin completar no suma ni corta la cuenta de días completos.
+  (h.calculo ??= []).push({ fecha: '2026-10-05', cuando: 0, puntos: 1, ms: 0 });
+  assert(entrenosCompletados(CATS, h) === 7 && mejorRacha(CATS, h) === 4);
+  assert(racha('2026-10-01', CATS, {}) === 0 && mejorRacha(CATS, {}) === 0);
+});
+
+probar('estadísticas: nivel de una partida (0–100)', () => {
+  assert(nivel(15, 30) === 50);
+  assert(nivel(45, 30) === 100, 'tope 100');
+  assert(nivel(500, 250, true) === 50, 'menor es mejor');
+  assert(nivel(200, 250, true) === 100);
+  assert(nivel(0, 30) === 0 && nivel(0, 250, true) === 0);
+});
+
+probar('estadísticas: perfil por habilidad', () => {
+  const juegos = [
+    { id: 'series', habilidad: 'Lógica', referencia: 20 },
+    { id: 'puzzle', habilidad: 'Lógica', referencia: 30, menorEsMejor: true },
+    { id: 'rayo', habilidad: 'Reacción', referencia: 250, menorEsMejor: true },
+  ];
+  const historiales = {
+    // 7 partidas de Lógica mezcladas; cuentan las 5 más recientes por `cuando`.
+    series: [10, 20, 30, 40].map((c, i) => ({ cuando: c, puntos: [0, 20, 10, 20][i] })), // niveles 0, 100, 50, 100
+    puzzle: [5, 15, 25].map((c, i) => ({ cuando: c, puntos: [30, 60, 30][i] })), // niveles 100, 50, 100
+    rayo: [],
+  };
+  // Por `cuando`: 5→100, 10→0, 15→50, 20→100, 25→100, 30→50, 40→100. Últimas 5: 50,100,100,50,100 → 80.
+  const p = perfil(juegos, historiales, ['Lógica', 'Reacción', 'Memoria']);
+  assert(p.map((x) => `${x.habilidad}:${x.valor}`).join() === 'Lógica:80,Reacción:null,Memoria:null', JSON.stringify(p));
+});
+
+probar('estadísticas: puntos de la gráfica (mejor arriba)', () => {
+  assert(puntosGrafica([1, 3], 100, 40) === '0,40 100,0', 'mayor es mejor: el 3 arriba');
+  assert(puntosGrafica([300, 200], 100, 40, true) === '0,40 100,0', 'menor es mejor: el 200 arriba');
+  assert(puntosGrafica([7], 100, 40) === '0,20 100,20', 'una partida: plana a media altura');
+  assert(puntosGrafica([5, 5, 5], 100, 40) === '0,20 50,20 100,20', 'todas iguales: plana');
+  assert(puntosGrafica([], 100, 40) === '');
+});
