@@ -8,14 +8,19 @@ export function alargar(secuencia, rnd = Math.random) {
   return [...secuencia, azar(COLORES.length, rnd)];
 }
 
+// Milisegundos por color [al empezar, mínimo] según la dificultad.
+const VELOCIDAD = { facil: [800, 350], normal: [600, 250], dificil: [400, 180] };
+
 // Milisegundos que se ilumina cada color. A partir de la ronda 5 va un poco más rápido.
-export function pausa(ronda) {
-  return ronda < 5 ? 600 : Math.max(250, 600 - (ronda - 4) * 50);
+export function pausa(ronda, dificultad = 'normal') {
+  const [base, minimo] = VELOCIDAD[dificultad];
+  return ronda < 5 ? base : Math.max(minimo, base - (ronda - 4) * 50);
 }
 
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export function start(pantalla, alTerminar) {
+export function start(pantalla, alTerminar, opciones = {}) {
+  const { dificultad = 'normal' } = opciones;
   let secuencia = [];
   let pos = 0;
   let turno = false; // true cuando el jugador puede tocar
@@ -39,7 +44,7 @@ export function start(pantalla, alTerminar) {
     turno = false;
     estado.textContent = `Ronda ${secuencia.length} — Mira…`;
     mensaje.textContent = '';
-    const ms = pausa(secuencia.length);
+    const ms = pausa(secuencia.length, dificultad);
     await esperar(600);
     for (const i of secuencia) {
       if (parado) return;

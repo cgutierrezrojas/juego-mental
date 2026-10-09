@@ -447,3 +447,33 @@ probar('modos: partidas antiguas cuentan como Normal + Normal; filtrar por modo 
   assert(n.calculo.map((p) => p.puntos).join() === '1,3' && n.rayo.length === 0, JSON.stringify(n));
   assert(h.calculo.length === 3, 'no modifica el original');
 });
+
+// --- dificultad en Memoria, Puzzle y Topos ---
+
+probar('memoria: velocidad según la dificultad (sin dificultad, la de siempre)', () => {
+  assert(pausa(1, 'facil') === 800 && pausa(1, 'normal') === 600 && pausa(1, 'dificil') === 400);
+  assert(pausa(1) === 600 && pausa(10) === pausa(10, 'normal'));
+  assert(pausa(100, 'facil') === 350 && pausa(100, 'normal') === 250 && pausa(100, 'dificil') === 180, 'mínimos');
+  assert(pausa(6, 'dificil') < pausa(4, 'dificil'), 'también acelera en difícil');
+});
+
+probar('topos: duración según la dificultad (sin dificultad, la de siempre)', () => {
+  assert(duracionTopo(0, 'facil') === 1300 && duracionTopo(0, 'normal') === 1000 && duracionTopo(0, 'dificil') === 750);
+  assert(duracionTopo(10) === 750 && duracionTopo(10, 'normal') === 750);
+  assert(duracionTopo(100, 'facil') === 600 && duracionTopo(100, 'dificil') === 350, 'mínimos');
+  assert(duracionTopo(4, 'dificil') === 650);
+});
+
+probar('puzzle: más movimientos al barajar = más desordenado', () => {
+  const fuera = (t) => t.filter((v, i) => v !== 0 && v !== RESUELTO[i]).length;
+  let poco = 0;
+  let mucho = 0;
+  for (let i = 0; i < 300; i++) {
+    const a = barajarPuzzle(Math.random, 20);
+    const b = barajarPuzzle(Math.random, 300);
+    assert(!resuelto(a) && !resuelto(b), 'salió resuelto');
+    poco += fuera(a);
+    mucho += fuera(b);
+  }
+  assert(poco < mucho, `media con 20: ${poco / 300}, con 300: ${mucho / 300}`);
+});

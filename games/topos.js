@@ -2,9 +2,16 @@
 import { azar, el, temporizador, pintarReloj } from './comun.js';
 import { destello } from './efectos.js';
 
-export const duracionTopo = (aciertos) => Math.max(450, 1000 - aciertos * 25);
+// Milisegundos que dura cada topo [al empezar, mínimo] según la dificultad.
+const DURACION = { facil: [1300, 600], normal: [1000, 450], dificil: [750, 350] };
 
-export function start(pantalla, alTerminar) {
+export function duracionTopo(aciertos, dificultad = 'normal') {
+  const [base, minimo] = DURACION[dificultad];
+  return Math.max(minimo, base - aciertos * 25);
+}
+
+export function start(pantalla, alTerminar, opciones = {}) {
+  const { dificultad = 'normal' } = opciones;
   let aciertos = 0;
   let errores = 0;
   let topo = -1; // casilla con el topo (-1: ninguna)
@@ -35,7 +42,7 @@ export function start(pantalla, alTerminar) {
     anterior = topo;
     casillas[topo].classList.add('topo');
     casillas[topo].textContent = '🐹';
-    id = setTimeout(esconder, duracionTopo(aciertos));
+    id = setTimeout(esconder, duracionTopo(aciertos, dificultad));
   }
 
   // Quita el topo y saca el siguiente 200 ms después.

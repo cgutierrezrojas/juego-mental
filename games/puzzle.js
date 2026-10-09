@@ -23,11 +23,11 @@ export function mover(tablero, i) {
 
 export const resuelto = (tablero) => tablero.every((v, i) => v === RESUELTO[i]);
 
-// 100 movimientos válidos al azar desde el resuelto: siempre tiene solución.
-export function barajarPuzzle(rnd = Math.random) {
+// Movimientos válidos al azar desde el resuelto (100 en Normal): siempre tiene solución.
+export function barajarPuzzle(rnd = Math.random, movimientos = 100) {
   let tablero = RESUELTO;
   do {
-    for (let k = 0; k < 100; k++) {
+    for (let k = 0; k < movimientos; k++) {
       const opciones = vecinas(tablero.indexOf(0));
       tablero = mover(tablero, opciones[azar(opciones.length, rnd)]);
     }
@@ -35,8 +35,12 @@ export function barajarPuzzle(rnd = Math.random) {
   return tablero;
 }
 
-export function start(pantalla, alTerminar) {
-  let tablero = barajarPuzzle();
+// Movimientos al barajar según la dificultad.
+const DESORDEN = { facil: 20, normal: 100, dificil: 300 };
+
+export function start(pantalla, alTerminar, opciones = {}) {
+  const { dificultad = 'normal' } = opciones;
+  let tablero = barajarPuzzle(Math.random, DESORDEN[dificultad]);
   let movimientos = 0;
   let terminado = false;
   let id;
