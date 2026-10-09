@@ -8,6 +8,7 @@ import * as calculo from './games/calculo.js';
 import * as atencion from './games/atencion.js';
 import * as memoria from './games/memoria.js';
 import * as series from './games/series.js';
+import * as sobra from './games/sobra.js';
 import { el, leer, guardar, esRecord } from './games/comun.js';
 import { sonar, callar, activo, alternar, puedeVibrar } from './games/efectos.js';
 
@@ -16,6 +17,7 @@ const JUEGOS = [
   { id: 'atencion', nombre: 'Atención', categoria: 'Clásicos', icono: '👁', color: 'azul', instrucciones: 'Toca el color de la tinta, no lo que dice la palabra.', juego: atencion },
   { id: 'memoria', nombre: 'Memoria', categoria: 'Clásicos', icono: '🧠', color: 'verde', instrucciones: 'Mira la secuencia de colores y repítela. Cada ronda, uno más.', juego: memoria },
   { id: 'series', nombre: 'Series', categoria: 'Lógica', icono: '🔢', color: 'amarillo', instrucciones: '¿Qué número sigue? Descubre la regla de cada serie. 60 segundos.', juego: series },
+  { id: 'sobra', nombre: '¿Cuál sobra?', categoria: 'Lógica', icono: '🧩', color: 'rojo', instrucciones: 'Tres números siguen una regla y uno no: toca el que sobra. 60 segundos.', juego: sobra },
 ];
 
 const $ = (id) => document.getElementById(id);

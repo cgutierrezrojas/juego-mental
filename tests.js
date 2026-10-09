@@ -237,3 +237,30 @@ probar('series: 5 enteros >= 0 que siguen un tipo permitido en cada tramo', () =
     }
   }
 });
+
+// --- sobra.js ---
+import { REGLAS, reglasDisponibles, distinto, generarRonda as rondaSobra } from './games/sobra.js';
+
+probar('sobra: 3 cumplen la regla, el que sobra no, y ninguna otra regla señala a otro', () => {
+  for (const [aciertos, max] of [[0, 20], [7, 50], [12, 100]]) {
+    const nombres = reglasDisponibles(aciertos).map((r) => r.nombre);
+    for (let i = 0; i < 500; i++) {
+      const { numeros, sobra, regla } = rondaSobra(aciertos);
+      assert(numeros.length === 4 && new Set(numeros).size === 4, `${numeros}`);
+      assert(numeros.every((n) => Number.isInteger(n) && n >= 1 && n <= max), `fuera de rango: ${numeros}`);
+      assert(nombres.includes(regla.nombre), `regla ${regla.nombre} no disponible con ${aciertos} aciertos`);
+      assert(numeros.filter(regla.cumple).length === 3 && !regla.cumple(sobra), `${numeros} / ${regla.nombre}`);
+      for (const r of REGLAS) assert([null, sobra].includes(distinto(r, numeros)), `ambiguo: ${numeros} con ${r.nombre}`);
+    }
+  }
+});
+
+probar('sobra: reglas por tramo y "distinto"', () => {
+  assert(reglasDisponibles(0).map((r) => r.nombre).join() === 'pares,impares');
+  assert(reglasDisponibles(5).length === 4);
+  assert(reglasDisponibles(10).length === 6);
+  const pares = REGLAS.find((r) => r.nombre === 'pares');
+  assert(distinto(pares, [2, 4, 6, 9]) === 9);
+  assert(distinto(pares, [1, 3, 5, 8]) === 8, 'también es raro el único que sí cumple');
+  assert(distinto(pares, [2, 4, 7, 9]) === null);
+});
