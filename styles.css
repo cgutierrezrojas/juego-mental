@@ -524,3 +524,10 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 }
 
 #final-modo:empty { display: none; }
+
+/* Título de cada fila de botones de la previa ("Modo", "Dificultad") */
+.chips-titulo {
+  align-self: center;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}

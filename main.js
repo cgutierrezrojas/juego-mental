@@ -192,20 +192,23 @@ function pintarPrevia(j) {
 
 // Filas de botones: Modo (si el juego tiene más de uno) y Dificultad (salvo Rayo).
 function pintarModos(j) {
-  const fila = (opciones, elegido, alElegir) => {
+  const fila = (titulo, opciones, elegido, alElegir) => {
     const caja = el('div', 'chips');
+    caja.setAttribute('role', 'group');
+    caja.setAttribute('aria-label', titulo);
+    caja.append(el('span', 'chips-titulo', titulo));
     for (const [valor, texto] of opciones) {
       const b = el('button', '', texto);
       b.setAttribute('aria-pressed', valor === elegido);
-      b.onclick = () => alElegir(valor);
+      b.onclick = () => { alElegir(valor); $('previa-modos').querySelector(`[aria-label="${titulo}"] button[aria-pressed="true"]`)?.focus(); };
       caja.append(b);
     }
     return caja;
   };
   const filas = [];
   const modos = j.modos ?? ['normal'];
-  if (modos.length > 1) filas.push(fila(modos.map((m) => [m, MODOS[m]]), eleccion.modo, (modo) => elegir(j, { ...eleccion, modo })));
-  if (!j.sinDificultad) filas.push(fila(Object.entries(DIFICULTADES), eleccion.dificultad, (dificultad) => elegir(j, { ...eleccion, dificultad })));
+  if (modos.length > 1) filas.push(fila('Modo', modos.map((m) => [m, MODOS[m]]), eleccion.modo, (modo) => elegir(j, { ...eleccion, modo })));
+  if (!j.sinDificultad) filas.push(fila('Dificultad', Object.entries(DIFICULTADES), eleccion.dificultad, (dificultad) => elegir(j, { ...eleccion, dificultad })));
   $('previa-modos').replaceChildren(...filas);
 }
 
