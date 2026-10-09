@@ -71,3 +71,10 @@ export function pintarReloj(span, segundos) {
   span.textContent = `⏱ ${segundos}`;
   span.classList.toggle('aviso', segundos <= 10);
 }
+
+// ¿Bate el récord? Una puntuación de 0 nunca lo es; sin récord guardado (0), cualquier otra sí.
+export function esRecord(puntos, record, menorEsMejor = false) {
+  if (puntos <= 0) return false;
+  if (record <= 0) return true;
+  return menorEsMejor ? puntos < record : puntos > record;
+}

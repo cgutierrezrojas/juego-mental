@@ -1,5 +1,5 @@
 // Pruebas de la lógica pura. Se ejecutan con `node tests.js` o abriendo tests.html.
-import { azar, barajar, leer, temporizador } from './games/comun.js';
+import { azar, barajar, leer, temporizador, esRecord } from './games/comun.js';
 import { encendido } from './games/efectos.js';
 
 function probar(nombre, fn) {
@@ -188,4 +188,18 @@ probar('ajustes: sonido y vibración encendidos salvo que se hayan apagado', () 
   assert(encendido(null) === true, 'sin nada guardado debe estar encendido');
   assert(encendido('1') === true);
   assert(encendido('0') === false);
+});
+
+// --- récords ---
+
+probar('récords: mayor es mejor, menor es mejor, sin récord y puntuación 0', () => {
+  assert(esRecord(10, 5) === true);
+  assert(esRecord(5, 10) === false);
+  assert(esRecord(5, 5) === false, 'empatar no es récord');
+  assert(esRecord(200, 250, true) === true);
+  assert(esRecord(300, 250, true) === false);
+  assert(esRecord(300, 0, true) === true, 'sin récord guardado, cualquier puntuación lo bate');
+  assert(esRecord(7, 0) === true);
+  assert(esRecord(0, 0) === false, '0 nunca es récord');
+  assert(esRecord(0, 5, true) === false, '0 nunca es récord, tampoco en menor es mejor');
 });

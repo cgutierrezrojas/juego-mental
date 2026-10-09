@@ -1,18 +1,19 @@
 // Menú, navegación entre pantallas, récords y tema.
 
-// Cada juego: { id, nombre, color, instrucciones, juego }. `juego` es un módulo con start(pantalla, alTerminar),
-// que devuelve una función parar(); `color` es el nombre de su variable CSS.
+// Cada juego: { id, nombre, categoria, icono, color, instrucciones, juego } y, si hace falta, `unidad`
+// (texto tras la puntuación) y `menorEsMejor` (récord = puntuación más baja). `juego` es un módulo con
+// start(pantalla, alTerminar), que devuelve una función parar(); `color` es el nombre de su variable CSS.
 // Para añadir un juego: crear el archivo en games/, importarlo arriba y añadir su entrada aquí.
 import * as calculo from './games/calculo.js';
 import * as atencion from './games/atencion.js';
 import * as memoria from './games/memoria.js';
-import { el, leer, guardar } from './games/comun.js';
+import { el, leer, guardar, esRecord } from './games/comun.js';
 import { sonar, callar, activo, alternar, puedeVibrar } from './games/efectos.js';
 
 const JUEGOS = [
-  { id: 'calculo', nombre: 'Cálculo', color: 'rojo', instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
-  { id: 'atencion', nombre: 'Atención', color: 'azul', instrucciones: 'Toca el color de la tinta, no lo que dice la palabra.', juego: atencion },
-  { id: 'memoria', nombre: 'Memoria', color: 'verde', instrucciones: 'Mira la secuencia de colores y repítela. Cada ronda, uno más.', juego: memoria },
+  { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
+  { id: 'atencion', nombre: 'Atención', categoria: 'Clásicos', icono: '👁', color: 'azul', instrucciones: 'Toca el color de la tinta, no lo que dice la palabra.', juego: atencion },
+  { id: 'memoria', nombre: 'Memoria', categoria: 'Clásicos', icono: '🧠', color: 'verde', instrucciones: 'Mira la secuencia de colores y repítela. Cada ronda, uno más.', juego: memoria },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -23,6 +24,9 @@ function leerRecord(id) {
   return Number(leer('record:' + id)) || 0;
 }
 
+// "245 ms", "12 movimientos" o solo "7" si el juego no tiene unidad.
+const conUnidad = (j, n) => (j.unidad ? `${n} ${j.unidad}` : `${n}`);
+
 function mostrar(id) {
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== id;
   $('btn-salir').hidden = id !== 'juego';
@@ -32,7 +36,8 @@ function abrirPrevia(j) {
   actual = j;
   $('previa-nombre').textContent = j.nombre;
   $('previa-instrucciones').textContent = j.instrucciones;
-  $('previa-record').textContent = leerRecord(j.id);
+  const record = leerRecord(j.id);
+  $('previa-record').textContent = record ? conUnidad(j, record) : '—';
   mostrar('previa');
 }
 
@@ -61,9 +66,9 @@ function jugar() {
 
 function terminar(puntos) {
   parar = null;
-  const nuevo = puntos > leerRecord(actual.id);
+  const nuevo = esRecord(puntos, leerRecord(actual.id), actual.menorEsMejor);
   if (nuevo) guardar('record:' + actual.id, puntos);
-  $('final-puntos').textContent = puntos;
+  $('final-puntos').textContent = conUnidad(actual, puntos);
   $('final-record').hidden = !nuevo;
   mostrar('final');
   if (nuevo) {
@@ -121,13 +126,19 @@ $('btn-vibracion').onclick = () => {
 $('btn-vibracion').hidden = !puedeVibrar();
 pintarAjustes();
 
-for (const j of JUEGOS) {
-  const b = document.createElement('button');
-  b.className = 'grande color';
-  b.style.setProperty('--c', `var(--${j.color})`);
-  b.textContent = j.nombre;
-  b.onclick = () => abrirPrevia(j);
-  $('lista-juegos').append(b);
+// Menú: tarjetas en cuadrícula, agrupadas por categoría (las categorías sin juegos no se dibujan).
+for (const categoria of ['Clásicos', 'Lógica', 'Reacción']) {
+  const juegos = JUEGOS.filter((j) => j.categoria === categoria);
+  if (!juegos.length) continue;
+  const rejilla = el('div', 'rejilla');
+  for (const j of juegos) {
+    const b = el('button', 'tarjeta color');
+    b.style.setProperty('--c', `var(--${j.color})`);
+    b.append(el('span', 'icono', j.icono), el('span', '', j.nombre));
+    b.onclick = () => abrirPrevia(j);
+    rejilla.append(b);
+  }
+  $('lista-juegos').append(el('h3', 'categoria', categoria), rejilla);
 }
 
 $('btn-jugar').onclick = jugar;
