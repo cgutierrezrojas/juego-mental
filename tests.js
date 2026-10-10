@@ -477,3 +477,33 @@ probar('puzzle: más movimientos al barajar = más desordenado', () => {
   }
   assert(poco < mucho, `media con 20: ${poco / 300}, con 300: ${mucho / 300}`);
 });
+
+// --- niveles.js ---
+import { NUM_NIVELES, configNivel, desbloqueado, nuevoProgreso } from './games/niveles.js';
+
+probar('niveles: configuración de los niveles 1, 11 y 20', () => {
+  const c = (id, n) => { const x = configNivel(id, n); return `${x.meta}/${x.segundos}/${x.aciertosIniciales}/${x.dificultad}`; };
+  for (const id of ['calculo', 'series', 'sobra']) {
+    assert(c(id, 1) === '6/30/0/normal' && c(id, 11) === '11/30/10/normal' && c(id, 20) === '16/30/19/normal', `${id}: ${c(id, 1)} ${c(id, 11)} ${c(id, 20)}`);
+  }
+  assert(c('atencion', 1) === '7/30/0/normal' && c('atencion', 10) === '16/30/0/normal' && c('atencion', 11) === '17/30/0/dificil' && c('atencion', 20) === '26/30/0/dificil');
+  assert(configNivel('memoria', 1).meta === 3 && configNivel('memoria', 11).meta === 9 && configNivel('memoria', 20).meta === 14);
+  assert(configNivel('memoria', 10).dificultad === 'normal' && configNivel('memoria', 11).dificultad === 'dificil');
+  assert(c('topos', 1) === '11/30/0/facil' && c('topos', 6) === '16/30/0/facil' && c('topos', 7) === '17/30/0/normal' && c('topos', 14) === '24/30/0/dificil' && c('topos', 20) === '30/30/0/dificil');
+  assert(configNivel('calculo', 4).texto === '8 aciertos en 30 s' && configNivel('memoria', 4).texto === 'secuencia de 5 colores' && configNivel('topos', 4).texto === '14 puntos en 30 s');
+  assert(configNivel('rayo', 1) === null && configNivel('puzzle', 1) === null);
+});
+
+probar('niveles: las metas nunca bajan de un nivel al siguiente', () => {
+  for (const id of ['calculo', 'atencion', 'series', 'sobra', 'memoria', 'topos']) {
+    for (let n = 2; n <= NUM_NIVELES; n++) assert(configNivel(id, n).meta >= configNivel(id, n - 1).meta, `${id} nivel ${n}`);
+  }
+});
+
+probar('niveles: desbloqueo y progreso', () => {
+  assert(desbloqueado(0, 1) && !desbloqueado(0, 2), 'sin superar nada solo está el 1');
+  assert(desbloqueado(3, 1) && desbloqueado(3, 4) && !desbloqueado(3, 5));
+  assert(nuevoProgreso(3, 4, true) === 4, 'superar el siguiente sube');
+  assert(nuevoProgreso(3, 2, true) === 3, 'superar uno más bajo no cambia');
+  assert(nuevoProgreso(3, 4, false) === 3, 'no superado no cambia');
+});

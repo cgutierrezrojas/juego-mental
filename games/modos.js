@@ -1,6 +1,6 @@
 // Modos de juego y dificultades: nombres visibles, claves de récord y filtros. Todo puro.
 
-export const MODOS = { normal: 'Normal', rapido: 'Rápido', sinfallo: 'Hasta fallar' };
+export const MODOS = { normal: 'Normal', rapido: 'Rápido', sinfallo: 'Hasta fallar', niveles: '🪜 Niveles' };
 export const DIFICULTADES = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil' };
 
 // Normal + Normal conserva la clave de siempre (así no se pierden los récords que ya había).
