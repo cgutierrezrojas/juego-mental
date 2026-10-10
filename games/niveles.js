@@ -8,7 +8,8 @@ export const NUM_NIVELES = 20;
 export function configNivel(id, n) {
   if (['calculo', 'series', 'sobra'].includes(id)) {
     const meta = 6 + Math.floor(n / 2);
-    return { meta, segundos: 30, aciertosIniciales: n - 1, dificultad: 'normal', texto: `${meta} aciertos en 30 s` };
+    const segundos = id === 'calculo' ? 30 : 60; // Series y ¿Cuál sobra? piensan más por pregunta
+    return { meta, segundos, aciertosIniciales: n - 1, dificultad: 'normal', texto: `${meta} aciertos en ${segundos} s` };
   }
   if (id === 'atencion') {
     const meta = 6 + n;

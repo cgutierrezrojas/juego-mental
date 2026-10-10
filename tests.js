@@ -483,9 +483,11 @@ import { NUM_NIVELES, configNivel, desbloqueado, nuevoProgreso } from './games/n
 
 probar('niveles: configuración de los niveles 1, 11 y 20', () => {
   const c = (id, n) => { const x = configNivel(id, n); return `${x.meta}/${x.segundos}/${x.aciertosIniciales}/${x.dificultad}`; };
-  for (const id of ['calculo', 'series', 'sobra']) {
-    assert(c(id, 1) === '6/30/0/normal' && c(id, 11) === '11/30/10/normal' && c(id, 20) === '16/30/19/normal', `${id}: ${c(id, 1)} ${c(id, 11)} ${c(id, 20)}`);
+  assert(c('calculo', 1) === '6/30/0/normal' && c('calculo', 11) === '11/30/10/normal' && c('calculo', 20) === '16/30/19/normal');
+  for (const id of ['series', 'sobra']) {
+    assert(c(id, 1) === '6/60/0/normal' && c(id, 11) === '11/60/10/normal' && c(id, 20) === '16/60/19/normal', `${id}: ${c(id, 1)} ${c(id, 11)} ${c(id, 20)}`);
   }
+  assert(configNivel('series', 4).texto === '8 aciertos en 60 s');
   assert(c('atencion', 1) === '7/30/0/normal' && c('atencion', 10) === '16/30/0/normal' && c('atencion', 11) === '17/30/0/dificil' && c('atencion', 20) === '26/30/0/dificil');
   assert(configNivel('memoria', 1).meta === 3 && configNivel('memoria', 11).meta === 9 && configNivel('memoria', 20).meta === 14);
   assert(configNivel('memoria', 10).dificultad === 'normal' && configNivel('memoria', 11).dificultad === 'dificil');

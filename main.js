@@ -205,6 +205,8 @@ function pintarPrevia(j) {
 function pintarNiveles(j) {
   const superado = leerNivelSuperado(j.id);
   const rejilla = el('div', 'niveles');
+  rejilla.setAttribute('role', 'group');
+  rejilla.setAttribute('aria-label', 'Nivel');
   for (let n = 1; n <= NUM_NIVELES; n++) {
     const libre = desbloqueado(superado, n);
     const b = el('button', '', n <= superado ? `⭐${n}` : libre ? `${n}` : `🔒${n}`);
@@ -214,10 +216,13 @@ function pintarNiveles(j) {
     b.onclick = () => {
       nivelElegido = n;
       pintarNiveles(j);
+      $('previa-niveles').querySelector('[aria-pressed="true"]').focus(); // la cuadrícula se rehízo: devolver el foco
     };
     rejilla.append(b);
   }
-  $('previa-niveles').replaceChildren(rejilla, el('p', 'objetivo', `Nivel ${nivelElegido}: ${configNivel(j.id, nivelElegido).texto}`));
+  const objetivo = el('p', 'objetivo', `Nivel ${nivelElegido}: ${configNivel(j.id, nivelElegido).texto}`);
+  objetivo.setAttribute('aria-live', 'polite'); // se anuncia al cambiar de nivel
+  $('previa-niveles').replaceChildren(rejilla, objetivo);
 }
 
 // Filas de botones: Modo (si el juego tiene más de uno) y Dificultad (salvo Rayo).
@@ -286,7 +291,7 @@ function terminar(puntos) {
   const entrenoAntes = entrenoCompleto(hoy, idsPorCategoria, historiales());
   const enNiveles = eleccion.modo === 'niveles';
   const partida = { fecha: hoy, cuando: Date.now(), puntos, ms: Date.now() - inicio, ...eleccion };
-  if (enNiveles) partida.nivel = nivelElegido;
+  if (enNiveles) Object.assign(partida, { dificultad: configNivel(actual.id, nivelElegido).dificultad, nivel: nivelElegido });
   guardarPartida(actual.id, partida);
   // ¿Esta partida es la que completa el entrenamiento de hoy?
   const entrenoHoy = !entrenoAntes && entrenoCompleto(hoy, idsPorCategoria, historiales());

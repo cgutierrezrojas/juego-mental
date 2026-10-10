@@ -8,7 +8,7 @@ Segunda entrega de la fase C. Añade el modo **🪜 Niveles**: 20 niveles por ju
 
 | Juego | Objetivo del nivel N (1–20) | Dificultad del nivel |
 |---|---|---|
-| Cálculo, Series, ¿Cuál sobra? | `6 + ⌊N/2⌋` aciertos en 30 s (6 → 16) | las preguntas empiezan como si ya llevaras `N − 1` aciertos |
+| Cálculo, Series, ¿Cuál sobra? | `6 + ⌊N/2⌋` aciertos (6 → 16) en 30 s (Cálculo) o 60 s (Series, ¿Cuál sobra?) | las preguntas empiezan como si ya llevaras `N − 1` aciertos |
 | Atención | `6 + N` puntos en 30 s (7 → 26) | Normal del 1 al 10; Difícil (botones barajados) del 11 al 20 |
 | Memoria | secuencia de `3 + ⌊N × 0,55⌋` colores (3 → 14) | velocidad Normal del 1 al 10; Difícil del 11 al 20 |
 | Topos | `10 + N` puntos en 30 s (11 → 30) | Fácil (1–6), Normal (7–13), Difícil (14–20) |
