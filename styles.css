@@ -531,3 +531,48 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   font-size: 0.85rem;
   opacity: 0.75;
 }
+
+/* Previa: cuadrícula de niveles */
+#previa-niveles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#previa-niveles[hidden],
+#previa-historial[hidden] { display: none; } /* su display: flex anularía el atributo hidden */
+
+.niveles {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.niveles button {
+  padding: 8px 0;
+  font-size: 0.95rem;
+}
+
+.niveles button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.niveles button[aria-pressed="true"] {
+  background: var(--acento);
+  color: #fff;
+}
+
+[data-tema="oscuro"] .niveles button[aria-pressed="true"] {
+  background: transparent;
+  color: var(--acento);
+  border-color: var(--acento);
+  box-shadow: 0 0 8px var(--acento);
+}
+
+.objetivo { margin: 0; font-weight: 700; }
+
+#final-nivel {
+  margin: 0;
+  font-weight: 900;
+}

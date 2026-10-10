@@ -20,16 +20,17 @@ import {
   mejorRacha, entrenosCompletados, perfil,
 } from './games/estadisticas.js';
 import { MODOS, DIFICULTADES, claveRecord, esDe, filtrar, etiqueta } from './games/modos.js';
+import { NUM_NIVELES, configNivel, desbloqueado, nuevoProgreso } from './games/niveles.js';
 
 const JUEGOS = [
-  { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
-  { id: 'atencion', nombre: 'Atención', categoria: 'Clásicos', icono: '👁', color: 'azul', habilidad: 'Atención', referencia: 40, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Toca el color de la tinta, no lo que dice la palabra.', juego: atencion },
-  { id: 'memoria', nombre: 'Memoria', categoria: 'Clásicos', icono: '🧠', color: 'verde', habilidad: 'Memoria', referencia: 12, instrucciones: 'Mira la secuencia de colores y repítela. Cada ronda, uno más.', juego: memoria },
-  { id: 'series', nombre: 'Series', categoria: 'Lógica', icono: '🔢', color: 'amarillo', habilidad: 'Lógica', referencia: 20, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: '¿Qué número sigue? Descubre la regla de cada serie. 60 segundos.', juego: series },
-  { id: 'sobra', nombre: '¿Cuál sobra?', categoria: 'Lógica', icono: '🔍', color: 'rojo', habilidad: 'Lógica', referencia: 20, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Tres números siguen una regla y uno no: toca el que sobra. 60 segundos.', juego: sobra },
+  { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
+  { id: 'atencion', nombre: 'Atención', categoria: 'Clásicos', icono: '👁', color: 'azul', habilidad: 'Atención', referencia: 40, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Toca el color de la tinta, no lo que dice la palabra.', juego: atencion },
+  { id: 'memoria', nombre: 'Memoria', categoria: 'Clásicos', icono: '🧠', color: 'verde', habilidad: 'Memoria', referencia: 12, modos: ['normal', 'niveles'], instrucciones: 'Mira la secuencia de colores y repítela. Cada ronda, uno más.', juego: memoria },
+  { id: 'series', nombre: 'Series', categoria: 'Lógica', icono: '🔢', color: 'amarillo', habilidad: 'Lógica', referencia: 20, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: '¿Qué número sigue? Descubre la regla de cada serie. 60 segundos.', juego: series },
+  { id: 'sobra', nombre: '¿Cuál sobra?', categoria: 'Lógica', icono: '🔍', color: 'rojo', habilidad: 'Lógica', referencia: 20, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Tres números siguen una regla y uno no: toca el que sobra. 60 segundos.', juego: sobra },
   { id: 'puzzle', nombre: 'Puzzle', categoria: 'Lógica', icono: '🧩', color: 'azul', habilidad: 'Lógica', referencia: 30, unidad: 'movimientos', menorEsMejor: true, instrucciones: 'Ordena las fichas del 1 al 8 con los menos movimientos posibles.', juego: puzzle },
   { id: 'rayo', nombre: 'Rayo', categoria: 'Reacción', icono: '⚡', color: 'amarillo', habilidad: 'Reacción', referencia: 250, unidad: 'ms', menorEsMejor: true, sinDificultad: true, instrucciones: 'Cuando se ponga verde, ¡toca! 5 intentos; cuenta tu tiempo medio.', juego: rayo },
-  { id: 'topos', nombre: 'Topos', categoria: 'Reacción', icono: '🔨', color: 'verde', habilidad: 'Reacción', referencia: 40, instrucciones: 'Toca cada topo antes de que se esconda. Tocar una casilla vacía resta. 30 segundos.', juego: topos },
+  { id: 'topos', nombre: 'Topos', categoria: 'Reacción', icono: '🔨', color: 'verde', habilidad: 'Reacción', referencia: 40, modos: ['normal', 'niveles'], instrucciones: 'Toca cada topo antes de que se esconda. Tocar una casilla vacía resta. 30 segundos.', juego: topos },
 ];
 
 const CATEGORIAS = ['Clásicos', 'Lógica', 'Reacción'];
@@ -44,6 +45,7 @@ let actual = null;
 let parar = null; // detiene el juego en curso (la devuelve start)
 let inicio = 0; // cuándo empezó el juego en curso (tras la cuenta atrás), para medir su duración
 let eleccion = { modo: 'normal', dificultad: 'normal' }; // modo y dificultad elegidos para el juego abierto
+let nivelElegido = 1; // nivel seleccionado en el modo Niveles
 
 const leerRecord = (clave) => Number(leer(clave)) || 0;
 
@@ -55,6 +57,9 @@ function leerEleccion(j) {
     dificultad: !j.sinDificultad && dificultad in DIFICULTADES ? dificultad : 'normal',
   };
 }
+
+// Nivel más alto superado de un juego (0 si ninguno).
+const leerNivelSuperado = (id) => Number(leer('niveles:' + id)) || 0;
 
 // "245 ms", "12 movimientos" o solo "7" si el juego no tiene unidad.
 const conUnidad = (j, n) => (j.unidad ? `${n} ${j.unidad}` : `${n}`);
@@ -176,18 +181,43 @@ function mostrar(id) {
 function abrirPrevia(j) {
   actual = j;
   eleccion = leerEleccion(j);
+  nivelElegido = Math.min(leerNivelSuperado(j.id) + 1, NUM_NIVELES);
   pintarPrevia(j);
   mostrar('previa');
 }
 
-// Nombre, instrucciones, botones de modo/dificultad, y récord y gráfica de la elección actual.
+// Nombre, instrucciones, botones de modo/dificultad y, según el modo, récord y gráfica o la cuadrícula de niveles.
 function pintarPrevia(j) {
   $('previa-nombre').textContent = j.nombre;
   $('previa-instrucciones').textContent = j.instrucciones;
   pintarModos(j);
+  const enNiveles = eleccion.modo === 'niveles';
+  $('previa-record-linea').hidden = enNiveles;
+  $('previa-historial').hidden = enNiveles;
+  $('previa-niveles').hidden = !enNiveles;
+  if (enNiveles) return pintarNiveles(j);
   const record = leerRecord(claveRecord(j.id, eleccion.modo, eleccion.dificultad));
   $('previa-record').textContent = record ? conUnidad(j, record) : '—';
   pintarHistorial(j);
+}
+
+// Cuadrícula de niveles (⭐ superados, 🔒 bloqueados) y el objetivo del nivel elegido.
+function pintarNiveles(j) {
+  const superado = leerNivelSuperado(j.id);
+  const rejilla = el('div', 'niveles');
+  for (let n = 1; n <= NUM_NIVELES; n++) {
+    const libre = desbloqueado(superado, n);
+    const b = el('button', '', n <= superado ? `⭐${n}` : libre ? `${n}` : `🔒${n}`);
+    b.disabled = !libre;
+    b.setAttribute('aria-pressed', n === nivelElegido);
+    b.setAttribute('aria-label', `Nivel ${n}${n <= superado ? ', superado' : libre ? '' : ', bloqueado'}`);
+    b.onclick = () => {
+      nivelElegido = n;
+      pintarNiveles(j);
+    };
+    rejilla.append(b);
+  }
+  $('previa-niveles').replaceChildren(rejilla, el('p', 'objetivo', `Nivel ${nivelElegido}: ${configNivel(j.id, nivelElegido).texto}`));
 }
 
 // Filas de botones: Modo (si el juego tiene más de uno) y Dificultad (salvo Rayo).
@@ -208,7 +238,8 @@ function pintarModos(j) {
   const filas = [];
   const modos = j.modos ?? ['normal'];
   if (modos.length > 1) filas.push(fila('Modo', modos.map((m) => [m, MODOS[m]]), eleccion.modo, (modo) => elegir(j, { ...eleccion, modo })));
-  if (!j.sinDificultad) filas.push(fila('Dificultad', Object.entries(DIFICULTADES), eleccion.dificultad, (dificultad) => elegir(j, { ...eleccion, dificultad })));
+  // En Niveles la dificultad la pone cada nivel.
+  if (!j.sinDificultad && eleccion.modo !== 'niveles') filas.push(fila('Dificultad', Object.entries(DIFICULTADES), eleccion.dificultad, (dificultad) => elegir(j, { ...eleccion, dificultad })));
   $('previa-modos').replaceChildren(...filas);
 }
 
@@ -216,6 +247,13 @@ function elegir(j, e) {
   eleccion = e;
   guardar('eleccion:' + j.id, `${e.modo}|${e.dificultad}`);
   pintarPrevia(j);
+}
+
+// Lo que recibe start: la elección o, en Niveles, la configuración del nivel elegido.
+function opcionesDeJuego() {
+  if (eleccion.modo !== 'niveles') return eleccion;
+  const nivel = configNivel(actual.id, nivelElegido);
+  return { modo: 'niveles', dificultad: nivel.dificultad, nivel };
 }
 
 // Cuenta atrás 3-2-1 y después empieza el juego. Mientras, ✕ la cancela con parar().
@@ -230,7 +268,7 @@ function jugar() {
     if (n === 0) {
       tablero.replaceChildren();
       inicio = Date.now();
-      parar = actual.juego.start(tablero, terminar, eleccion);
+      parar = actual.juego.start(tablero, terminar, opcionesDeJuego());
       return;
     }
     tablero.replaceChildren(el('div', 'cuenta', n));
@@ -246,18 +284,42 @@ function terminar(puntos) {
   parar = null;
   const hoy = fechaLocal();
   const entrenoAntes = entrenoCompleto(hoy, idsPorCategoria, historiales());
-  guardarPartida(actual.id, { fecha: hoy, cuando: Date.now(), puntos, ms: Date.now() - inicio, ...eleccion });
+  const enNiveles = eleccion.modo === 'niveles';
+  const partida = { fecha: hoy, cuando: Date.now(), puntos, ms: Date.now() - inicio, ...eleccion };
+  if (enNiveles) partida.nivel = nivelElegido;
+  guardarPartida(actual.id, partida);
   // ¿Esta partida es la que completa el entrenamiento de hoy?
   const entrenoHoy = !entrenoAntes && entrenoCompleto(hoy, idsPorCategoria, historiales());
-  const clave = claveRecord(actual.id, eleccion.modo, eleccion.dificultad);
-  const nuevo = esRecord(puntos, leerRecord(clave), actual.menorEsMejor);
-  if (nuevo) guardar(clave, puntos);
+  let celebrar = entrenoHoy;
   $('final-puntos').textContent = conUnidad(actual, puntos);
-  $('final-record').hidden = !nuevo;
   $('final-entreno').hidden = !entrenoHoy;
-  $('final-modo').textContent = etiqueta(eleccion.modo, eleccion.dificultad);
+
+  if (enNiveles) {
+    // Niveles: sin récord; se guarda el progreso y Repetir pasa a "Siguiente nivel" o "Reintentar".
+    const { meta, texto } = configNivel(actual.id, nivelElegido);
+    const logrado = puntos >= meta;
+    guardar('niveles:' + actual.id, nuevoProgreso(leerNivelSuperado(actual.id), nivelElegido, logrado));
+    $('final-modo').textContent = `🪜 Nivel ${nivelElegido}`;
+    $('final-nivel').textContent = logrado ? `⭐ ¡Nivel ${nivelElegido} superado!` : `Nivel no superado (objetivo: ${texto})`;
+    $('final-nivel').hidden = false;
+    $('final-record').hidden = true;
+    const siguiente = logrado && nivelElegido < NUM_NIVELES;
+    if (siguiente) nivelElegido++;
+    $('btn-repetir').textContent = siguiente ? 'Siguiente nivel' : 'Reintentar';
+    celebrar ||= logrado;
+  } else {
+    const clave = claveRecord(actual.id, eleccion.modo, eleccion.dificultad);
+    const nuevo = esRecord(puntos, leerRecord(clave), actual.menorEsMejor);
+    if (nuevo) guardar(clave, puntos);
+    $('final-record').hidden = !nuevo;
+    $('final-modo').textContent = etiqueta(eleccion.modo, eleccion.dificultad);
+    $('final-nivel').hidden = true;
+    $('btn-repetir').textContent = 'Repetir';
+    celebrar ||= nuevo;
+  }
+
   mostrar('final');
-  if (nuevo || entrenoHoy) {
+  if (celebrar) {
     confeti();
     sonar('record');
   }
