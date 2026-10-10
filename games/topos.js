@@ -10,8 +10,10 @@ export function duracionTopo(aciertos, dificultad = 'normal') {
   return Math.max(minimo, base - aciertos * 25);
 }
 
+// `opciones.nivel` (modo Niveles): reloj de `nivel.segundos` y termina al llegar a `nivel.meta` puntos.
 export function start(pantalla, alTerminar, opciones = {}) {
-  const { dificultad = 'normal' } = opciones;
+  const { dificultad = 'normal', nivel = null } = opciones;
+  let terminado = false;
   let aciertos = 0;
   let errores = 0;
   let topo = -1; // casilla con el topo (-1: ninguna)
@@ -20,7 +22,7 @@ export function start(pantalla, alTerminar, opciones = {}) {
   const puntuacion = () => Math.max(0, aciertos - errores);
 
   const tiempo = el('span');
-  const puntos = el('span', '', 'Puntos: 0');
+  const puntos = el('span', '', nivel ? `Puntos: 0/${nivel.meta}` : 'Puntos: 0');
   const marcador = el('div', 'marcador');
   marcador.append(tiempo, puntos);
   const rejilla = el('div', 'topos');
@@ -32,7 +34,7 @@ export function start(pantalla, alTerminar, opciones = {}) {
   rejilla.append(...casillas);
   pantalla.append(marcador, rejilla);
 
-  const reloj = temporizador(30, (s) => pintarReloj(tiempo, s), () => {
+  const reloj = temporizador(nivel ? nivel.segundos : 30, (s) => pintarReloj(tiempo, s), () => {
     clearTimeout(id);
     alTerminar(puntuacion());
   });
@@ -54,6 +56,7 @@ export function start(pantalla, alTerminar, opciones = {}) {
   }
 
   function tocar(i) {
+    if (terminado) return;
     const ok = i === topo;
     destello(casillas[i], ok);
     if (ok) {
@@ -63,11 +66,19 @@ export function start(pantalla, alTerminar, opciones = {}) {
     } else {
       errores++;
     }
-    puntos.textContent = `Puntos: ${puntuacion()}`;
+    puntos.textContent = nivel ? `Puntos: ${puntuacion()}/${nivel.meta}` : `Puntos: ${puntuacion()}`;
+    if (nivel && puntuacion() >= nivel.meta) {
+      // Meta del nivel alcanzada: no salen más topos y se termina tras el destello.
+      terminado = true;
+      reloj.parar();
+      clearTimeout(id);
+      id = setTimeout(() => alTerminar(puntuacion()), 400);
+    }
   }
 
   aparecer();
   return () => {
+    terminado = true;
     reloj.parar();
     clearTimeout(id);
   };

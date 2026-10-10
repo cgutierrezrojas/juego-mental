@@ -22,15 +22,17 @@ export function generarOpciones(resultado, rnd = Math.random) {
 // un texto que se enseña bajo el enunciado cuando se falla esa ronda.
 // `opciones.modo`: 'normal' (60 s), 'rapido' (30 s) o 'sinfallo' (sin reloj; el primer fallo termina).
 // `opciones.dificultad`: ajusta los aciertos que ve `generar` (ver aciertosSegun).
+// `opciones.nivel` (modo Niveles): reloj de `nivel.segundos`, preguntas desde `nivel.aciertosIniciales`
+// y la partida termina al llegar a `nivel.meta` aciertos.
 export function jugarConOpciones(pantalla, alTerminar, generar, claseEnunciado = '', opciones = {}) {
-  const { modo = 'normal', dificultad = 'normal' } = opciones;
+  const { modo = 'normal', dificultad = 'normal', nivel = null } = opciones;
   let aciertos = 0;
   let ronda;
   let terminado = false;
   let id;
 
   const tiempo = el('span');
-  const puntos = el('span', '', 'Aciertos: 0');
+  const puntos = el('span', '', nivel ? `Aciertos: 0/${nivel.meta}` : 'Aciertos: 0');
   const marcador = el('div', 'marcador');
   marcador.append(tiempo, puntos);
   const enunciado = el('div', `enunciado ${claseEnunciado}`.trim());
@@ -39,11 +41,12 @@ export function jugarConOpciones(pantalla, alTerminar, generar, claseEnunciado =
   pantalla.append(marcador, enunciado, pista, rejilla);
 
   let reloj = null;
+  const segundos = nivel ? nivel.segundos : modo === 'rapido' ? 30 : 60;
   if (modo === 'sinfallo') tiempo.textContent = '❌ Hasta fallar';
-  else reloj = temporizador(modo === 'rapido' ? 30 : 60, (s) => pintarReloj(tiempo, s), () => alTerminar(aciertos));
+  else reloj = temporizador(segundos, (s) => pintarReloj(tiempo, s), () => alTerminar(aciertos));
 
   function nueva() {
-    ronda = generar(aciertosSegun(aciertos, dificultad));
+    ronda = generar(aciertosSegun(aciertos, dificultad) + (nivel?.aciertosIniciales ?? 0));
     enunciado.textContent = ronda.texto;
     rejilla.replaceChildren(...ronda.opciones.map((n) => {
       const b = el('button', 'grande', n);
@@ -59,7 +62,14 @@ export function jugarConOpciones(pantalla, alTerminar, generar, claseEnunciado =
     pista.textContent = ok ? '' : ronda.pista ?? '';
     if (ok) {
       aciertos++;
-      puntos.textContent = `Aciertos: ${aciertos}`;
+      puntos.textContent = nivel ? `Aciertos: ${aciertos}/${nivel.meta}` : `Aciertos: ${aciertos}`;
+      if (nivel && aciertos >= nivel.meta) {
+        // Meta del nivel alcanzada: se para el reloj y se termina tras el destello.
+        terminado = true;
+        reloj?.parar();
+        id = setTimeout(() => alTerminar(aciertos), 400);
+        return;
+      }
     } else if (reloj) {
       reloj.restar(3);
     } else {

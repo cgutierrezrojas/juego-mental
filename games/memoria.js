@@ -19,8 +19,9 @@ export function pausa(ronda, dificultad = 'normal') {
 
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// `opciones.nivel` (modo Niveles): termina con éxito al completar una secuencia de `nivel.meta` colores.
 export function start(pantalla, alTerminar, opciones = {}) {
-  const { dificultad = 'normal' } = opciones;
+  const { dificultad = 'normal', nivel = null } = opciones;
   let secuencia = [];
   let pos = 0;
   let turno = false; // true cuando el jugador puede tocar
@@ -39,10 +40,13 @@ export function start(pantalla, alTerminar, opciones = {}) {
   rejilla.append(...botones);
   pantalla.append(estado, mensaje, rejilla);
 
+  // "Ronda 3" o, en Niveles, "Ronda 3 de 6".
+  const titulo = () => (nivel ? `Ronda ${secuencia.length} de ${nivel.meta}` : `Ronda ${secuencia.length}`);
+
   async function ronda() {
     secuencia = alargar(secuencia);
     turno = false;
-    estado.textContent = `Ronda ${secuencia.length} — Mira…`;
+    estado.textContent = `${titulo()} — Mira…`;
     mensaje.textContent = '';
     const ms = pausa(secuencia.length, dificultad);
     await esperar(600);
@@ -57,7 +61,7 @@ export function start(pantalla, alTerminar, opciones = {}) {
     if (parado) return;
     pos = 0;
     turno = true;
-    estado.textContent = `Ronda ${secuencia.length} — Repite`;
+    estado.textContent = `${titulo()} — Repite`;
   }
 
   function decir(texto, ok) {
@@ -78,6 +82,12 @@ export function start(pantalla, alTerminar, opciones = {}) {
     pos++;
     if (pos < secuencia.length) return decir('✓', true);
     turno = false;
+    if (nivel && secuencia.length >= nivel.meta) {
+      // Meta del nivel: secuencia completa de la longitud pedida.
+      decir('✓ ¡Nivel superado!', true);
+      setTimeout(() => { if (!parado) alTerminar(secuencia.length); }, 800);
+      return;
+    }
     decir('✓ ¡Ronda superada!', true);
     setTimeout(() => { if (!parado) ronda(); }, 800);
   }

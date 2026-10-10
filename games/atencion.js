@@ -20,8 +20,9 @@ export function puntuacion(aciertos, errores) {
 
 // `opciones.modo`: 'normal' (60 s), 'rapido' (30 s) o 'sinfallo' (sin reloj; el primer fallo termina).
 // `opciones.dificultad`: 'facil' (los errores no restan), 'normal' o 'dificil' (los botones cambian de orden en cada ronda).
+// `opciones.nivel` (modo Niveles): reloj de `nivel.segundos` y termina al llegar a `nivel.meta` puntos.
 export function start(pantalla, alTerminar, opciones = {}) {
-  const { modo = 'normal', dificultad = 'normal' } = opciones;
+  const { modo = 'normal', dificultad = 'normal', nivel = null } = opciones;
   let aciertos = 0;
   let errores = 0;
   let ronda;
@@ -29,7 +30,7 @@ export function start(pantalla, alTerminar, opciones = {}) {
   let id;
 
   const tiempo = el('span');
-  const puntos = el('span', '', 'Puntos: 0');
+  const puntos = el('span', '', nivel ? `Puntos: 0/${nivel.meta}` : 'Puntos: 0');
   const marcador = el('div', 'marcador');
   marcador.append(tiempo, puntos);
   const enunciado = el('div', 'enunciado');
@@ -45,7 +46,7 @@ export function start(pantalla, alTerminar, opciones = {}) {
 
   let reloj = null;
   if (modo === 'sinfallo') tiempo.textContent = '❌ Hasta fallar';
-  else reloj = temporizador(modo === 'rapido' ? 30 : 60, (s) => pintarReloj(tiempo, s), () => alTerminar(puntuacion(aciertos, errores)));
+  else reloj = temporizador(nivel ? nivel.segundos : modo === 'rapido' ? 30 : 60, (s) => pintarReloj(tiempo, s), () => alTerminar(puntuacion(aciertos, errores)));
 
   function nueva() {
     ronda = generarRonda();
@@ -60,7 +61,14 @@ export function start(pantalla, alTerminar, opciones = {}) {
     destello(enunciado, ok);
     if (ok) aciertos++;
     else if (dificultad !== 'facil' && modo !== 'sinfallo') errores++; // en Hasta fallar el fallo solo termina
-    puntos.textContent = `Puntos: ${puntuacion(aciertos, errores)}`;
+    puntos.textContent = nivel ? `Puntos: ${puntuacion(aciertos, errores)}/${nivel.meta}` : `Puntos: ${puntuacion(aciertos, errores)}`;
+    if (nivel && puntuacion(aciertos, errores) >= nivel.meta) {
+      // Meta del nivel alcanzada.
+      terminado = true;
+      reloj?.parar();
+      id = setTimeout(() => alTerminar(puntuacion(aciertos, errores)), 400);
+      return;
+    }
     if (!ok && modo === 'sinfallo') {
       terminado = true;
       id = setTimeout(() => alTerminar(puntuacion(aciertos, errores)), 600);
