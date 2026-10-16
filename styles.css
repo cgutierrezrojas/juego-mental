@@ -494,43 +494,12 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   gap: 6px;
 }
 
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px;
-}
-
-.chips button {
-  font-size: 0.9rem;
-  padding: 8px 12px;
-}
-
-.chips button[aria-pressed="true"] {
-  background: var(--acento);
-  color: #fff;
-}
-
-[data-tema="oscuro"] .chips button[aria-pressed="true"] {
-  background: transparent;
-  color: var(--acento);
-  border-color: var(--acento);
-  box-shadow: 0 0 8px var(--acento);
-}
-
 #final-modo {
   margin: 0;
   opacity: 0.75;
 }
 
 #final-modo:empty { display: none; }
-
-/* Título de cada fila de botones de la previa ("Modo", "Dificultad") */
-.chips-titulo {
-  align-self: center;
-  font-size: 0.85rem;
-  opacity: 0.75;
-}
 
 /* Previa: cuadrícula de niveles */
 #previa-niveles {
@@ -589,3 +558,93 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 }
 
 .menu-juegos .icono { font-size: 1.6rem; }
+
+/* Previa: cabecera grande del color del juego */
+#previa-cabecera {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 16px 12px;
+  border-radius: 18px;
+  background: var(--c);
+  color: #fff;
+  box-shadow: var(--relieve);
+}
+
+[data-tema="oscuro"] #previa-cabecera {
+  background: transparent;
+  color: var(--c);
+  border: 2px solid var(--c);
+  box-shadow: 0 0 12px var(--c);
+}
+
+#previa-icono {
+  font-size: 2.6rem;
+  line-height: 1;
+}
+
+#previa-cabecera h2 { margin: 2px 0 0; }
+#previa-cabecera p { margin: 0; font-size: 0.9rem; opacity: 0.9; }
+
+#previa-modos .categoria { margin: 4px 0 0; }
+
+/* Previa: modos en baldosas 2×2 */
+.baldosas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.baldosas button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px;
+  border-width: 3px;
+}
+
+.icono-modo { font-size: 1.6rem; line-height: 1.1; }
+.baldosas small { font-weight: 500; font-size: 0.8rem; opacity: 0.7; }
+
+.baldosas button[aria-pressed="true"] {
+  border-color: var(--acento);
+  background: color-mix(in srgb, var(--acento) 15%, var(--fondo));
+}
+
+[data-tema="oscuro"] .baldosas button[aria-pressed="true"] {
+  background: transparent;
+  color: var(--acento);
+  box-shadow: 0 0 10px var(--acento);
+}
+
+/* Previa: dificultad como interruptor de tres posiciones */
+.segmento {
+  display: flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(128, 128, 128, 0.15);
+}
+
+.segmento button {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 0.9rem;
+  border-color: transparent;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.segmento button[aria-pressed="true"] {
+  background: var(--acento);
+  color: #fff;
+}
+
+[data-tema="oscuro"] .segmento button[aria-pressed="true"] {
+  background: transparent;
+  color: var(--acento);
+  border-color: var(--acento);
+  box-shadow: 0 0 8px var(--acento);
+}

@@ -189,10 +189,13 @@ function abrirPrevia(j) {
 
 // Nombre, instrucciones, botones de modo/dificultad y, según el modo, récord y gráfica o la cuadrícula de niveles.
 function pintarPrevia(j) {
+  $('previa-cabecera').style.setProperty('--c', `var(--${j.color})`);
+  $('previa-icono').textContent = j.icono;
   $('previa-nombre').textContent = j.nombre;
   $('previa-instrucciones').textContent = j.instrucciones;
   pintarModos(j);
   const enNiveles = eleccion.modo === 'niveles';
+  $('btn-jugar').textContent = '▶ Jugar';
   $('previa-record-linea').hidden = enNiveles;
   $('previa-historial').hidden = enNiveles;
   $('previa-niveles').hidden = !enNiveles;
@@ -224,29 +227,51 @@ function pintarNiveles(j) {
   const objetivo = el('p', 'objetivo', `Nivel ${nivelElegido}: ${configNivel(j.id, nivelElegido).texto}`);
   objetivo.setAttribute('aria-live', 'polite'); // se anuncia al cambiar de nivel
   $('previa-niveles').replaceChildren(rejilla, objetivo);
+  $('btn-jugar').textContent = `▶ Jugar nivel ${nivelElegido}`;
 }
 
-// Filas de botones: Modo (si el juego tiene más de uno) y Dificultad (salvo Rayo).
+// Icono de cada modo en su baldosa y carita de cada dificultad.
+const ICONO_MODO = { normal: '⏱', rapido: '⚡', sinfallo: '❤️', niveles: '🪜' };
+const CARA = { facil: '🙂', normal: '😐', dificil: '😈' };
+
+// Subtítulo de la baldosa de un modo: duración, vidas o nivel alcanzado.
+function subtituloModo(j, modo) {
+  if (modo === 'rapido') return '30 s';
+  if (modo === 'sinfallo') return '1 vida';
+  if (modo === 'niveles') return `⭐ ${leerNivelSuperado(j.id)}`;
+  return j.duracion ?? '60 s';
+}
+
+// Modo en baldosas 2×2 (si el juego tiene más de uno) y dificultad como interruptor con caritas
+// (salvo en Niveles, donde la pone el nivel, y en Rayo).
 function pintarModos(j) {
-  const fila = (titulo, opciones, elegido, alElegir) => {
-    const caja = el('div', 'chips');
+  const grupo = (titulo, clase, opciones, elegido, alElegir) => {
+    const caja = el('div', clase);
     caja.setAttribute('role', 'group');
     caja.setAttribute('aria-label', titulo);
-    caja.append(el('span', 'chips-titulo', titulo));
-    for (const [valor, texto] of opciones) {
-      const b = el('button', '', texto);
+    for (const [valor, contenido] of opciones) {
+      const b = el('button');
+      b.append(...contenido);
       b.setAttribute('aria-pressed', valor === elegido);
-      b.onclick = () => { alElegir(valor); $('previa-modos').querySelector(`[aria-label="${titulo}"] button[aria-pressed="true"]`)?.focus(); };
+      b.onclick = () => {
+        alElegir(valor);
+        $('previa-modos').querySelector(`[aria-label="${titulo}"] button[aria-pressed="true"]`)?.focus();
+      };
       caja.append(b);
     }
-    return caja;
+    return [el('h3', 'categoria', titulo), caja];
   };
-  const filas = [];
+  const partes = [];
   const modos = j.modos ?? ['normal'];
-  if (modos.length > 1) filas.push(fila('Modo', modos.map((m) => [m, MODOS[m]]), eleccion.modo, (modo) => elegir(j, { ...eleccion, modo })));
-  // En Niveles la dificultad la pone cada nivel.
-  if (!j.sinDificultad && eleccion.modo !== 'niveles') filas.push(fila('Dificultad', Object.entries(DIFICULTADES), eleccion.dificultad, (dificultad) => elegir(j, { ...eleccion, dificultad })));
-  $('previa-modos').replaceChildren(...filas);
+  if (modos.length > 1) {
+    const baldosa = (m) => [m, [el('span', 'icono-modo', ICONO_MODO[m]), el('span', '', MODOS[m]), el('small', '', subtituloModo(j, m))]];
+    partes.push(...grupo('Modo', 'baldosas', modos.map(baldosa), eleccion.modo, (modo) => elegir(j, { ...eleccion, modo })));
+  }
+  if (!j.sinDificultad && eleccion.modo !== 'niveles') {
+    const opciones = Object.entries(DIFICULTADES).map(([d, nombre]) => [d, [`${CARA[d]} ${nombre}`]]);
+    partes.push(...grupo('Dificultad', 'segmento', opciones, eleccion.dificultad, (dificultad) => elegir(j, { ...eleccion, dificultad })));
+  }
+  $('previa-modos').replaceChildren(...partes);
 }
 
 function elegir(j, e) {
