@@ -671,3 +671,30 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   line-height: 1.5;
   white-space: pre-line;
 }
+
+/* Parejas: cartas en 4 columnas */
+.parejas {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.carta {
+  aspect-ratio: 3 / 4;
+  padding: 0;
+  font-size: 2rem;
+  background: var(--verde);
+}
+
+.carta.vista {
+  background: var(--superficie);
+  border-color: var(--verde);
+}
+
+.carta.hecha { opacity: 0.5; }
+
+[data-tema="oscuro"] .carta {
+  background: transparent;
+  border-color: var(--verde);
+  box-shadow: 0 0 6px var(--verde);
+}

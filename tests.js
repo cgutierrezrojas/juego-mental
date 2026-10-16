@@ -555,3 +555,19 @@ probar('balanza: ecuaciones coherentes y respuesta = peso de la fruta preguntada
     }
   }
 });
+
+// --- parejas.js ---
+import { repartir, SIMBOLOS } from './games/parejas.js';
+
+probar('parejas: cada símbolo aparece exactamente dos veces', () => {
+  for (const n of [4, 6, 8]) {
+    for (let i = 0; i < 100; i++) {
+      const cartas = repartir(n);
+      assert(cartas.length === 2 * n);
+      const cuenta = {};
+      for (const s of cartas) cuenta[s] = (cuenta[s] ?? 0) + 1;
+      assert(Object.keys(cuenta).length === n && Object.values(cuenta).every((x) => x === 2), JSON.stringify(cuenta));
+      assert(cartas.every((s) => SIMBOLOS.includes(s)));
+    }
+  }
+});

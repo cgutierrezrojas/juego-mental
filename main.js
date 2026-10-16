@@ -18,6 +18,7 @@ import * as topos from './games/topos.js';
 import * as mayor from './games/mayor.js';
 import * as distinto from './games/distinto.js';
 import * as balanza from './games/balanza.js';
+import * as parejas from './games/parejas.js';
 import { el, leer, guardar, esRecord } from './games/comun.js';
 import { sonar, callar, activo, alternar, puedeVibrar } from './games/efectos.js';
 import {
@@ -39,6 +40,7 @@ const JUEGOS = [
   { id: 'mayor', nombre: 'Mayor o menor', icono: '⚖️', color: 'rojo', habilidad: 'Cálculo', referencia: 35, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Toca la operación que da más. 60 segundos.', juego: mayor },
   { id: 'distinto', nombre: 'El distinto', icono: '🎯', color: 'azul', habilidad: 'Atención', referencia: 25, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Toca el cuadrado de color distinto. 60 segundos.', juego: distinto },
   { id: 'balanza', nombre: 'Balanza', icono: '🏋️', color: 'amarillo', habilidad: 'Lógica', referencia: 15, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Deduce cuánto pesa la fruta que se pregunta. 60 segundos.', juego: balanza },
+  { id: 'parejas', nombre: 'Parejas', icono: '🃏', color: 'verde', habilidad: 'Memoria', referencia: 9, unidad: 'intentos', menorEsMejor: true, instrucciones: 'Encuentra todas las parejas de cartas con los menos intentos posibles.', juego: parejas },
 ];
 
 const CATEGORIAS = ['Clásicos', 'Lógica', 'Reacción'];
