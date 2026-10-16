@@ -45,7 +45,7 @@ export function start(pantalla, alTerminar, opciones = {}) {
   pantalla.append(marcador, enunciado, rejilla);
 
   let reloj = null;
-  if (modo === 'sinfallo') tiempo.textContent = '❌ Hasta fallar';
+  if (modo === 'sinfallo') tiempo.textContent = '❤️ Sin fallar';
   else reloj = temporizador(nivel ? nivel.segundos : modo === 'rapido' ? 30 : 60, (s) => pintarReloj(tiempo, s), () => alTerminar(puntuacion(aciertos, errores)));
 
   function nueva() {

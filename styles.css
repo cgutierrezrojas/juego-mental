@@ -576,3 +576,16 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   margin: 0;
   font-weight: 900;
 }
+
+/* Menú: 3 tarjetas por fila, más compactas */
+.menu-juegos {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.menu-juegos button.tarjeta {
+  padding: 10px 4px;
+  font-size: 0.9rem;
+}
+
+.menu-juegos .icono { font-size: 1.6rem; }

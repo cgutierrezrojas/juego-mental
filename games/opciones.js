@@ -42,7 +42,7 @@ export function jugarConOpciones(pantalla, alTerminar, generar, claseEnunciado =
 
   let reloj = null;
   const segundos = nivel ? nivel.segundos : modo === 'rapido' ? 30 : 60;
-  if (modo === 'sinfallo') tiempo.textContent = '❌ Hasta fallar';
+  if (modo === 'sinfallo') tiempo.textContent = '❤️ Sin fallar';
   else reloj = temporizador(segundos, (s) => pintarReloj(tiempo, s), () => alTerminar(aciertos));
 
   function nueva() {

@@ -426,6 +426,7 @@ probar('modos: clave de récord y etiqueta', () => {
   assert(etiqueta('normal', 'normal') === '');
   assert(etiqueta('rapido', 'dificil') === 'Rápido · Difícil');
   assert(etiqueta('normal', 'facil') === 'Normal · Fácil');
+  assert(etiqueta('sinfallo', 'normal') === 'Sin fallar · Normal');
 });
 
 probar('modos: la dificultad ajusta los aciertos que ven los generadores', () => {
