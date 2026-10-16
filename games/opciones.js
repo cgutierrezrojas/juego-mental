@@ -61,7 +61,7 @@ export function jugarConOpciones(pantalla, alTerminar, generar, claseEnunciado =
   function responder(n) {
     if (terminado) return;
     const ok = n === ronda.correcta;
-    destello(enunciado, ok);
+    destello(ronda.pintar ? rejilla : enunciado, ok); // El distinto: el anillo, alrededor de la cuadrícula donde se toca
     pista.textContent = ok ? '' : ronda.pista ?? '';
     if (ok) {
       aciertos++;

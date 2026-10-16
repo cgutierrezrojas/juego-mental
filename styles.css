@@ -698,3 +698,11 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   border-color: var(--verde);
   box-shadow: 0 0 6px var(--verde);
 }
+
+/* Parejas en Neón: la carta descubierta se distingue de la tapada */
+[data-tema="oscuro"] .carta.vista {
+  background: rgba(93, 255, 155, 0.15);
+  box-shadow: 0 0 16px var(--verde);
+}
+
+.carta:disabled { cursor: default; }

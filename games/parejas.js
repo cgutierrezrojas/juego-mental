@@ -55,6 +55,8 @@ export function start(pantalla, alTerminar, opciones = {}) {
       // Pareja: se quedan descubiertas (un solo sonido de acierto).
       botones[a].classList.add('hecha');
       botones[b].classList.add('hecha');
+      botones[a].disabled = true;
+      botones[b].disabled = true;
       destello(botones[a], true, false);
       destello(botones[b], true);
       abiertas = [];
