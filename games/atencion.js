@@ -60,7 +60,7 @@ export function start(pantalla, alTerminar, opciones = {}) {
     const ok = i === ronda.tinta;
     destello(enunciado, ok);
     if (ok) aciertos++;
-    else if (dificultad !== 'facil' && modo !== 'sinfallo') errores++; // en Hasta fallar el fallo solo termina
+    else if (dificultad !== 'facil' && modo !== 'sinfallo') errores++; // en Sin fallar el fallo solo termina
     puntos.textContent = nivel ? `Puntos: ${puntuacion(aciertos, errores)}/${nivel.meta}` : `Puntos: ${puntuacion(aciertos, errores)}`;
     if (nivel && puntuacion(aciertos, errores) >= nivel.meta) {
       // Meta del nivel alcanzada.

@@ -16,7 +16,7 @@ Primera de tres entregas: D1 nueva elección, D2 juegos nuevos y D3 niveles ampl
 | Cálculo | `rojo` |
 | Atención | `azul` |
 | Lógica | `amarillo` |
-| Reacción | `acento` |
+| Reacción | `morado` |
 
 - **Entrenamiento diario:** sigue usando los 3 grupos internos de `categoria` (Clásicos, Lógica, Reacción), así no cambian los entrenamientos pasados ni las rachas.
 

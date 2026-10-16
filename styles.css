@@ -8,6 +8,7 @@
   --azul: #1f6feb;
   --verde: #2b9348;
   --amarillo: #b8860b;
+  --morado: #7b2cbf;
   --ok: #2b9348;
   --mal: #e63946;
   --relieve: 0 4px 0 rgba(0, 0, 0, 0.18); /* sombra sólida debajo: botón "en relieve" */
@@ -23,6 +24,7 @@
   --azul: #7df9ff;
   --verde: #5dff9b;
   --amarillo: #ffe66d;
+  --morado: #c77dff;
   --ok: #5dff9b;
   --mal: #ff4f6d;
   --relieve: none;
@@ -585,7 +587,7 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 }
 
 #previa-cabecera h2 { margin: 2px 0 0; }
-#previa-cabecera p { margin: 0; font-size: 0.9rem; opacity: 0.9; }
+#previa-cabecera p { margin: 0; font-size: 0.9rem; }
 
 #previa-modos .categoria { margin: 4px 0 0; }
 
@@ -610,6 +612,7 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 
 .baldosas button[aria-pressed="true"] {
   border-color: var(--acento);
+  background: #fcdfcf; /* para navegadores sin color-mix (iOS < 16.2) */
   background: color-mix(in srgb, var(--acento) 15%, var(--fondo));
 }
 
@@ -641,6 +644,8 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   background: var(--acento);
   color: #fff;
 }
+
+[data-tema="oscuro"] .segmento button { border-color: transparent; }
 
 [data-tema="oscuro"] .segmento button[aria-pressed="true"] {
   background: transparent;

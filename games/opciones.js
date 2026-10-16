@@ -73,7 +73,7 @@ export function jugarConOpciones(pantalla, alTerminar, generar, claseEnunciado =
     } else if (reloj) {
       reloj.restar(3);
     } else {
-      // Hasta fallar: se deja ver el anillo rojo (y la pista) y se termina.
+      // Sin fallar: se deja ver el anillo rojo (y la pista) y se termina.
       terminado = true;
       id = setTimeout(() => alTerminar(aciertos), 600);
       return;
