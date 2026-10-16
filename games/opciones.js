@@ -24,7 +24,7 @@ export function generarOpciones(resultado, rnd = Math.random) {
 // `opciones.modo`: 'normal' (60 s), 'rapido' (30 s) o 'sinfallo' (sin reloj; el primer fallo termina).
 // `opciones.dificultad`: ajusta los aciertos que ve `generar` (ver aciertosSegun).
 // `opciones.nivel` (modo Niveles): reloj de `nivel.segundos`, preguntas desde `nivel.aciertosIniciales`
-// y la partida termina al llegar a `nivel.meta` aciertos.
+// y la partida termina al llegar a `nivel.tope` (⭐⭐⭐); con `nivel.sinFallar`, el primer fallo termina.
 export function jugarConOpciones(pantalla, alTerminar, generar, claseEnunciado = '', opciones = {}) {
   const { modo = 'normal', dificultad = 'normal', nivel = null } = opciones;
   let aciertos = 0;
@@ -66,18 +66,19 @@ export function jugarConOpciones(pantalla, alTerminar, generar, claseEnunciado =
     if (ok) {
       aciertos++;
       puntos.textContent = nivel ? `Aciertos: ${aciertos}/${nivel.meta}` : `Aciertos: ${aciertos}`;
-      if (nivel && aciertos >= nivel.meta) {
-        // Meta del nivel alcanzada: se para el reloj y se termina tras el destello.
+      if (nivel && aciertos >= nivel.tope) {
+        // Nivel con ⭐⭐⭐: ya no hay más que ganar; se para el reloj y se termina tras el destello.
         terminado = true;
         reloj?.parar();
         id = setTimeout(() => alTerminar(aciertos), 400);
         return;
       }
-    } else if (reloj) {
+    } else if (reloj && !nivel?.sinFallar) {
       reloj.restar(3);
     } else {
-      // Sin fallar: se deja ver el anillo rojo (y la pista) y se termina.
+      // Sin fallar (modo o reto del nivel): se deja ver el anillo rojo (y la pista) y se termina.
       terminado = true;
+      reloj?.parar();
       id = setTimeout(() => alTerminar(aciertos), 600);
       return;
     }

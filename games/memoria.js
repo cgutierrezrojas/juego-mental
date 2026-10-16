@@ -19,7 +19,7 @@ export function pausa(ronda, dificultad = 'normal') {
 
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// `opciones.nivel` (modo Niveles): termina con éxito al completar una secuencia de `nivel.meta` colores.
+// `opciones.nivel` (modo Niveles): termina con éxito al completar una secuencia de `nivel.tope` colores (⭐⭐⭐).
 export function start(pantalla, alTerminar, opciones = {}) {
   const { dificultad = 'normal', nivel = null } = opciones;
   let secuencia = [];
@@ -82,8 +82,8 @@ export function start(pantalla, alTerminar, opciones = {}) {
     pos++;
     if (pos < secuencia.length) return decir('✓', true);
     turno = false;
-    if (nivel && secuencia.length >= nivel.meta) {
-      // Meta del nivel: secuencia completa de la longitud pedida.
+    if (nivel && secuencia.length >= nivel.tope) {
+      // Nivel con ⭐⭐⭐: secuencia completa de la longitud más alta.
       decir('✓ ¡Nivel superado!', true);
       setTimeout(() => { if (!parado) alTerminar(secuencia.length); }, 800);
       return;

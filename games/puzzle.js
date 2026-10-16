@@ -40,7 +40,7 @@ const DESORDEN = { facil: 20, normal: 100, dificil: 300 };
 
 export function start(pantalla, alTerminar, opciones = {}) {
   const { dificultad = 'normal' } = opciones;
-  let tablero = barajarPuzzle(Math.random, DESORDEN[dificultad]);
+  let tablero = barajarPuzzle(Math.random, opciones.nivel?.desorden ?? DESORDEN[dificultad]); // en Niveles, lo desordenado lo pone el nivel
   let movimientos = 0;
   let terminado = false;
   let id;

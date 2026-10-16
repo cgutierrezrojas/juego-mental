@@ -13,7 +13,7 @@ export function repartir(n, rnd = Math.random) {
 
 export function start(pantalla, alTerminar, opciones = {}) {
   const { dificultad = 'normal' } = opciones;
-  const cartas = repartir(PAREJAS[dificultad]);
+  const cartas = repartir(opciones.nivel?.parejas ?? PAREJAS[dificultad]); // en Niveles, las parejas las pone el nivel
   const total = cartas.length / 2;
   let abiertas = []; // cartas levantadas en este intento (0, 1 o 2)
   let encontradas = 0;

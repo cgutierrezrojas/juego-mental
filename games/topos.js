@@ -10,7 +10,7 @@ export function duracionTopo(aciertos, dificultad = 'normal') {
   return Math.max(minimo, base - aciertos * 25);
 }
 
-// `opciones.nivel` (modo Niveles): reloj de `nivel.segundos` y termina al llegar a `nivel.meta` puntos.
+// `opciones.nivel` (modo Niveles): reloj de `nivel.segundos` y termina al llegar a `nivel.tope` (⭐⭐⭐); con `nivel.sinFallar`, el primer fallo termina.
 export function start(pantalla, alTerminar, opciones = {}) {
   const { dificultad = 'normal', nivel = null } = opciones;
   let terminado = false;
@@ -63,16 +63,16 @@ export function start(pantalla, alTerminar, opciones = {}) {
       aciertos++;
       clearTimeout(id);
       esconder();
-    } else {
-      errores++;
+    } else if (!nivel?.sinFallar) {
+      errores++; // en un reto Sin fallar el fallo solo termina
     }
     puntos.textContent = nivel ? `Puntos: ${puntuacion()}/${nivel.meta}` : `Puntos: ${puntuacion()}`;
-    if (nivel && puntuacion() >= nivel.meta) {
-      // Meta del nivel alcanzada: no salen más topos y se termina tras el destello.
+    // Fin anticipado: ⭐⭐⭐ del nivel, o un fallo en un reto Sin fallar. No salen más topos.
+    if (nivel && (puntuacion() >= nivel.tope || (!ok && nivel.sinFallar))) {
       terminado = true;
       reloj.parar();
       clearTimeout(id);
-      id = setTimeout(() => alTerminar(puntuacion()), 400);
+      id = setTimeout(() => alTerminar(puntuacion()), ok ? 400 : 600);
     }
   }
 

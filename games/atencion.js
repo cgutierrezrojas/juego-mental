@@ -20,9 +20,10 @@ export function puntuacion(aciertos, errores) {
 
 // `opciones.modo`: 'normal' (60 s), 'rapido' (30 s) o 'sinfallo' (sin reloj; el primer fallo termina).
 // `opciones.dificultad`: 'facil' (los errores no restan), 'normal' o 'dificil' (los botones cambian de orden en cada ronda).
-// `opciones.nivel` (modo Niveles): reloj de `nivel.segundos` y termina al llegar a `nivel.meta` puntos.
+// `opciones.nivel` (modo Niveles): reloj de `nivel.segundos` y termina al llegar a `nivel.tope` (⭐⭐⭐); con `nivel.sinFallar`, el primer fallo termina.
 export function start(pantalla, alTerminar, opciones = {}) {
   const { modo = 'normal', dificultad = 'normal', nivel = null } = opciones;
+  const sinFallar = modo === 'sinfallo' || Boolean(nivel?.sinFallar); // modo Sin fallar o reto del nivel
   let aciertos = 0;
   let errores = 0;
   let ronda;
@@ -60,17 +61,18 @@ export function start(pantalla, alTerminar, opciones = {}) {
     const ok = i === ronda.tinta;
     destello(enunciado, ok);
     if (ok) aciertos++;
-    else if (dificultad !== 'facil' && modo !== 'sinfallo') errores++; // en Sin fallar el fallo solo termina
+    else if (dificultad !== 'facil' && !sinFallar) errores++; // en Sin fallar el fallo solo termina
     puntos.textContent = nivel ? `Puntos: ${puntuacion(aciertos, errores)}/${nivel.meta}` : `Puntos: ${puntuacion(aciertos, errores)}`;
-    if (nivel && puntuacion(aciertos, errores) >= nivel.meta) {
-      // Meta del nivel alcanzada.
+    if (nivel && puntuacion(aciertos, errores) >= nivel.tope) {
+      // Nivel con ⭐⭐⭐: no hay más que ganar.
       terminado = true;
       reloj?.parar();
       id = setTimeout(() => alTerminar(puntuacion(aciertos, errores)), 400);
       return;
     }
-    if (!ok && modo === 'sinfallo') {
+    if (!ok && sinFallar) {
       terminado = true;
+      reloj?.parar();
       id = setTimeout(() => alTerminar(puntuacion(aciertos, errores)), 600);
       return;
     }
