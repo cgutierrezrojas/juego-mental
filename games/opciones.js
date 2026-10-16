@@ -19,7 +19,8 @@ export function generarOpciones(resultado, rnd = Math.random) {
 }
 
 // `generar(aciertos)` devuelve { texto, opciones, correcta } y, si quiere, `pista`:
-// un texto que se enseña bajo el enunciado cuando se falla esa ronda.
+// un texto que se enseña bajo el enunciado cuando se falla esa ronda; `columnas` (por defecto 2)
+// y `pintar(boton, valor)` para retocar cada botón de opción.
 // `opciones.modo`: 'normal' (60 s), 'rapido' (30 s) o 'sinfallo' (sin reloj; el primer fallo termina).
 // `opciones.dificultad`: ajusta los aciertos que ve `generar` (ver aciertosSegun).
 // `opciones.nivel` (modo Niveles): reloj de `nivel.segundos`, preguntas desde `nivel.aciertosIniciales`
@@ -48,8 +49,10 @@ export function jugarConOpciones(pantalla, alTerminar, generar, claseEnunciado =
   function nueva() {
     ronda = generar(aciertosSegun(aciertos, dificultad) + (nivel?.aciertosIniciales ?? 0));
     enunciado.textContent = ronda.texto;
+    rejilla.style.gridTemplateColumns = `repeat(${ronda.columnas ?? 2}, 1fr)`;
     rejilla.replaceChildren(...ronda.opciones.map((n) => {
       const b = el('button', 'grande', n);
+      ronda.pintar?.(b, n); // p. ej. El distinto pinta el color y quita el texto
       b.onclick = () => responder(n);
       return b;
     }));

@@ -510,3 +510,16 @@ probar('niveles: desbloqueo y progreso', () => {
   assert(nuevoProgreso(3, 2, true) === 3, 'superar uno más bajo no cambia');
   assert(nuevoProgreso(3, 4, false) === 3, 'no superado no cambia');
 });
+
+// --- mayor.js ---
+import { generarPar } from './games/mayor.js';
+
+probar('mayor o menor: nunca empatan y la correcta es la de mayor resultado', () => {
+  for (const aciertos of [0, 7, 12, 20]) {
+    for (let i = 0; i < 300; i++) {
+      const { a, b, mayor } = generarPar(aciertos);
+      assert(a.resultado !== b.resultado, `${a.texto} / ${b.texto}`);
+      assert(mayor === (a.resultado > b.resultado ? a.texto : b.texto));
+    }
+  }
+});
