@@ -5,7 +5,7 @@ export const NOMBRE_RETO = { normal: '⏱ Normal', sinfallo: '❤️ Sin fallar'
 export const ICONO_RETO = { normal: '', sinfallo: '❤️', contrarreloj: '⚡', jefe: '👑' };
 
 // Segundos de los juegos de opciones; Atención y Topos son de 30 s.
-const OPCIONES = { calculo: 30, mayor: 30, distinto: 30, series: 60, sobra: 60, balanza: 60 };
+const OPCIONES = { calculo: 30, mayor: 30, distinto: 45, series: 60, sobra: 60, balanza: 75 };
 const CON_TIEMPO = [...Object.keys(OPCIONES), 'atencion', 'topos'];
 const MENOR_ES_MEJOR = ['puzzle', 'rayo', 'parejas'];
 
@@ -20,13 +20,13 @@ export function retoDe(n) {
 // Meta base (sin reto) y parámetros del juego en el nivel n.
 function base(id, n) {
   if (id in OPCIONES) {
-    return { meta: 5 + Math.round(n * 0.3), segundos: OPCIONES[id], aciertosIniciales: Math.min(n - 1, 20), dificultad: 'normal', unidad: 'aciertos' };
+    return { meta: 5 + Math.round(n * 0.25), segundos: OPCIONES[id], aciertosIniciales: Math.min(n - 1, 20), dificultad: 'normal', unidad: 'aciertos' };
   }
-  if (id === 'atencion') return { meta: 6 + Math.round(n * 0.35), segundos: 30, dificultad: n >= 11 ? 'dificil' : 'normal', unidad: 'puntos' };
-  if (id === 'memoria') return { meta: 3 + Math.floor(n * 0.25), dificultad: n >= 21 ? 'dificil' : 'normal', unidad: 'colores' };
-  if (id === 'topos') return { meta: 10 + Math.round(n * 0.3), segundos: 30, dificultad: n <= 10 ? 'facil' : n <= 30 ? 'normal' : 'dificil', unidad: 'puntos' };
-  if (id === 'puzzle') return { meta: Math.round(25 + n * 1.2), desorden: 10 + n * 4, unidad: 'movimientos' };
-  if (id === 'rayo') return { meta: 450 - n * 4, unidad: 'ms' };
+  if (id === 'atencion') return { meta: 6 + Math.round(n * 0.25), segundos: 30, dificultad: n >= 11 ? 'dificil' : 'normal', unidad: 'puntos' };
+  if (id === 'memoria') return { meta: 3 + Math.floor(n * 0.2), dificultad: n >= 21 ? 'dificil' : 'normal', unidad: 'colores' };
+  if (id === 'topos') return { meta: 10 + Math.round(n * 0.25), segundos: 30, dificultad: n <= 10 ? 'facil' : n <= 30 ? 'normal' : 'dificil', unidad: 'puntos' };
+  if (id === 'puzzle') return { meta: Math.round(30 + n * 0.5), desorden: 10 + n * 4, unidad: 'movimientos' };
+  if (id === 'rayo') return { meta: 450 - n * 3, unidad: 'ms' };
   if (id === 'parejas') {
     const parejas = 3 + Math.ceil(n / 10); // 4 parejas en el mundo 1 … 8 en el 5
     return { meta: Math.round(parejas * 2.2), parejas, unidad: 'intentos' };
@@ -38,7 +38,7 @@ function base(id, n) {
 export function configNivel(id, n) {
   const b = base(id, n);
   if (!b) return null;
-  const reto = retoDe(n);
+  let reto = retoDe(n);
   const menor = MENOR_ES_MEJOR.includes(id);
   const conTiempo = CON_TIEMPO.includes(id);
   let { meta, segundos = 0, dificultad = 'normal' } = b;
@@ -48,9 +48,13 @@ export function configNivel(id, n) {
   } else if (reto === 'sinfallo' && conTiempo) {
     sinFallar = true;
     meta = Math.round(meta * 0.7);
-  } else if (reto === 'contrarreloj') {
-    if (conTiempo) segundos = Math.round(segundos * 0.75);
-    else if (id === 'memoria') dificultad = 'dificil';
+  } else if (reto === 'contrarreloj' && conTiempo) {
+    segundos = Math.round(segundos * 0.75);
+    meta = Math.round(meta * 0.8);
+  } else if (reto === 'contrarreloj' && id === 'memoria' && dificultad !== 'dificil') {
+    dificultad = 'dificil';
+  } else {
+    reto = 'normal'; // un reto que no cambia nada en este juego se juega (y se muestra) como Normal
   }
   const metas = menor
     ? [meta, Math.round(meta * 0.9), Math.round(meta * 0.8)]

@@ -754,3 +754,5 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 .objetivo { white-space: pre-line; }
 
 #final-nivel { font-size: 1.15rem; }
+/* Neón: el nivel elegido conserva el borde de reto */
+[data-tema="oscuro"] .niveles button.reto[aria-pressed="true"] { border-color: var(--amarillo); }

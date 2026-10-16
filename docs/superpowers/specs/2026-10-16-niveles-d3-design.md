@@ -12,8 +12,10 @@ Fecha: 2026-10-16
 |---|---|---|
 | 10, 20, …, 50 | 👑 Jefe | meta × 1,1 (o × 0,9 en los de "menos es mejor") |
 | 5, 15, 25, 35, 45 | ❤️ Sin fallar | solo en juegos por tiempo: un fallo termina; meta × 0,7 |
-| terminados en 3 o 7 | ⚡ Contrarreloj | en juegos por tiempo: tiempo × 0,75 con la misma meta; en Memoria, velocidad Difícil |
+| terminados en 3 o 7 | ⚡ Contrarreloj | en juegos por tiempo: tiempo × 0,75 y meta × 0,8; en Memoria, velocidad Difícil (si aún no lo era) |
 | el resto | ⏱ Normal | — |
+
+Un reto que no cambia nada en un juego se juega y se muestra como Normal (p. ej. ⚡ en Rayo).
 
 - **Juegos por tiempo:** Cálculo, Mayor o menor, El distinto, Series, ¿Cuál sobra?, Balanza, Atención y Topos.
 - **En los demás** (Memoria, Puzzle, Rayo y Parejas), los retos que no tienen sentido se juegan como Normal.
@@ -22,13 +24,13 @@ Fecha: 2026-10-16
 
 | Juego | Meta base | Parámetros |
 |---|---|---|
-| Cálculo, Mayor o menor, El distinto | `5 + round(0,3·N)` aciertos | 30 s; preguntas desde `min(N−1, 20)` aciertos |
-| Series, ¿Cuál sobra?, Balanza | igual | 60 s; igual |
-| Atención | `6 + round(0,35·N)` puntos | 30 s; Difícil desde el nivel 11 |
-| Memoria | secuencia de `3 + ⌊0,25·N⌋` colores | velocidad Difícil desde el nivel 21 |
-| Topos | `10 + round(0,3·N)` puntos | 30 s; Fácil (1–10), Normal (11–30), Difícil (31–50) |
-| Puzzle | `round(25 + 1,2·N)` movimientos o menos | desordenado con `10 + 4·N` movimientos |
-| Rayo | `450 − 4·N` ms de media o menos | 5 intentos |
+| Cálculo, Mayor o menor, El distinto | `5 + round(0,25·N)` aciertos | 30 s (El distinto: 45 s); preguntas desde `min(N−1, 20)` aciertos |
+| Series, ¿Cuál sobra?, Balanza | igual | 60 s (Balanza: 75 s); igual |
+| Atención | `6 + round(0,25·N)` puntos | 30 s; Difícil desde el nivel 11 |
+| Memoria | secuencia de `3 + ⌊0,2·N⌋` colores | velocidad Difícil desde el nivel 21 |
+| Topos | `10 + round(0,25·N)` puntos | 30 s; Fácil (1–10), Normal (11–30), Difícil (31–50) |
+| Puzzle | `round(30 + 0,5·N)` movimientos o menos | desordenado con `10 + 4·N` movimientos |
+| Rayo | `450 − 3·N` ms de media o menos | 5 intentos |
 | Parejas | `round(2,2·parejas)` intentos o menos | parejas = `3 + ⌈N/10⌉` (4 en el mundo 1, 8 en el 5) |
 
 ## Estrellas

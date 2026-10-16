@@ -494,21 +494,25 @@ probar('niveles: patrón de retos', () => {
 probar('niveles: configuración de algunos niveles', () => {
   const c = (id, n) => { const x = configNivel(id, n); return `${x.metas.join('/')}|${x.segundos}|${x.aciertosIniciales}|${x.dificultad}|${x.sinFallar}|${x.reto}`; };
   assert(c('calculo', 1) === '5/7/8|30|0|normal|false|normal', c('calculo', 1));
-  assert(c('calculo', 3) === '6/8/9|23|2|normal|false|contrarreloj', c('calculo', 3));
-  assert(c('calculo', 5) === '5/7/8|30|4|normal|true|sinfallo', c('calculo', 5));
+  assert(c('calculo', 3) === '5/7/8|23|2|normal|false|contrarreloj', c('calculo', 3));
+  assert(c('calculo', 5) === '4/5/6|30|4|normal|true|sinfallo', c('calculo', 5));
   assert(c('calculo', 10) === '9/12/14|30|9|normal|false|jefe', c('calculo', 10));
-  assert(c('calculo', 50) === '22/28/33|30|20|normal|false|jefe', c('calculo', 50));
+  assert(c('calculo', 50) === '20/25/30|30|20|normal|false|jefe', c('calculo', 50));
   assert(configNivel('series', 1).segundos === 60);
   assert(configNivel('memoria', 1).metas.join() === '3,4,5');
   assert(configNivel('memoria', 2).dificultad === 'normal' && configNivel('memoria', 3).dificultad === 'dificil' && configNivel('memoria', 21).dificultad === 'dificil');
   assert(configNivel('memoria', 5).sinFallar === false, 'Memoria no tiene Sin fallar');
-  assert(configNivel('rayo', 1).metas.join() === '446,401,357' && configNivel('rayo', 10).metas.join() === '369,332,295');
-  assert(configNivel('puzzle', 1).metas.join() === '26,23,21' && configNivel('puzzle', 1).desorden === 14);
+  assert(configNivel('rayo', 1).metas.join() === '447,402,358' && configNivel('rayo', 10).metas.join() === '378,340,302');
+  assert(configNivel('puzzle', 1).metas.join() === '31,28,25' && configNivel('puzzle', 1).desorden === 14);
   assert(configNivel('parejas', 1).parejas === 4 && configNivel('parejas', 1).metas.join() === '9,8,7' && configNivel('parejas', 50).parejas === 8);
   assert(configNivel('topos', 1).dificultad === 'facil' && configNivel('topos', 11).dificultad === 'normal' && configNivel('topos', 31).dificultad === 'dificil');
   assert(configNivel('topos', 5).metas.join() === '8,10,12' && configNivel('topos', 5).sinFallar);
   assert(configNivel('calculo', 1).texto === '⭐ 5 · ⭐⭐ 7 · ⭐⭐⭐ 8 aciertos en 30 s', configNivel('calculo', 1).texto);
-  assert(configNivel('rayo', 1).texto === '⭐ ≤446 · ⭐⭐ ≤401 · ⭐⭐⭐ ≤357 ms', configNivel('rayo', 1).texto);
+  assert(configNivel('rayo', 1).texto === '⭐ ≤447 · ⭐⭐ ≤402 · ⭐⭐⭐ ≤358 ms', configNivel('rayo', 1).texto);
+  assert(configNivel('distinto', 1).segundos === 45 && configNivel('balanza', 1).segundos === 75);
+  assert(configNivel('puzzle', 3).reto === 'normal' && configNivel('rayo', 5).reto === 'normal' && configNivel('memoria', 5).reto === 'normal', 'un reto sin efecto se juega como Normal');
+  assert(configNivel('memoria', 3).reto === 'contrarreloj' && configNivel('memoria', 23).reto === 'normal', 'en Memoria el contrarreloj solo cuenta si no era ya Difícil');
+  assert(configNivel('puzzle', 10).metas.join() === '32,29,26' && configNivel('memoria', 10).metas.join() === '6,8,9');
   assert(configNivel('no-existe', 1) === null);
 });
 

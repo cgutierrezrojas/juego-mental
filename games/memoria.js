@@ -41,7 +41,7 @@ export function start(pantalla, alTerminar, opciones = {}) {
   pantalla.append(estado, mensaje, rejilla);
 
   // "Ronda 3" o, en Niveles, "Ronda 3 de 6".
-  const titulo = () => (nivel ? `Ronda ${secuencia.length} de ${nivel.meta}` : `Ronda ${secuencia.length}`);
+  const titulo = () => (nivel ? `Ronda ${secuencia.length} de ${nivel.tope}` : `Ronda ${secuencia.length}`);
 
   async function ronda() {
     secuencia = alargar(secuencia);

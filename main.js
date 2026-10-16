@@ -27,7 +27,7 @@ import {
 } from './games/estadisticas.js';
 import { MODOS, DIFICULTADES, claveRecord, esDe, filtrar, etiqueta } from './games/modos.js';
 import {
-  NUM_NIVELES, NOMBRE_RETO, ICONO_RETO, retoDe, configNivel, estrellasDe, nivelLibre, conEstrellas, totalEstrellas, desdeAntiguo, siguienteNivel,
+  NUM_NIVELES, NOMBRE_RETO, ICONO_RETO, configNivel, estrellasDe, nivelLibre, conEstrellas, totalEstrellas, desdeAntiguo, siguienteNivel,
 } from './games/niveles.js';
 
 const JUEGOS = [
@@ -75,7 +75,8 @@ function leerEleccion(j) {
 function leerEstrellas(id) {
   try {
     const estrellas = JSON.parse(leer('estrellas:' + id));
-    if (Array.isArray(estrellas)) return estrellas;
+    // Siempre 50 números: un dato corto o con huecos no debe marcar mundos como completos.
+    if (Array.isArray(estrellas)) return Array.from({ length: NUM_NIVELES }, (_, i) => Number(estrellas[i]) || 0);
   } catch {
     // dato roto: se usa el progreso antiguo
   }
@@ -264,7 +265,7 @@ function pintarNiveles(j) {
   for (let n = (mundo - 1) * 10 + 1; n <= mundo * 10; n++) {
     const libre = nivelLibre(estrellas, n);
     const e = estrellas[n - 1] || 0;
-    const reto = retoDe(n);
+    const reto = configNivel(j.id, n).reto; // el reto real en este juego (los que no cambian nada salen como Normal)
     const b = el('button', reto === 'normal' ? '' : 'reto');
     b.append(el('span', '', libre ? `${n}` : `🔒${n}`), el('small', '', libre ? `${ICONO_RETO[reto]}${'⭐'.repeat(e)}${'☆'.repeat(3 - e)}` : ''));
     b.disabled = !libre;
