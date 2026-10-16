@@ -540,3 +540,18 @@ probar('el distinto: tamaño de la cuadrícula, casilla y diferencia de color', 
     }
   }
 });
+
+// --- balanza.js ---
+import { generarBalanza } from './games/balanza.js';
+
+probar('balanza: ecuaciones coherentes y respuesta = peso de la fruta preguntada', () => {
+  for (const [a, n] of [[0, 1], [7, 2], [12, 3]]) {
+    for (let i = 0; i < 300; i++) {
+      const { ecuaciones, pregunta, respuesta, pesos } = generarBalanza(a);
+      assert(ecuaciones.length === n, `aciertos ${a}: ${ecuaciones.length} ecuaciones`);
+      for (const e of ecuaciones) assert(e.total === e.frutas.reduce((s, f) => s + pesos[f], 0), JSON.stringify(e));
+      assert(respuesta === pesos[pregunta]);
+      assert(Object.values(pesos).every((p) => p >= 1 && p <= 9), JSON.stringify(pesos));
+    }
+  }
+});

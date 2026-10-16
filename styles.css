@@ -664,3 +664,10 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   border-radius: 10px;
   box-shadow: none;
 }
+
+/* Balanza: varias líneas de ecuaciones en el enunciado */
+.enunciado.balanza {
+  font-size: 1.5rem;
+  line-height: 1.5;
+  white-space: pre-line;
+}
