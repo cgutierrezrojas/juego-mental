@@ -653,3 +653,14 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   border-color: var(--acento);
   box-shadow: 0 0 8px var(--acento);
 }
+
+/* El distinto: casillas de color en cuadrícula */
+.enunciado.distinto { font-size: 1.6rem; }
+
+.casilla-color {
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: none;
+}

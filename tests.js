@@ -523,3 +523,20 @@ probar('mayor o menor: nunca empatan y la correcta es la de mayor resultado', ()
     }
   }
 });
+
+// --- distinto.js ---
+import { generarRonda as rondaDistinto } from './games/distinto.js';
+
+probar('el distinto: tamaño de la cuadrícula, casilla y diferencia de color', () => {
+  for (const [a, lado] of [[0, 2], [3, 2], [4, 3], [8, 3], [9, 4], [14, 4], [15, 5], [30, 5]]) {
+    assert(rondaDistinto(a).lado === lado, `aciertos ${a}`);
+  }
+  const luz = (c) => Number(c.match(/(\d+)%\)$/)[1]);
+  for (const a of [0, 10, 18, 40]) {
+    for (let i = 0; i < 200; i++) {
+      const r = rondaDistinto(a);
+      assert(r.distinto >= 0 && r.distinto < r.lado * r.lado, `${r.distinto}`);
+      assert(Math.abs(luz(r.color) - luz(r.colorDistinto)) === Math.max(4, 22 - a), `${r.color} / ${r.colorDistinto}`);
+    }
+  }
+});

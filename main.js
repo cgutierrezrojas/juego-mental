@@ -16,6 +16,7 @@ import * as puzzle from './games/puzzle.js';
 import * as rayo from './games/rayo.js';
 import * as topos from './games/topos.js';
 import * as mayor from './games/mayor.js';
+import * as distinto from './games/distinto.js';
 import { el, leer, guardar, esRecord } from './games/comun.js';
 import { sonar, callar, activo, alternar, puedeVibrar } from './games/efectos.js';
 import {
@@ -35,6 +36,7 @@ const JUEGOS = [
   { id: 'rayo', nombre: 'Rayo', categoria: 'Reacción', icono: '⚡', color: 'morado', habilidad: 'Reacción', referencia: 250, unidad: 'ms', menorEsMejor: true, sinDificultad: true, instrucciones: 'Cuando se ponga verde, ¡toca! 5 intentos; cuenta tu tiempo medio.', juego: rayo },
   { id: 'topos', nombre: 'Topos', categoria: 'Reacción', icono: '🔨', color: 'morado', habilidad: 'Reacción', referencia: 40, modos: ['normal', 'niveles'], duracion: '30 s', instrucciones: 'Toca cada topo antes de que se esconda. Tocar una casilla vacía resta. 30 segundos.', juego: topos },
   { id: 'mayor', nombre: 'Mayor o menor', icono: '⚖️', color: 'rojo', habilidad: 'Cálculo', referencia: 35, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Toca la operación que da más. 60 segundos.', juego: mayor },
+  { id: 'distinto', nombre: 'El distinto', icono: '🎯', color: 'azul', habilidad: 'Atención', referencia: 25, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Toca el cuadrado de color distinto. 60 segundos.', juego: distinto },
 ];
 
 const CATEGORIAS = ['Clásicos', 'Lógica', 'Reacción'];
