@@ -480,35 +480,64 @@ probar('puzzle: más movimientos al barajar = más desordenado', () => {
 });
 
 // --- niveles.js ---
-import { NUM_NIVELES, configNivel, desbloqueado, nuevoProgreso } from './games/niveles.js';
+import {
+  NUM_NIVELES, retoDe, configNivel, estrellasDe, nivelLibre, conEstrellas, totalEstrellas, desdeAntiguo, siguienteNivel,
+} from './games/niveles.js';
 
-probar('niveles: configuración de los niveles 1, 11 y 20', () => {
-  const c = (id, n) => { const x = configNivel(id, n); return `${x.meta}/${x.segundos}/${x.aciertosIniciales}/${x.dificultad}`; };
-  assert(c('calculo', 1) === '6/30/0/normal' && c('calculo', 11) === '11/30/10/normal' && c('calculo', 20) === '16/30/19/normal');
-  for (const id of ['series', 'sobra']) {
-    assert(c(id, 1) === '6/60/0/normal' && c(id, 11) === '11/60/10/normal' && c(id, 20) === '16/60/19/normal', `${id}: ${c(id, 1)} ${c(id, 11)} ${c(id, 20)}`);
-  }
-  assert(configNivel('series', 4).texto === '8 aciertos en 60 s');
-  assert(c('atencion', 1) === '7/30/0/normal' && c('atencion', 10) === '16/30/0/normal' && c('atencion', 11) === '17/30/0/dificil' && c('atencion', 20) === '26/30/0/dificil');
-  assert(configNivel('memoria', 1).meta === 3 && configNivel('memoria', 11).meta === 9 && configNivel('memoria', 20).meta === 14);
-  assert(configNivel('memoria', 10).dificultad === 'normal' && configNivel('memoria', 11).dificultad === 'dificil');
-  assert(c('topos', 1) === '11/30/0/facil' && c('topos', 6) === '16/30/0/facil' && c('topos', 7) === '17/30/0/normal' && c('topos', 14) === '24/30/0/dificil' && c('topos', 20) === '30/30/0/dificil');
-  assert(configNivel('calculo', 4).texto === '8 aciertos en 30 s' && configNivel('memoria', 4).texto === 'secuencia de 5 colores' && configNivel('topos', 4).texto === '14 puntos en 30 s');
-  assert(configNivel('rayo', 1) === null && configNivel('puzzle', 1) === null);
+const TODOS_LOS_JUEGOS = ['calculo', 'atencion', 'memoria', 'series', 'sobra', 'puzzle', 'rayo', 'topos', 'mayor', 'distinto', 'balanza', 'parejas'];
+
+probar('niveles: patrón de retos', () => {
+  const esperado = { 1: 'normal', 3: 'contrarreloj', 5: 'sinfallo', 7: 'contrarreloj', 10: 'jefe', 13: 'contrarreloj', 15: 'sinfallo', 20: 'jefe', 44: 'normal', 50: 'jefe' };
+  for (const [n, reto] of Object.entries(esperado)) assert(retoDe(Number(n)) === reto, `nivel ${n}: ${retoDe(Number(n))}`);
 });
 
-probar('niveles: las metas nunca bajan de un nivel al siguiente', () => {
-  for (const id of ['calculo', 'atencion', 'series', 'sobra', 'memoria', 'topos']) {
-    for (let n = 2; n <= NUM_NIVELES; n++) assert(configNivel(id, n).meta >= configNivel(id, n - 1).meta, `${id} nivel ${n}`);
+probar('niveles: configuración de algunos niveles', () => {
+  const c = (id, n) => { const x = configNivel(id, n); return `${x.metas.join('/')}|${x.segundos}|${x.aciertosIniciales}|${x.dificultad}|${x.sinFallar}|${x.reto}`; };
+  assert(c('calculo', 1) === '5/7/8|30|0|normal|false|normal', c('calculo', 1));
+  assert(c('calculo', 3) === '6/8/9|23|2|normal|false|contrarreloj', c('calculo', 3));
+  assert(c('calculo', 5) === '5/7/8|30|4|normal|true|sinfallo', c('calculo', 5));
+  assert(c('calculo', 10) === '9/12/14|30|9|normal|false|jefe', c('calculo', 10));
+  assert(c('calculo', 50) === '22/28/33|30|20|normal|false|jefe', c('calculo', 50));
+  assert(configNivel('series', 1).segundos === 60);
+  assert(configNivel('memoria', 1).metas.join() === '3,4,5');
+  assert(configNivel('memoria', 2).dificultad === 'normal' && configNivel('memoria', 3).dificultad === 'dificil' && configNivel('memoria', 21).dificultad === 'dificil');
+  assert(configNivel('memoria', 5).sinFallar === false, 'Memoria no tiene Sin fallar');
+  assert(configNivel('rayo', 1).metas.join() === '446,401,357' && configNivel('rayo', 10).metas.join() === '369,332,295');
+  assert(configNivel('puzzle', 1).metas.join() === '26,23,21' && configNivel('puzzle', 1).desorden === 14);
+  assert(configNivel('parejas', 1).parejas === 4 && configNivel('parejas', 1).metas.join() === '9,8,7' && configNivel('parejas', 50).parejas === 8);
+  assert(configNivel('topos', 1).dificultad === 'facil' && configNivel('topos', 11).dificultad === 'normal' && configNivel('topos', 31).dificultad === 'dificil');
+  assert(configNivel('topos', 5).metas.join() === '8,10,12' && configNivel('topos', 5).sinFallar);
+  assert(configNivel('calculo', 1).texto === '⭐ 5 · ⭐⭐ 7 · ⭐⭐⭐ 8 aciertos en 30 s', configNivel('calculo', 1).texto);
+  assert(configNivel('rayo', 1).texto === '⭐ ≤446 · ⭐⭐ ≤401 · ⭐⭐⭐ ≤357 ms', configNivel('rayo', 1).texto);
+  assert(configNivel('no-existe', 1) === null);
+});
+
+probar('niveles: los 12 juegos tienen 50 niveles con 3 metas ordenadas y distintas', () => {
+  for (const id of TODOS_LOS_JUEGOS) {
+    for (let n = 1; n <= NUM_NIVELES; n++) {
+      const x = configNivel(id, n);
+      assert(x, `${id} ${n}`);
+      const [a, b, c] = x.metas;
+      const menor = ['puzzle', 'rayo', 'parejas'].includes(id);
+      assert(menor ? a > b && b > c : a < b && b < c, `${id} ${n}: ${x.metas}`);
+      assert(x.tope === c);
+      if (id === 'parejas') assert(c >= x.parejas, `parejas ${n}: ${x.metas} con ${x.parejas} parejas`);
+    }
   }
 });
 
-probar('niveles: desbloqueo y progreso', () => {
-  assert(desbloqueado(0, 1) && !desbloqueado(0, 2), 'sin superar nada solo está el 1');
-  assert(desbloqueado(3, 1) && desbloqueado(3, 4) && !desbloqueado(3, 5));
-  assert(nuevoProgreso(3, 4, true) === 4, 'superar el siguiente sube');
-  assert(nuevoProgreso(3, 2, true) === 3, 'superar uno más bajo no cambia');
-  assert(nuevoProgreso(3, 4, false) === 3, 'no superado no cambia');
+probar('niveles: estrellas y progreso', () => {
+  assert(estrellasDe(4, [5, 7, 8]) === 0 && estrellasDe(5, [5, 7, 8]) === 1 && estrellasDe(7, [5, 7, 8]) === 2 && estrellasDe(20, [5, 7, 8]) === 3);
+  const ms = [446, 401, 357];
+  assert(estrellasDe(450, ms, true) === 0 && estrellasDe(446, ms, true) === 1 && estrellasDe(380, ms, true) === 2 && estrellasDe(300, ms, true) === 3);
+  assert(estrellasDe(0, ms, true) === 0, '0 no es una marca válida');
+  const e = desdeAntiguo(3);
+  assert(e.length === NUM_NIVELES && totalEstrellas(e) === 3 && e[2] === 1 && e[3] === 0);
+  assert(nivelLibre(e, 1) && nivelLibre(e, 4) && !nivelLibre(e, 5));
+  assert(siguienteNivel(e) === 4 && siguienteNivel(desdeAntiguo(0)) === 1 && siguienteNivel(desdeAntiguo(50)) === NUM_NIVELES);
+  const e2 = conEstrellas(e, 2, 3);
+  assert(e2[1] === 3 && e[1] === 1, 'no modifica el original');
+  assert(conEstrellas(e2, 2, 1)[1] === 3, 'las estrellas de un nivel no bajan');
 });
 
 // --- mayor.js ---
