@@ -706,3 +706,51 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 }
 
 .carta:disabled { cursor: default; }
+
+/* Niveles: total de estrellas, mundos y niveles con su reto y estrellas */
+.total-estrellas { margin: 0; font-weight: 900; }
+
+.mundos {
+  display: flex;
+  gap: 6px;
+}
+
+.mundos button {
+  flex: 1;
+  padding: 8px 0;
+  font-size: 0.9rem;
+}
+
+.mundos button:disabled { opacity: 0.4; cursor: default; }
+
+.mundos button[aria-pressed="true"] {
+  background: var(--acento);
+  color: #fff;
+}
+
+[data-tema="oscuro"] .mundos button[aria-pressed="true"] {
+  background: transparent;
+  color: var(--acento);
+  border-color: var(--acento);
+  box-shadow: 0 0 8px var(--acento);
+}
+
+.niveles button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 0;
+}
+
+.niveles button small {
+  min-height: 0.8rem;
+  font-size: 0.55rem;
+  letter-spacing: -1px;
+}
+
+.niveles button.reto { border-color: var(--amarillo); }
+
+.objetivo { white-space: pre-line; }
+
+#final-nivel { font-size: 1.15rem; }

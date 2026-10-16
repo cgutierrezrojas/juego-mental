@@ -26,7 +26,9 @@ import {
   mejorRacha, entrenosCompletados, perfil,
 } from './games/estadisticas.js';
 import { MODOS, DIFICULTADES, claveRecord, esDe, filtrar, etiqueta } from './games/modos.js';
-import { NUM_NIVELES, configNivel, desbloqueado, nuevoProgreso } from './games/niveles.js';
+import {
+  NUM_NIVELES, NOMBRE_RETO, ICONO_RETO, retoDe, configNivel, estrellasDe, nivelLibre, conEstrellas, totalEstrellas, desdeAntiguo, siguienteNivel,
+} from './games/niveles.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -34,13 +36,13 @@ const JUEGOS = [
   { id: 'memoria', nombre: 'Memoria', categoria: 'Clásicos', icono: '🧠', color: 'verde', habilidad: 'Memoria', referencia: 12, modos: ['normal', 'niveles'], duracion: 'hasta fallar', instrucciones: 'Mira la secuencia de colores y repítela. Cada ronda, uno más.', juego: memoria },
   { id: 'series', nombre: 'Series', categoria: 'Lógica', icono: '🔢', color: 'amarillo', habilidad: 'Lógica', referencia: 20, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: '¿Qué número sigue? Descubre la regla de cada serie. 60 segundos.', juego: series },
   { id: 'sobra', nombre: '¿Cuál sobra?', categoria: 'Lógica', icono: '🔍', color: 'amarillo', habilidad: 'Lógica', referencia: 20, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Tres números siguen una regla y uno no: toca el que sobra. 60 segundos.', juego: sobra },
-  { id: 'puzzle', nombre: 'Puzzle', categoria: 'Lógica', icono: '🧩', color: 'amarillo', habilidad: 'Lógica', referencia: 30, unidad: 'movimientos', menorEsMejor: true, instrucciones: 'Ordena las fichas del 1 al 8 con los menos movimientos posibles.', juego: puzzle },
-  { id: 'rayo', nombre: 'Rayo', categoria: 'Reacción', icono: '⚡', color: 'morado', habilidad: 'Reacción', referencia: 250, unidad: 'ms', menorEsMejor: true, sinDificultad: true, instrucciones: 'Cuando se ponga verde, ¡toca! 5 intentos; cuenta tu tiempo medio.', juego: rayo },
+  { id: 'puzzle', nombre: 'Puzzle', categoria: 'Lógica', icono: '🧩', color: 'amarillo', habilidad: 'Lógica', referencia: 30, unidad: 'movimientos', menorEsMejor: true, modos: ['normal', 'niveles'], duracion: 'sin tiempo', instrucciones: 'Ordena las fichas del 1 al 8 con los menos movimientos posibles.', juego: puzzle },
+  { id: 'rayo', nombre: 'Rayo', categoria: 'Reacción', icono: '⚡', color: 'morado', habilidad: 'Reacción', referencia: 250, unidad: 'ms', menorEsMejor: true, sinDificultad: true, modos: ['normal', 'niveles'], duracion: '5 intentos', instrucciones: 'Cuando se ponga verde, ¡toca! 5 intentos; cuenta tu tiempo medio.', juego: rayo },
   { id: 'topos', nombre: 'Topos', categoria: 'Reacción', icono: '🔨', color: 'morado', habilidad: 'Reacción', referencia: 40, modos: ['normal', 'niveles'], duracion: '30 s', instrucciones: 'Toca cada topo antes de que se esconda. Tocar una casilla vacía resta. 30 segundos.', juego: topos },
-  { id: 'mayor', nombre: 'Mayor o menor', icono: '⚖️', color: 'rojo', habilidad: 'Cálculo', referencia: 35, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Toca la operación que da más. 60 segundos.', juego: mayor },
-  { id: 'distinto', nombre: 'El distinto', icono: '🎯', color: 'azul', habilidad: 'Atención', referencia: 25, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Toca el cuadrado de color distinto. 60 segundos.', juego: distinto },
-  { id: 'balanza', nombre: 'Balanza', icono: '🏋️', color: 'amarillo', habilidad: 'Lógica', referencia: 15, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Deduce cuánto pesa la fruta que se pregunta. 60 segundos.', juego: balanza },
-  { id: 'parejas', nombre: 'Parejas', icono: '🃏', color: 'verde', habilidad: 'Memoria', referencia: 9, unidad: 'intentos', menorEsMejor: true, instrucciones: 'Encuentra todas las parejas de cartas con los menos intentos posibles.', juego: parejas },
+  { id: 'mayor', nombre: 'Mayor o menor', icono: '⚖️', color: 'rojo', habilidad: 'Cálculo', referencia: 35, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Toca la operación que da más. 60 segundos.', juego: mayor },
+  { id: 'distinto', nombre: 'El distinto', icono: '🎯', color: 'azul', habilidad: 'Atención', referencia: 25, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Toca el cuadrado de color distinto. 60 segundos.', juego: distinto },
+  { id: 'balanza', nombre: 'Balanza', icono: '🏋️', color: 'amarillo', habilidad: 'Lógica', referencia: 15, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Deduce cuánto pesa la fruta que se pregunta. 60 segundos.', juego: balanza },
+  { id: 'parejas', nombre: 'Parejas', icono: '🃏', color: 'verde', habilidad: 'Memoria', referencia: 9, unidad: 'intentos', menorEsMejor: true, modos: ['normal', 'niveles'], duracion: 'sin tiempo', instrucciones: 'Encuentra todas las parejas de cartas con los menos intentos posibles.', juego: parejas },
 ];
 
 const CATEGORIAS = ['Clásicos', 'Lógica', 'Reacción'];
@@ -68,8 +70,17 @@ function leerEleccion(j) {
   };
 }
 
-// Nivel más alto superado de un juego (0 si ninguno).
-const leerNivelSuperado = (id) => Number(leer('niveles:' + id)) || 0;
+// Estrellas por nivel de un juego (`estrellas:<id>` = JSON con 50 números 0–3). Si aún no hay,
+// el progreso de la versión anterior (`niveles:<id>` = nivel más alto superado) cuenta como 1 ⭐ por nivel.
+function leerEstrellas(id) {
+  try {
+    const estrellas = JSON.parse(leer('estrellas:' + id));
+    if (Array.isArray(estrellas)) return estrellas;
+  } catch {
+    // dato roto: se usa el progreso antiguo
+  }
+  return desdeAntiguo(Number(leer('niveles:' + id)) || 0);
+}
 
 // "245 ms", "12 movimientos" o solo "7" si el juego no tiene unidad.
 const conUnidad = (j, n) => (j.unidad ? `${n} ${j.unidad}` : `${n}`);
@@ -191,7 +202,7 @@ function mostrar(id) {
 function abrirPrevia(j) {
   actual = j;
   eleccion = leerEleccion(j);
-  nivelElegido = Math.min(leerNivelSuperado(j.id) + 1, NUM_NIVELES);
+  nivelElegido = siguienteNivel(leerEstrellas(j.id));
   pintarPrevia(j);
   mostrar('previa');
 }
@@ -214,28 +225,60 @@ function pintarPrevia(j) {
   pintarHistorial(j);
 }
 
-// Cuadrícula de niveles (⭐ superados, 🔒 bloqueados) y el objetivo del nivel elegido.
+// Modo Niveles: total de estrellas, mundos (de 10 niveles), niveles del mundo con su reto y estrellas, y el objetivo.
 function pintarNiveles(j) {
-  const superado = leerNivelSuperado(j.id);
-  const rejilla = el('div', 'niveles');
-  rejilla.setAttribute('role', 'group');
-  rejilla.setAttribute('aria-label', 'Nivel');
-  for (let n = 1; n <= NUM_NIVELES; n++) {
-    const libre = desbloqueado(superado, n);
-    const b = el('button', '', n <= superado ? `⭐${n}` : libre ? `${n}` : `🔒${n}`);
+  const estrellas = leerEstrellas(j.id);
+  const mundo = Math.ceil(nivelElegido / 10);
+  const grupo = (titulo, clase) => {
+    const caja = el('div', clase);
+    caja.setAttribute('role', 'group');
+    caja.setAttribute('aria-label', titulo);
+    return caja;
+  };
+  // Al elegir, se repinta y el foco vuelve al botón elegido de esa fila.
+  const elegirNivel = (n, fila) => {
+    nivelElegido = n;
+    pintarNiveles(j);
+    $('previa-niveles').querySelector(`[aria-label="${fila}"] [aria-pressed="true"]`)?.focus();
+  };
+
+  const mundos = grupo('Mundo', 'mundos');
+  for (let m = 1; m <= NUM_NIVELES / 10; m++) {
+    const primero = (m - 1) * 10 + 1;
+    const libre = nivelLibre(estrellas, primero);
+    const completo = estrellas.slice(primero - 1, primero + 9).every((e) => e > 0);
+    const b = el('button', '', `${libre ? '' : '🔒'}${m}${completo ? ' ✓' : ''}`);
+    b.disabled = !libre;
+    b.setAttribute('aria-pressed', m === mundo);
+    b.setAttribute('aria-label', `Mundo ${m}${completo ? ', completo' : libre ? '' : ', bloqueado'}`);
+    // Al cambiar de mundo se elige su primer nivel libre sin estrellas (o el primero del mundo).
+    b.onclick = () => {
+      let destino = primero;
+      for (let n = primero + 9; n >= primero; n--) if (nivelLibre(estrellas, n) && !(estrellas[n - 1] > 0)) destino = n;
+      elegirNivel(destino, 'Mundo');
+    };
+    mundos.append(b);
+  }
+
+  const rejilla = grupo('Nivel', 'niveles');
+  for (let n = (mundo - 1) * 10 + 1; n <= mundo * 10; n++) {
+    const libre = nivelLibre(estrellas, n);
+    const e = estrellas[n - 1] || 0;
+    const reto = retoDe(n);
+    const b = el('button', reto === 'normal' ? '' : 'reto');
+    b.append(el('span', '', libre ? `${n}` : `🔒${n}`), el('small', '', libre ? `${ICONO_RETO[reto]}${'⭐'.repeat(e)}${'☆'.repeat(3 - e)}` : ''));
     b.disabled = !libre;
     b.setAttribute('aria-pressed', n === nivelElegido);
-    b.setAttribute('aria-label', `Nivel ${n}${n <= superado ? ', superado' : libre ? '' : ', bloqueado'}`);
-    b.onclick = () => {
-      nivelElegido = n;
-      pintarNiveles(j);
-      $('previa-niveles').querySelector('[aria-pressed="true"]').focus(); // la cuadrícula se rehízo: devolver el foco
-    };
+    b.setAttribute('aria-label', libre ? `Nivel ${n}, ${NOMBRE_RETO[reto]}, ${e} de 3 estrellas` : `Nivel ${n}, bloqueado`);
+    b.onclick = () => elegirNivel(n, 'Nivel');
     rejilla.append(b);
   }
-  const objetivo = el('p', 'objetivo', `Nivel ${nivelElegido}: ${configNivel(j.id, nivelElegido).texto}`);
+
+  const cfg = configNivel(j.id, nivelElegido);
+  const objetivo = el('p', 'objetivo', `Nivel ${nivelElegido} · ${NOMBRE_RETO[cfg.reto]}\n${cfg.texto}`);
   objetivo.setAttribute('aria-live', 'polite'); // se anuncia al cambiar de nivel
-  $('previa-niveles').replaceChildren(rejilla, objetivo);
+  const total = el('p', 'total-estrellas', `⭐ ${totalEstrellas(estrellas)}/${NUM_NIVELES * 3}`);
+  $('previa-niveles').replaceChildren(total, mundos, rejilla, objetivo);
   $('btn-jugar').textContent = `▶ Jugar nivel ${nivelElegido}`;
 }
 
@@ -247,7 +290,7 @@ const CARA = { facil: '🙂', normal: '😐', dificil: '😈' };
 function subtituloModo(j, modo) {
   if (modo === 'rapido') return '30 s';
   if (modo === 'sinfallo') return '1 vida';
-  if (modo === 'niveles') return `⭐ ${leerNivelSuperado(j.id)}`;
+  if (modo === 'niveles') return `⭐ ${totalEstrellas(leerEstrellas(j.id))}`;
   return j.duracion ?? '60 s';
 }
 
@@ -335,18 +378,22 @@ function terminar(puntos) {
   $('final-entreno').hidden = !entrenoHoy;
 
   if (enNiveles) {
-    // Niveles: sin récord; se guarda el progreso y Repetir pasa a "Siguiente nivel" o "Reintentar".
-    const { meta, texto } = configNivel(actual.id, nivelElegido);
-    const logrado = puntos >= meta;
-    guardar('niveles:' + actual.id, nuevoProgreso(leerNivelSuperado(actual.id), nivelElegido, logrado));
-    $('final-modo').textContent = `🪜 Nivel ${nivelElegido}`;
-    $('final-nivel').textContent = logrado ? `⭐ ¡Nivel ${nivelElegido} superado!` : `Nivel no superado (objetivo: ${texto})`;
+    // Niveles: sin récord; se guarda la mejor marca de estrellas y Repetir pasa a "Siguiente nivel" o "Reintentar".
+    const cfg = configNivel(actual.id, nivelElegido);
+    const conseguidas = estrellasDe(puntos, cfg.metas, actual.menorEsMejor);
+    guardar('estrellas:' + actual.id, JSON.stringify(conEstrellas(leerEstrellas(actual.id), nivelElegido, conseguidas)));
+    const signo = actual.menorEsMejor ? '≤' : '';
+    $('final-modo').textContent = `🪜 Nivel ${nivelElegido} · ${NOMBRE_RETO[cfg.reto]}`;
+    $('final-nivel').textContent = !conseguidas
+      ? `Nivel no superado (⭐ con ${signo}${cfg.metas[0]} ${cfg.unidad})`
+      : `${'⭐'.repeat(conseguidas)}${'☆'.repeat(3 - conseguidas)} ¡Superado!` +
+        (conseguidas < 3 ? ` · ${'⭐'.repeat(conseguidas + 1)} con ${signo}${cfg.metas[conseguidas]} ${cfg.unidad}` : '');
     $('final-nivel').hidden = false;
     $('final-record').hidden = true;
-    const siguiente = logrado && nivelElegido < NUM_NIVELES;
+    const siguiente = conseguidas > 0 && nivelElegido < NUM_NIVELES;
     if (siguiente) nivelElegido++;
     $('btn-repetir').textContent = siguiente ? 'Siguiente nivel' : 'Reintentar';
-    celebrar ||= logrado;
+    celebrar ||= conseguidas > 0;
   } else {
     const clave = claveRecord(actual.id, eleccion.modo, eleccion.dificultad);
     const nuevo = esRecord(puntos, leerRecord(clave), actual.menorEsMejor);
