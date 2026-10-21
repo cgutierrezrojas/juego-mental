@@ -15,6 +15,11 @@ const MENOR_ES_MEJOR = ['puzzle', 'rayo', 'parejas'];
 // Variantes de los mundos a partir del 6, en rotación. Solo en los juegos con reloj (en los demás no cambiarían nada).
 export const VARIANTES = ['maraton', 'relampago', 'precision'];
 export const NOMBRE_VARIANTE = { maraton: '🏃 Maratón', relampago: '⚡ Relámpago', precision: '❤️ Precisión' };
+export const DESCRIPCION_VARIANTE = {
+  maraton: 'Más tiempo, más aciertos',
+  relampago: 'Menos tiempo, menos aciertos',
+  precision: 'La mitad de los niveles, sin fallar',
+};
 
 export function varianteDe(id, mundo) {
   if (mundo <= NUM_NIVELES / NIVELES_POR_MUNDO || !CON_TIEMPO.includes(id)) return null;

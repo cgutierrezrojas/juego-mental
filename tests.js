@@ -482,7 +482,7 @@ probar('puzzle: más movimientos al barajar = más desordenado', () => {
 // --- niveles.js ---
 import {
   NUM_NIVELES, retoDe, configNivel, estrellasDe, nivelLibre, conEstrellas, totalEstrellas, desdeAntiguo, siguienteNivel,
-  mundoDe, varianteDe, nivelesDelDia, diarioCompleto, rachaDiaria, podarDiarios, estrellasDiarias,
+  mundoDe, varianteDe, VARIANTES, DESCRIPCION_VARIANTE, nivelesDelDia, diarioCompleto, rachaDiaria, podarDiarios, estrellasDiarias,
 } from './games/niveles.js';
 
 const TODOS_LOS_JUEGOS = ['calculo', 'atencion', 'memoria', 'series', 'sobra', 'puzzle', 'rayo', 'topos', 'mayor', 'distinto', 'balanza', 'parejas'];
@@ -570,6 +570,7 @@ probar('niveles: mundos sin fin con variantes', () => {
     }
   }
   const todas = Array(50).fill(2);
+  assert(VARIANTES.every((v) => typeof DESCRIPCION_VARIANTE[v] === 'string' && DESCRIPCION_VARIANTE[v].length > 0), 'cada variante tiene su explicación');
   assert(siguienteNivel(todas) === 51 && siguienteNivel([1, 1, 0]) === 3 && siguienteNivel([...todas, 1, 3]) === 53);
 });
 
