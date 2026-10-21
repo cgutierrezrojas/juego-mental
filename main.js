@@ -355,6 +355,7 @@ function pintarNiveles(j) {
     const b = el('button', clases);
     b.append(el('span', '', libre ? `${n}` : `🔒${n}`), el('small', '', libre ? `${ICONO_RETO[reto]}${textoEstrellas(e)}` : ''));
     if (n === siguiente) {
+      b.setAttribute('aria-current', 'step'); // tu siguiente nivel (no solo por el color)
       const yo = el('span', 'yo', '🧑');
       yo.setAttribute('aria-hidden', 'true');
       b.append(yo);

@@ -772,11 +772,13 @@ button.tarjeta { position: relative; }
   height: 70px;
   background: var(--acento);
   color: #fff;
+  box-shadow: 0 0 0 6px rgba(232, 85, 42, 0.3), var(--relieve); /* iOS antiguo, sin color-mix */
   box-shadow: 0 0 0 6px color-mix(in srgb, var(--acento) 30%, transparent), var(--relieve);
   animation: latir-suave 1.4s infinite;
 }
 @keyframes latir-suave { 50% { scale: 1.08; } }
 .camino .yo { position: absolute; top: -8px; right: -24px; font-size: 1.3rem; }
+[data-tema="oscuro"] .camino button { background: var(--fondo); } /* tapa la línea del camino */
 [data-tema="oscuro"] .camino button.hecho { background: transparent; color: var(--verde); border-color: var(--verde); }
 [data-tema="oscuro"] .camino button.jefe { background: transparent; color: var(--amarillo); border-color: var(--amarillo); }
 [data-tema="oscuro"] .camino button.actual { background: transparent; color: var(--acento); border-color: var(--acento); box-shadow: 0 0 12px var(--acento); }
@@ -784,7 +786,7 @@ button.tarjeta { position: relative; }
 /* Tarjeta del nivel: diálogo anclado abajo */
 #tarjeta-nivel {
   width: min(420px, 100% - 24px);
-  margin: auto auto 12px;
+  margin: auto auto calc(12px + env(safe-area-inset-bottom));
   padding: 0;
   border: none;
   border-top: 6px solid var(--acento);
@@ -810,3 +812,9 @@ button.tarjeta { position: relative; }
   .cartel.nuevo,
   #tarjeta-nivel[open] { animation: none; }
 }
+
+/* Neón: acento y azul son el mismo color; los retos de hoy van en morado para distinguirlos */
+[data-tema="oscuro"] .retos-hoy button { border-color: var(--morado); }
+[data-tema="oscuro"] .retos-hoy button.hecho { color: var(--morado); box-shadow: 0 0 8px var(--morado); }
+[data-tema="oscuro"] #tarjeta-nivel.diaria { border-top-color: var(--morado); }
+[data-tema="oscuro"] #tarjeta-nivel.diaria #tarjeta-jugar { --c: var(--morado); }
