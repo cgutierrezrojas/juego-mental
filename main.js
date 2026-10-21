@@ -531,6 +531,8 @@ function terminar(puntos) {
       if (siguiente) nivelElegido++;
       $('btn-repetir').textContent = siguiente ? 'Siguiente nivel' : 'Reintentar';
     }
+    // Superado con 1 o 2 ⭐ y el botón grande ya pasa al siguiente: también se puede repetir este por las 3.
+    $('btn-mejorar').hidden = !(siguiente && conseguidas < 3);
     $('final-nivel').textContent = texto;
     $('final-nivel').hidden = false;
     $('final-record').hidden = true;
@@ -543,6 +545,7 @@ function terminar(puntos) {
     $('final-modo').textContent = etiqueta(eleccion.modo, eleccion.dificultad);
     $('final-nivel').hidden = true;
     $('btn-repetir').textContent = 'Repetir';
+    $('btn-mejorar').hidden = true;
     celebrar ||= nuevo;
   }
 
@@ -639,6 +642,13 @@ $('tarjeta-nivel').onclick = (e) => {
   if (e.target === e.currentTarget) e.currentTarget.close();
 };
 $('btn-repetir').onclick = jugar;
+// Vuelve a jugar el mismo nivel o reto que acaba de terminar (el botón grande ya apunta al siguiente).
+$('btn-mejorar').onclick = () => {
+  vistaHoy = jugando.diario !== null;
+  if (vistaHoy) diarioElegido = jugando.diario;
+  else nivelElegido = jugando.nivel;
+  jugar();
+};
 for (const b of document.querySelectorAll('.btn-menu')) b.onclick = () => mostrar('menu');
 
 $('btn-estadisticas').onclick = () => {
