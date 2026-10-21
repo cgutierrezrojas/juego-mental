@@ -30,6 +30,7 @@ import {
   NUM_NIVELES, NOMBRE_RETO, ICONO_RETO, NOMBRE_VARIANTE, DESCRIPCION_VARIANTE, NIVELES_POR_MUNDO, mundoDe, varianteDe, configNivel, estrellasDe, nivelLibre,
   conEstrellas, totalEstrellas, desdeAntiguo, siguienteNivel, nivelesDelDia, diarioCompleto, rachaDiaria, podarDiarios, estrellasDiarias,
 } from './games/niveles.js';
+import { barraFinal, fraseEstrellas, fraseRecord } from './games/final.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -486,6 +487,24 @@ function jugar() {
   paso();
 }
 
+// Barra del final: se llena hasta la puntuación y marca cada valor (`etiquetas[i]` encima, el número debajo).
+function pintarBarra(puntos, valores, etiquetas, menorEsMejor) {
+  const barra = $('final-barra');
+  barra.hidden = !valores.length;
+  if (!valores.length) return;
+  const { relleno, marcas } = barraFinal(puntos, valores, menorEsMejor);
+  const lleno = el('div', 'relleno');
+  lleno.style.setProperty('--p', `${relleno * 100}%`);
+  const partes = [lleno];
+  marcas.forEach((posicion, i) => {
+    const marca = el('span', 'marca');
+    marca.style.left = `${posicion * 100}%`;
+    marca.append(el('span', '', etiquetas[i]), el('small', '', `${valores[i]}`));
+    partes.push(marca);
+  });
+  barra.replaceChildren(...partes);
+}
+
 function terminar(puntos) {
   parar = null;
   const hoy = fechaLocal();
@@ -498,19 +517,21 @@ function terminar(puntos) {
   // ¿Esta partida es la que completa el entrenamiento de hoy?
   const entrenoHoy = !entrenoAntes && entrenoCompleto(hoy, idsPorCategoria, historiales());
   let celebrar = entrenoHoy;
-  $('final-puntos').textContent = conUnidad(actual, puntos);
+  $('final-puntos').textContent = puntos;
   $('final-entreno').hidden = !entrenoHoy;
+  let titular = '';
+  let frase = '';
+  let unidad = actual.unidad ?? '';
+  let espera = 0; // en Niveles, la celebración espera a que caigan las estrellas
 
   if (enNiveles) {
     // Niveles: sin récord; se guarda la mejor marca de estrellas (del nivel o del diario)
-    // y Repetir pasa a "Siguiente nivel" / "Siguiente diario" o "Reintentar".
+    // y el botón grande pasa a "Siguiente nivel" / "Siguiente diario" o "Reintentar".
     const cfg = configNivel(actual.id, nivel);
     const conseguidas = estrellasDe(puntos, cfg.metas, actual.menorEsMejor);
-    const signo = actual.menorEsMejor ? '≤' : '';
-    let texto = !conseguidas
-      ? `Nivel no superado (⭐ con ${signo}${cfg.metas[0]} ${cfg.unidad})`
-      : `${'⭐'.repeat(conseguidas)}${'☆'.repeat(3 - conseguidas)} ¡Superado!` +
-        (conseguidas < 3 ? ` · ${'⭐'.repeat(conseguidas + 1)} con ${signo}${cfg.metas[conseguidas]} ${cfg.unidad}` : '');
+    unidad = cfg.unidad;
+    titular = conseguidas ? '¡Superado!' : 'No superado';
+    frase = fraseEstrellas(puntos, cfg.metas, conseguidas, cfg.unidad, actual.menorEsMejor);
     let siguiente = conseguidas > 0;
     if (jugando.diario !== null) {
       // Se guarda en el día en que empezó la partida.
@@ -520,39 +541,68 @@ function terminar(puntos) {
       dia.estrellas[jugando.diario] = Math.max(dia.estrellas[jugando.diario] || 0, conseguidas);
       guardarDiarios(actual.id, diarios);
       $('final-modo').textContent = `📅 Diario ${jugando.diario + 1}/3 · Nivel ${nivel} · ${NOMBRE_RETO[cfg.reto]}`;
-      if (!antes && diarioCompleto(dia)) texto += ` · ¡Diarios de hoy completos! 📅🔥 ${rachaDiaria(diarios, hoy)}`;
+      if (!antes && diarioCompleto(dia)) frase += `\n¡Diarios de hoy completos! 📅🔥 ${rachaDiaria(diarios, hoy)}`;
       const pendiente = dia.estrellas.findIndex((e) => !(e > 0));
       siguiente &&= pendiente !== -1;
       if (siguiente) diarioElegido = pendiente;
-      $('btn-repetir').textContent = siguiente ? 'Siguiente diario' : 'Reintentar';
+      $('btn-repetir').textContent = siguiente ? '▶ Siguiente diario' : '↻ Reintentar';
     } else {
       guardar('estrellas:' + actual.id, JSON.stringify(conEstrellas(leerEstrellas(actual.id), nivel, conseguidas)));
       $('final-modo').textContent = `🪜 Nivel ${nivel} · ${NOMBRE_RETO[cfg.reto]}`;
       if (siguiente) nivelElegido++;
-      $('btn-repetir').textContent = siguiente ? 'Siguiente nivel' : 'Reintentar';
+      $('btn-repetir').textContent = siguiente ? '▶ Siguiente nivel' : '↻ Reintentar';
     }
     // Superado con 1 o 2 ⭐ y el botón grande ya pasa al siguiente: también se puede repetir este por las 3.
     $('btn-mejorar').hidden = !(siguiente && conseguidas < 3);
-    $('final-nivel').textContent = texto;
-    $('final-nivel').hidden = false;
-    $('final-record').hidden = true;
+    // Estrellas: las conseguidas caen una a una, cada una con su sonido.
+    const estrellas = $('final-estrellas');
+    estrellas.hidden = false;
+    estrellas.setAttribute('aria-label', `${conseguidas} de 3 estrellas`);
+    [...estrellas.children].forEach((s, i) => s.classList.toggle('ganada', i < conseguidas));
+    for (let i = 0; i < conseguidas; i++) setTimeout(() => sonar('acierto'), 300 + i * 350);
+    espera = conseguidas ? 300 + conseguidas * 350 : 0;
+    pintarBarra(puntos, cfg.metas, ['⭐', '⭐⭐', '⭐⭐⭐'], actual.menorEsMejor);
     celebrar ||= conseguidas > 0;
   } else {
+    // Otros modos: récord, y la barra compara con tu media (últimas 10 de antes) y tu récord anterior.
     const clave = claveRecord(actual.id, eleccion.modo, eleccion.dificultad);
-    const nuevo = esRecord(puntos, leerRecord(clave), actual.menorEsMejor);
+    const anterior = leerRecord(clave);
+    const nuevo = esRecord(puntos, anterior, actual.menorEsMejor);
     if (nuevo) guardar(clave, puntos);
-    $('final-record').hidden = !nuevo;
+    const previas = leerHistorial(actual.id).filter((p) => esDe(p, eleccion.modo, eleccion.dificultad)).slice(0, -1).slice(-10);
+    const valores = [];
+    const etiquetas = [];
+    if (previas.length) {
+      valores.push(Math.round(previas.reduce((s, p) => s + p.puntos, 0) / previas.length));
+      etiquetas.push('📊');
+    }
+    if (anterior) {
+      valores.push(anterior);
+      etiquetas.push('🏆');
+    }
+    pintarBarra(puntos, valores, etiquetas, actual.menorEsMejor);
+    titular = nuevo ? '🏆 ¡Nuevo récord!' : '';
+    frase = anterior || nuevo ? fraseRecord(puntos, anterior, actual.unidad ?? 'puntos', actual.menorEsMejor) : '';
     $('final-modo').textContent = etiqueta(eleccion.modo, eleccion.dificultad);
-    $('final-nivel').hidden = true;
-    $('btn-repetir').textContent = 'Repetir';
+    $('final-estrellas').hidden = true;
+    $('btn-repetir').textContent = '↻ Repetir';
     $('btn-mejorar').hidden = true;
     celebrar ||= nuevo;
   }
 
+  $('final-titular').textContent = titular;
+  $('final-titular').hidden = !titular;
+  $('final-titular').classList.toggle('mal', titular === 'No superado');
+  $('final-barra').classList.toggle('metas', enNiveles); // etiquetas de estrellas, más pequeñas
+  $('final-unidad').textContent = unidad;
+  $('final-nivel').textContent = frase;
+  $('final-nivel').hidden = !frase;
   mostrar('final');
   if (celebrar) {
-    confeti();
-    sonar('record');
+    setTimeout(() => {
+      confeti();
+      sonar('record');
+    }, espera);
   }
 }
 

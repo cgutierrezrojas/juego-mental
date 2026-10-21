@@ -680,7 +680,6 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 /* Niveles: total de estrellas */
 .total-estrellas { margin: 0; font-weight: 900; }
 
-#final-nivel { font-size: 1.15rem; }
 
 /* Menú: 📅 en la esquina de los juegos con diarios de hoy pendientes */
 button.tarjeta { position: relative; }
@@ -818,3 +817,57 @@ button.tarjeta { position: relative; }
 [data-tema="oscuro"] .retos-hoy button.hecho { color: var(--morado); box-shadow: 0 0 8px var(--morado); }
 [data-tema="oscuro"] #tarjeta-nivel.diaria { border-top-color: var(--morado); }
 [data-tema="oscuro"] #tarjeta-nivel.diaria #tarjeta-jugar { --c: var(--morado); }
+
+/* F2: final de partida */
+#final-estrellas { margin: 0; font-size: 3rem; letter-spacing: 6px; }
+#final-estrellas span { display: inline-block; opacity: 0.25; filter: grayscale(1); }
+#final-estrellas span.ganada { opacity: 1; filter: none; animation: caer-estrella 0.4s ease-out backwards; }
+#final-estrellas span.ganada:nth-child(1) { animation-delay: 0.3s; }
+#final-estrellas span.ganada:nth-child(2) { animation-delay: 0.65s; }
+#final-estrellas span.ganada:nth-child(3) { animation-delay: 1s; }
+@keyframes caer-estrella { from { scale: 2.4; opacity: 0; } }
+#final-titular { margin: 0; font-size: 1.4rem; font-weight: 900; color: var(--ok); }
+#final-titular.mal { color: var(--mal); }
+#final-puntos { margin: 0; font-size: 3.2rem; font-weight: 900; line-height: 1; }
+#final-unidad { margin: 0; font-weight: 700; opacity: 0.7; }
+#final-unidad:empty { display: none; }
+#final-nivel { white-space: pre-line; }
+
+#final-barra {
+  position: relative;
+  height: 14px;
+  margin: 30px 12px 26px;
+  border-radius: 7px;
+  background: rgba(128, 128, 128, 0.25);
+}
+#final-barra .relleno {
+  width: var(--p);
+  height: 100%;
+  border-radius: 7px;
+  background: var(--acento);
+  animation: llenar 0.9s ease-out;
+}
+@keyframes llenar { from { width: 0; } }
+#final-barra .marca {
+  position: absolute;
+  top: -26px;
+  bottom: -22px;
+  translate: -50% 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 800;
+  background: linear-gradient(currentColor, currentColor) center / 2px 22px no-repeat; /* raya de la marca */
+}
+
+#final-barra.metas .marca > span { font-size: 0.6rem; letter-spacing: -2px; } /* metas juntas: las estrellas no se pisan */
+
+.fila-botones { display: flex; gap: 8px; }
+.fila-botones button { flex: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  #final-estrellas span.ganada,
+  #final-barra .relleno { animation: none; }
+}

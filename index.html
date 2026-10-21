@@ -63,14 +63,19 @@
     </section>
 
     <section id="final" hidden>
-      <h2>Puntuación: <span id="final-puntos"></span></h2>
       <p id="final-modo"></p>
+      <p id="final-estrellas" role="img" hidden><span>⭐</span><span>⭐</span><span>⭐</span></p>
+      <p id="final-titular" hidden></p>
+      <p id="final-puntos"></p>
+      <p id="final-unidad"></p>
+      <div id="final-barra" aria-hidden="true" hidden></div>
       <p id="final-nivel" hidden></p>
-      <p id="final-record" hidden>¡Nuevo récord!</p>
       <p id="final-entreno" hidden>✓ ¡Entrenamiento de hoy completado!</p>
       <button id="btn-repetir" class="grande color" style="--c: var(--acento)">Repetir</button>
-      <button id="btn-mejorar" hidden>↻ Reintentar por ⭐⭐⭐</button>
-      <button class="btn-menu">Menú</button>
+      <div class="fila-botones">
+        <button id="btn-mejorar" hidden>↻ Por ⭐⭐⭐</button>
+        <button class="btn-menu">🏠 Menú</button>
+      </div>
     </section>
 
     <section id="estadisticas" hidden>
