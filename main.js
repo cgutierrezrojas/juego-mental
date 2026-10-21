@@ -61,6 +61,7 @@ let eleccion = { modo: 'normal', dificultad: 'normal' }; // modo y dificultad el
 let nivelElegido = 1; // nivel seleccionado en el modo Niveles
 let vistaHoy = false; // en Niveles: pestaña 📅 Hoy (los 3 diarios) en vez de los mundos
 let diarioElegido = 0; // diario seleccionado (0–2) en la pestaña Hoy
+let jugando = null; // { nivel, fecha, diario } del nivel en curso; se fija al empezar (puede acabar pasada la medianoche)
 
 const leerRecord = (clave) => Number(leer(clave)) || 0;
 
@@ -92,7 +93,8 @@ function leerDiarios(id) {
     const diarios = JSON.parse(leer('diarios:' + id));
     // Solo días válidos: un dato roto no debe romper el menú.
     if (diarios && typeof diarios === 'object') {
-      return Object.fromEntries(Object.entries(diarios).filter(([, d]) => Array.isArray(d?.niveles) && Array.isArray(d?.estrellas)));
+      const valido = (d) => d?.niveles?.length === 3 && d.niveles.every((n) => Number.isInteger(n) && n >= 1) && d.estrellas?.length === 3;
+      return Object.fromEntries(Object.entries(diarios).filter(([, d]) => valido(d)));
     }
   } catch {
     // dato roto: sin diarios
@@ -291,10 +293,12 @@ function pintarNiveles(j) {
     caja.setAttribute('aria-label', titulo);
     return caja;
   };
-  // Tras elegir se repinta y el foco vuelve al botón equivalente (`selector`) de esa fila.
+  // Tras elegir se repinta y el foco vuelve al botón equivalente (`selector`) de esa fila
+  // (o al nombre del mundo, si una flecha ha quedado desactivada).
   const repintar = (fila, selector = '[aria-pressed="true"]') => {
     pintarNiveles(j);
-    $('previa-niveles').querySelector(`[aria-label="${fila}"] ${selector}`)?.focus();
+    const b = $('previa-niveles').querySelector(`[aria-label="${fila}"] ${selector}`);
+    (b && !b.disabled ? b : $('previa-niveles').querySelector('.nombre-mundo'))?.focus();
   };
   // Al cambiar de mundo se elige su primer nivel libre sin estrellas (o el primero del mundo).
   const irAMundo = (m, selector) => {
@@ -432,7 +436,8 @@ function elegir(j, e) {
 // Lo que recibe start: la elección o, en Niveles, la configuración del nivel elegido.
 function opcionesDeJuego() {
   if (eleccion.modo !== 'niveles') return eleccion;
-  const nivel = configNivel(actual.id, nivelJugado());
+  jugando = { nivel: nivelJugado(), fecha: fechaLocal(), diario: vistaHoy ? diarioElegido : null };
+  const nivel = configNivel(actual.id, jugando.nivel);
   return { modo: 'niveles', dificultad: nivel.dificultad, nivel };
 }
 
@@ -466,7 +471,7 @@ function terminar(puntos) {
   const entrenoAntes = entrenoCompleto(hoy, idsPorCategoria, historiales());
   const enNiveles = eleccion.modo === 'niveles';
   const partida = { fecha: hoy, cuando: Date.now(), puntos, ms: Date.now() - inicio, ...eleccion };
-  const nivel = enNiveles ? nivelJugado() : 0;
+  const nivel = enNiveles ? jugando.nivel : 0;
   if (enNiveles) Object.assign(partida, { dificultad: configNivel(actual.id, nivel).dificultad, nivel });
   guardarPartida(actual.id, partida);
   // ¿Esta partida es la que completa el entrenamiento de hoy?
@@ -486,13 +491,14 @@ function terminar(puntos) {
       : `${'⭐'.repeat(conseguidas)}${'☆'.repeat(3 - conseguidas)} ¡Superado!` +
         (conseguidas < 3 ? ` · ${'⭐'.repeat(conseguidas + 1)} con ${signo}${cfg.metas[conseguidas]} ${cfg.unidad}` : '');
     let siguiente = conseguidas > 0;
-    if (vistaHoy) {
-      const diarios = diariosConHoy(actual.id);
-      const dia = diarios[hoy];
+    if (jugando.diario !== null) {
+      // Se guarda en el día en que empezó la partida.
+      const diarios = leerDiarios(actual.id);
+      const dia = diarios[jugando.fecha];
       const antes = diarioCompleto(dia);
-      dia.estrellas[diarioElegido] = Math.max(dia.estrellas[diarioElegido] || 0, conseguidas);
+      dia.estrellas[jugando.diario] = Math.max(dia.estrellas[jugando.diario] || 0, conseguidas);
       guardarDiarios(actual.id, diarios);
-      $('final-modo').textContent = `📅 Diario ${diarioElegido + 1}/3 · Nivel ${nivel} · ${NOMBRE_RETO[cfg.reto]}`;
+      $('final-modo').textContent = `📅 Diario ${jugando.diario + 1}/3 · Nivel ${nivel} · ${NOMBRE_RETO[cfg.reto]}`;
       if (!antes && diarioCompleto(dia)) texto += ` · ¡Diarios de hoy completos! 📅🔥 ${rachaDiaria(diarios, hoy)}`;
       const pendiente = dia.estrellas.findIndex((e) => !(e > 0));
       siguiente &&= pendiente !== -1;
