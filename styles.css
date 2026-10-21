@@ -419,7 +419,6 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   padding: 8px 4px;
 }
 
-.entreno-juegos button.hecho { opacity: 0.6; }
 
 .entreno-completo,
 #final-entreno {
@@ -681,15 +680,6 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 .total-estrellas { margin: 0; font-weight: 900; }
 
 
-/* Menú: 📅 en la esquina de los juegos con diarios de hoy pendientes */
-button.tarjeta { position: relative; }
-.tarjeta.diario-pendiente::after {
-  content: '📅';
-  position: absolute;
-  top: 3px;
-  right: 5px;
-  font-size: 0.75rem;
-}
 
 /* F1: camino de niveles */
 .retos-hoy { display: flex; gap: 8px; }
@@ -871,3 +861,32 @@ button.tarjeta { position: relative; }
   #final-estrellas span.ganada,
   #final-barra .relleno { animation: none; }
 }
+
+/* F3: menú — Tu día, retos pendientes y progreso en las tarjetas */
+.entreno-juegos button.hecho { background: var(--verde); color: #fff; }
+[data-tema="oscuro"] .entreno-juegos button.hecho { background: transparent; color: var(--verde); border-color: var(--verde); }
+.entreno-juegos button.siguiente { border-color: var(--acento); }
+.barra-dia { height: 8px; overflow: hidden; border-radius: 4px; background: rgba(128, 128, 128, 0.25); }
+.barra-dia div { height: 100%; background: var(--verde); }
+
+#retos-pendientes { display: flex; flex-direction: column; gap: 6px; }
+#retos-pendientes:empty { display: none; }
+.fila-retos { display: flex; flex-wrap: wrap; gap: 6px; }
+.fila-retos button { padding: 6px 10px; font-size: 0.85rem; border-color: var(--morado); }
+
+button.tarjeta { position: relative; }
+.tarjeta .progreso { font-size: 0.7rem; font-weight: 700; opacity: 0.9; }
+.tarjeta .progreso:empty,
+.tarjeta .aviso-retos:empty { display: none; }
+.tarjeta .aviso-retos {
+  position: absolute;
+  top: -6px;
+  right: -4px;
+  padding: 1px 6px;
+  border: 2px solid var(--fondo);
+  border-radius: 10px;
+  background: var(--morado);
+  color: #fff;
+  font-size: 0.7rem;
+}
+[data-tema="oscuro"] .tarjeta .aviso-retos { background: var(--fondo); color: var(--morado); border-color: var(--morado); }

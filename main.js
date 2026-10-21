@@ -127,12 +127,34 @@ const estrellasDelJuego = (id) => totalEstrellas(leerEstrellas(id)) + estrellasD
 // Nivel que se juega: el elegido o, en la pestaña Hoy, el del diario elegido.
 const nivelJugado = () => (vistaHoy ? diariosConHoy(actual.id)[fechaLocal()].niveles[diarioElegido] : nivelElegido);
 
-// Menú: 📅 en las tarjetas de los juegos con diarios de hoy sin terminar.
-function pintarAvisosDiarios() {
-  const hoy = fechaLocal();
+// Retos de hoy que te faltan en un juego; solo cuenta si ya lo juegas en Niveles (tiene alguna ⭐).
+const retosPendientes = (j) => (estrellasDelJuego(j.id) > 0 ? 3 - diariosHechos(j.id) : 0);
+
+// Abre un juego directamente en modo Niveles, con el camino colocado en tu nivel.
+function abrirEnNiveles(j) {
+  abrirPrevia(j);
+  if (eleccion.modo !== 'niveles') elegir(j, { ...eleccion, modo: 'niveles' });
+  document.querySelector('.camino .actual')?.scrollIntoView({ block: 'center' });
+}
+
+// Menú: fila de retos de hoy pendientes y, en cada tarjeta, tu nivel 🪜, tu récord 🏆 y el aviso 📅.
+function pintarProgreso() {
+  const retos = el('div', 'fila-retos');
   for (const b of document.querySelectorAll('.tarjeta[data-juego]')) {
-    b.classList.toggle('diario-pendiente', !diarioCompleto(leerDiarios(b.dataset.juego)[hoy]));
+    const j = JUEGOS.find((x) => x.id === b.dataset.juego);
+    const pendientes = retosPendientes(j);
+    const nivel = estrellasDelJuego(j.id) > 0 ? siguienteNivel(leerEstrellas(j.id)) : 0;
+    const record = leerRecord(claveRecord(j.id));
+    b.querySelector('.progreso').textContent = [nivel && `🪜 ${nivel}`, record && `🏆 ${record}`].filter(Boolean).join(' · ');
+    b.querySelector('.aviso-retos').textContent = pendientes ? `📅 ${pendientes}` : '';
+    b.setAttribute('aria-label', [j.nombre, nivel && `nivel ${nivel}`, record && `récord ${record}`, pendientes && `${pendientes} retos de hoy pendientes`].filter(Boolean).join(', '));
+    if (pendientes) {
+      const reto = el('button', '', `${j.icono} ${j.nombre} ${3 - pendientes}/3`);
+      reto.onclick = () => abrirEnNiveles(j);
+      retos.append(reto);
+    }
   }
+  $('retos-pendientes').replaceChildren(...(retos.children.length ? [el('h3', 'categoria', '📅 Retos de hoy pendientes'), retos] : []));
 }
 
 // "245 ms", "12 movimientos" o solo "7" si el juego no tiene unidad.
@@ -179,24 +201,33 @@ function pintarHistorial(j) {
   caja.replaceChildren(grafica, el('p', '', `Media de las últimas ${diez.length}: ${conUnidad(j, media)}`));
 }
 
-// Tarjeta "Entrenamiento de hoy": los 3 juegos del día (✓ si ya hay una partida hoy) y la racha.
+// Tarjeta "☀️ Tu día": los 3 juegos del entrenamiento (✓ hechos, ▶ el siguiente), barra de avance y racha.
 function pintarEntreno() {
   const hoy = fechaLocal();
   const hist = historiales();
   const hechos = jugadosEn(hoy, hist);
   const ids = entrenoDelDia(hoy, idsPorCategoria);
+  const siguiente = ids.find((id) => !hechos.has(id));
   const titulo = el('div', 'entreno-titulo');
-  titulo.append(el('span', '', 'Entrenamiento de hoy'), el('span', '', `🔥 ${racha(hoy, idsPorCategoria, hist)}`));
+  titulo.append(el('span', '', '☀️ Tu día'), el('span', '', `🔥 ${racha(hoy, idsPorCategoria, hist)}`));
   const lista = el('div', 'entreno-juegos');
   for (const id of ids) {
     const j = JUEGOS.find((x) => x.id === id);
     const hecho = hechos.has(id);
-    const b = el('button', hecho ? 'hecho' : '', `${hecho ? '✓' : '○'} ${j.icono} ${j.nombre}`);
+    const marca = hecho ? '✓ ' : id === siguiente ? '▶ ' : '';
+    const b = el('button', hecho ? 'hecho' : id === siguiente ? 'siguiente' : '', `${marca}${j.icono} ${j.nombre}`);
     b.onclick = () => abrirPrevia(j);
     lista.append(b);
   }
-  const partes = [titulo, lista];
-  if (ids.every((id) => hechos.has(id))) partes.push(el('p', 'entreno-completo', '✓ ¡Entrenamiento completado!'));
+  const cuantos = ids.filter((id) => hechos.has(id)).length;
+  const barra = el('div', 'barra-dia');
+  barra.setAttribute('role', 'img');
+  barra.setAttribute('aria-label', `${cuantos} de ${ids.length} hechos`);
+  const relleno = el('div');
+  relleno.style.width = `${(cuantos / ids.length) * 100}%`;
+  barra.append(relleno);
+  const partes = [titulo, lista, barra];
+  if (!siguiente) partes.push(el('p', 'entreno-completo', '✓ ¡Entrenamiento completado!'));
   $('entreno').replaceChildren(...partes);
 }
 
@@ -255,7 +286,7 @@ function mostrar(id) {
   }
   if (id === 'menu') {
     pintarEntreno();
-    pintarAvisosDiarios();
+    pintarProgreso();
   }
 }
 
@@ -672,7 +703,7 @@ for (const habilidad of HABILIDADES) {
     const b = el('button', 'tarjeta color');
     b.dataset.juego = j.id;
     b.style.setProperty('--c', `var(--${j.color})`);
-    b.append(el('span', 'icono', j.icono), el('span', '', j.nombre));
+    b.append(el('span', 'icono', j.icono), el('span', '', j.nombre), el('small', 'progreso'), el('span', 'aviso-retos'));
     b.onclick = () => abrirPrevia(j);
     rejilla.append(b);
   }
@@ -680,7 +711,7 @@ for (const habilidad of HABILIDADES) {
 }
 
 pintarEntreno();
-pintarAvisosDiarios();
+pintarProgreso();
 
 // En Niveles, el botón grande juega siempre el siguiente nivel (aunque antes se mirara otro en su tarjeta).
 $('btn-jugar').onclick = () => {
