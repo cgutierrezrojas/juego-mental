@@ -482,6 +482,7 @@ probar('puzzle: más movimientos al barajar = más desordenado', () => {
 // --- niveles.js ---
 import {
   NUM_NIVELES, retoDe, configNivel, estrellasDe, nivelLibre, conEstrellas, totalEstrellas, desdeAntiguo, siguienteNivel,
+  mundoDe, varianteDe, nivelesDelDia, diarioCompleto, rachaDiaria, podarDiarios, estrellasDiarias,
 } from './games/niveles.js';
 
 const TODOS_LOS_JUEGOS = ['calculo', 'atencion', 'memoria', 'series', 'sobra', 'puzzle', 'rayo', 'topos', 'mayor', 'distinto', 'balanza', 'parejas'];
@@ -538,10 +539,54 @@ probar('niveles: estrellas y progreso', () => {
   const e = desdeAntiguo(3);
   assert(e.length === NUM_NIVELES && totalEstrellas(e) === 3 && e[2] === 1 && e[3] === 0);
   assert(nivelLibre(e, 1) && nivelLibre(e, 4) && !nivelLibre(e, 5));
-  assert(siguienteNivel(e) === 4 && siguienteNivel(desdeAntiguo(0)) === 1 && siguienteNivel(desdeAntiguo(50)) === NUM_NIVELES);
+  assert(siguienteNivel(e) === 4 && siguienteNivel(desdeAntiguo(0)) === 1 && siguienteNivel(desdeAntiguo(50)) === 51);
   const e2 = conEstrellas(e, 2, 3);
   assert(e2[1] === 3 && e[1] === 1, 'no modifica el original');
   assert(conEstrellas(e2, 2, 1)[1] === 3, 'las estrellas de un nivel no bajan');
+});
+
+probar('niveles: mundos sin fin con variantes', () => {
+  assert(mundoDe(1) === 1 && mundoDe(10) === 1 && mundoDe(11) === 2 && mundoDe(51) === 6);
+  const v = [5, 6, 7, 8, 9].map((m) => varianteDe('calculo', m)).join();
+  assert(v === ',maraton,relampago,precision,maraton', v);
+  assert(varianteDe('memoria', 6) === null && varianteDe('rayo', 7) === null, 'sin reloj no hay variante');
+  const c = (id, n) => { const x = configNivel(id, n); return `${x.metas.join('/')}|${x.segundos}|${x.sinFallar}|${x.reto}|${x.variante}|${x.mundo}`; };
+  assert(c('calculo', 50) === '20/25/30|30|false|jefe|null|5', c('calculo', 50));
+  assert(c('calculo', 51) === '27/34/41|45|false|normal|maraton|6', c('calculo', 51));
+  assert(c('calculo', 61) === '14/18/21|23|false|normal|relampago|7', c('calculo', 61));
+  assert(c('calculo', 63) === '11/14/17|17|false|contrarreloj|relampago|7', c('calculo', 63));
+  assert(c('calculo', 71) === '13/17/20|30|true|sinfallo|precision|8', c('calculo', 71));
+  assert(c('calculo', 72) === '19/24/29|30|false|normal|precision|8', c('calculo', 72));
+  assert(c('calculo', 301) === '17/22/26|23|false|normal|relampago|31', c('calculo', 301));
+  assert(c('rayo', 60) === '265/239/212|0|false|jefe|null|6', c('rayo', 60));
+  assert(c('memoria', 55) === '14/18/21|0|false|normal|null|6', c('memoria', 55));
+  for (const id of TODOS_LOS_JUEGOS) {
+    for (let n = 1; n <= 400; n++) {
+      const x = configNivel(id, n);
+      const [a, b, c3] = x.metas;
+      const menor = ['puzzle', 'rayo', 'parejas'].includes(id);
+      assert(a > 0 && (menor ? a > b && b > c3 : a < b && b < c3), `${id} ${n}: ${x.metas}`);
+      if (id === 'parejas') assert(c3 >= x.parejas, `parejas ${n}: ${x.metas}`);
+    }
+  }
+  const todas = Array(50).fill(2);
+  assert(siguienteNivel(todas) === 51 && siguienteNivel([1, 1, 0]) === 3 && siguienteNivel([...todas, 1, 3]) === 53);
+});
+
+probar('niveles: diarios y su racha', () => {
+  assert(nivelesDelDia(1).join() === '1,3,5' && nivelesDelDia(17).join() === '15,17,19');
+  assert(!diarioCompleto(undefined) && !diarioCompleto({ niveles: [1, 3, 5], estrellas: [1, 0, 3] }) && diarioCompleto({ niveles: [1, 3, 5], estrellas: [1, 2, 3] }));
+  const lleno = { niveles: [1, 3, 5], estrellas: [1, 1, 1] };
+  const medio = { niveles: [1, 3, 5], estrellas: [3, 0, 0] };
+  const d = { '2026-10-18': lleno, '2026-10-19': lleno, '2026-10-20': lleno, '2026-10-21': medio };
+  assert(rachaDiaria(d, '2026-10-21') === 3, 'hoy a medias cuenta desde ayer');
+  assert(rachaDiaria({ ...d, '2026-10-21': lleno }, '2026-10-21') === 4);
+  assert(rachaDiaria(d, '2026-10-23') === 0, 'un día sin jugar la corta');
+  assert(rachaDiaria({ '2026-02-28': lleno, '2026-03-01': lleno }, '2026-03-01') === 2, 'cambio de mes');
+  assert(estrellasDiarias(d) === 12 && estrellasDiarias({}) === 0);
+  const muchos = Object.fromEntries(Array.from({ length: 70 }, (_, i) => [`2026-01-${String(i + 1).padStart(3, '0')}`, lleno]));
+  const podado = podarDiarios(muchos);
+  assert(Object.keys(podado).length === 60 && !('2026-01-001' in podado) && '2026-01-070' in podado);
 });
 
 // --- mayor.js ---
