@@ -63,6 +63,7 @@ let nivelElegido = 1; // nivel seleccionado en el modo Niveles
 let vistaHoy = false; // en Niveles: pestaña 📅 Hoy (los 3 diarios) en vez de los mundos
 let diarioElegido = 0; // diario seleccionado (0–2) en los retos de hoy
 let mundoVisto = 1; // mundo que se ve en el camino (◀ ▶)
+let temporizadores = []; // sonidos y confeti pendientes del final; se cancelan al salir de él
 let jugando = null; // { nivel, fecha, diario } del nivel en curso; se fija al empezar (puede acabar pasada la medianoche)
 
 const leerRecord = (clave) => Number(leer(clave)) || 0;
@@ -248,6 +249,10 @@ function mostrar(id) {
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== id;
   $('btn-salir').hidden = id !== 'juego';
   $('btn-estadisticas').hidden = id !== 'menu';
+  if (id !== 'final') {
+    temporizadores.forEach(clearTimeout);
+    temporizadores = [];
+  }
   if (id === 'menu') {
     pintarEntreno();
     pintarAvisosDiarios();
@@ -531,7 +536,8 @@ function terminar(puntos) {
     const conseguidas = estrellasDe(puntos, cfg.metas, actual.menorEsMejor);
     unidad = cfg.unidad;
     titular = conseguidas ? '¡Superado!' : 'No superado';
-    frase = fraseEstrellas(puntos, cfg.metas, conseguidas, cfg.unidad, actual.menorEsMejor);
+    const valida = !actual.menorEsMejor || puntos > 0; // en "menos es mejor", 0 no es una marca válida
+    frase = valida ? fraseEstrellas(puntos, cfg.metas, conseguidas, cfg.unidad, actual.menorEsMejor) : '';
     let siguiente = conseguidas > 0;
     if (jugando.diario !== null) {
       // Se guarda en el día en que empezó la partida.
@@ -559,9 +565,9 @@ function terminar(puntos) {
     estrellas.hidden = false;
     estrellas.setAttribute('aria-label', `${conseguidas} de 3 estrellas`);
     [...estrellas.children].forEach((s, i) => s.classList.toggle('ganada', i < conseguidas));
-    for (let i = 0; i < conseguidas; i++) setTimeout(() => sonar('acierto'), 300 + i * 350);
+    for (let i = 0; i < conseguidas; i++) temporizadores.push(setTimeout(() => sonar('acierto'), 300 + i * 350));
     espera = conseguidas ? 300 + conseguidas * 350 : 0;
-    pintarBarra(puntos, cfg.metas, ['⭐', '⭐⭐', '⭐⭐⭐'], actual.menorEsMejor);
+    pintarBarra(puntos, valida ? cfg.metas : [], ['⭐', '⭐⭐', '⭐⭐⭐'], actual.menorEsMejor);
     celebrar ||= conseguidas > 0;
   } else {
     // Otros modos: récord, y la barra compara con tu media (últimas 10 de antes) y tu récord anterior.
@@ -569,7 +575,8 @@ function terminar(puntos) {
     const anterior = leerRecord(clave);
     const nuevo = esRecord(puntos, anterior, actual.menorEsMejor);
     if (nuevo) guardar(clave, puntos);
-    const previas = leerHistorial(actual.id).filter((p) => esDe(p, eleccion.modo, eleccion.dificultad)).slice(0, -1).slice(-10);
+    const previas = leerHistorial(actual.id).filter((p) => esDe(p, eleccion.modo, eleccion.dificultad)).slice(0, -1)
+      .filter((p) => !actual.menorEsMejor || p.puntos > 0).slice(-10);
     const valores = [];
     const etiquetas = [];
     if (previas.length) {
@@ -599,10 +606,10 @@ function terminar(puntos) {
   $('final-nivel').hidden = !frase;
   mostrar('final');
   if (celebrar) {
-    setTimeout(() => {
+    temporizadores.push(setTimeout(() => {
       confeti();
       sonar('record');
-    }, espera);
+    }, espera));
   }
 }
 
