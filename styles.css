@@ -513,36 +513,6 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 #previa-niveles[hidden],
 #previa-historial[hidden] { display: none; } /* su display: flex anularía el atributo hidden */
 
-.niveles {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
-}
-
-.niveles button {
-  padding: 8px 0;
-  font-size: 0.95rem;
-}
-
-.niveles button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.niveles button[aria-pressed="true"] {
-  background: var(--acento);
-  color: #fff;
-}
-
-[data-tema="oscuro"] .niveles button[aria-pressed="true"] {
-  background: transparent;
-  color: var(--acento);
-  border-color: var(--acento);
-  box-shadow: 0 0 8px var(--acento);
-}
-
-.objetivo { margin: 0; font-weight: 700; }
-
 #final-nivel {
   margin: 0;
   font-weight: 900;
@@ -707,62 +677,10 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 
 .carta:disabled { cursor: default; }
 
-/* Niveles: total de estrellas, mundos y niveles con su reto y estrellas */
+/* Niveles: total de estrellas */
 .total-estrellas { margin: 0; font-weight: 900; }
 
-.mundos {
-  display: flex;
-  gap: 6px;
-}
-
-.mundos button {
-  flex: 1;
-  padding: 8px 0;
-  font-size: 0.9rem;
-}
-
-.mundos button:disabled { opacity: 0.4; cursor: default; }
-
-.mundos button[aria-pressed="true"] {
-  background: var(--acento);
-  color: #fff;
-}
-
-[data-tema="oscuro"] .mundos button[aria-pressed="true"] {
-  background: transparent;
-  color: var(--acento);
-  border-color: var(--acento);
-  box-shadow: 0 0 8px var(--acento);
-}
-
-.niveles button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  padding: 6px 0;
-}
-
-.niveles button small {
-  min-height: 0.8rem;
-  font-size: 0.55rem;
-  letter-spacing: -1px;
-}
-
-.niveles button.reto { border-color: var(--amarillo); }
-
-.objetivo { white-space: pre-line; }
-
 #final-nivel { font-size: 1.15rem; }
-/* Neón: el nivel elegido conserva el borde de reto */
-[data-tema="oscuro"] .niveles button.reto[aria-pressed="true"] { border-color: var(--amarillo); }
-
-/* Niveles sin fin: selector ◀ Mundo N ▶ con la pestaña 📅 Hoy, y los 3 diarios */
-.mundos .anterior,
-.mundos .siguiente { flex: 0 0 36px; }
-.mundos .nombre-mundo { flex: 3; }
-.mundos .hoy { flex: 1.6; }
-.niveles.diarios { grid-template-columns: repeat(3, 1fr); }
 
 /* Menú: 📅 en la esquina de los juegos con diarios de hoy pendientes */
 button.tarjeta { position: relative; }
@@ -772,4 +690,123 @@ button.tarjeta { position: relative; }
   top: 3px;
   right: 5px;
   font-size: 0.75rem;
+}
+
+/* F1: camino de niveles */
+.retos-hoy { display: flex; gap: 8px; }
+.retos-hoy button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0;
+  font-size: 0.95rem;
+  border-color: var(--azul);
+}
+.retos-hoy button.hecho { background: var(--azul); color: #fff; }
+[data-tema="oscuro"] .retos-hoy button.hecho { background: transparent; color: var(--azul); box-shadow: 0 0 8px var(--azul); }
+.retos-hoy small,
+.camino small { font-size: 0.6rem; letter-spacing: -1px; }
+
+.cartel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border: 2px solid var(--acento);
+  border-radius: 16px;
+  background: var(--acento);
+  color: #fff;
+}
+[data-tema="oscuro"] .cartel { background: transparent; color: var(--acento); box-shadow: 0 0 8px var(--acento); }
+.cartel button { flex: 0 0 44px; padding: 8px 0; }
+.cartel button:disabled { opacity: 0.35; cursor: default; }
+.nombre-mundo { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.nombre-mundo small { font-size: 0.8rem; font-weight: 600; opacity: 0.9; }
+.cartel.nuevo { animation: mundo-nuevo 0.6s ease-out; }
+@keyframes mundo-nuevo {
+  from { scale: 0.6; opacity: 0; }
+  60% { scale: 1.08; }
+}
+
+/* Camino: de abajo arriba (column-reverse), en zigzag con `translate` (deja `scale` libre para el latido) */
+.camino {
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 0; /* en zigzag, dos niveles seguidos no se tocan aunque se solapen en altura */
+  padding: 8px 0;
+}
+.camino > * + * { margin-bottom: -10px; }
+.camino::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  border-left: 3px dashed currentColor;
+  opacity: 0.2;
+}
+.camino button {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+.camino button:nth-child(4n + 2) { translate: 60px 0; }
+.camino button:nth-child(4n) { translate: -60px 0; }
+.camino button:disabled { opacity: 0.4; cursor: default; }
+.camino button.hecho { background: var(--verde); color: #fff; }
+.camino button.jefe { width: 72px; height: 72px; background: var(--amarillo); color: #fff; }
+.camino button.actual {
+  width: 70px;
+  height: 70px;
+  background: var(--acento);
+  color: #fff;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--acento) 30%, transparent), var(--relieve);
+  animation: latir-suave 1.4s infinite;
+}
+@keyframes latir-suave { 50% { scale: 1.08; } }
+.camino .yo { position: absolute; top: -8px; right: -24px; font-size: 1.3rem; }
+[data-tema="oscuro"] .camino button.hecho { background: transparent; color: var(--verde); border-color: var(--verde); }
+[data-tema="oscuro"] .camino button.jefe { background: transparent; color: var(--amarillo); border-color: var(--amarillo); }
+[data-tema="oscuro"] .camino button.actual { background: transparent; color: var(--acento); border-color: var(--acento); box-shadow: 0 0 12px var(--acento); }
+
+/* Tarjeta del nivel: diálogo anclado abajo */
+#tarjeta-nivel {
+  width: min(420px, 100% - 24px);
+  margin: auto auto 12px;
+  padding: 0;
+  border: none;
+  border-top: 6px solid var(--acento);
+  border-radius: 20px;
+  background: var(--fondo);
+  color: var(--texto);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3);
+}
+#tarjeta-nivel.diaria { border-top-color: var(--azul); }
+#tarjeta-nivel[open] { animation: subir 0.2s ease-out; }
+@keyframes subir { from { translate: 0 40px; opacity: 0; } }
+#tarjeta-nivel::backdrop { background: rgba(0, 0, 0, 0.4); }
+.tarjeta-dentro { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
+.tarjeta-dentro h3 { margin: 0 40px 0 0; }
+.tarjeta-dentro p { margin: 0; font-weight: 700; white-space: pre-line; }
+.tarjeta-dentro form { position: absolute; top: 10px; right: 10px; }
+.tarjeta-dentro form button { padding: 4px 10px; font-size: 1rem; box-shadow: none; }
+#tarjeta-jugar { --c: var(--acento); }
+#tarjeta-nivel.diaria #tarjeta-jugar { --c: var(--azul); }
+
+@media (prefers-reduced-motion: reduce) {
+  .camino button.actual,
+  .cartel.nuevo,
+  #tarjeta-nivel[open] { animation: none; }
 }

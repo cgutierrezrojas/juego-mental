@@ -27,7 +27,7 @@ import {
 } from './games/estadisticas.js';
 import { MODOS, DIFICULTADES, claveRecord, esDe, filtrar, etiqueta } from './games/modos.js';
 import {
-  NUM_NIVELES, NOMBRE_RETO, ICONO_RETO, NOMBRE_VARIANTE, NIVELES_POR_MUNDO, mundoDe, varianteDe, configNivel, estrellasDe, nivelLibre,
+  NUM_NIVELES, NOMBRE_RETO, ICONO_RETO, NOMBRE_VARIANTE, DESCRIPCION_VARIANTE, NIVELES_POR_MUNDO, mundoDe, varianteDe, configNivel, estrellasDe, nivelLibre,
   conEstrellas, totalEstrellas, desdeAntiguo, siguienteNivel, nivelesDelDia, diarioCompleto, rachaDiaria, podarDiarios, estrellasDiarias,
 } from './games/niveles.js';
 
@@ -60,7 +60,8 @@ let inicio = 0; // cuándo empezó el juego en curso (tras la cuenta atrás), pa
 let eleccion = { modo: 'normal', dificultad: 'normal' }; // modo y dificultad elegidos para el juego abierto
 let nivelElegido = 1; // nivel seleccionado en el modo Niveles
 let vistaHoy = false; // en Niveles: pestaña 📅 Hoy (los 3 diarios) en vez de los mundos
-let diarioElegido = 0; // diario seleccionado (0–2) en la pestaña Hoy
+let diarioElegido = 0; // diario seleccionado (0–2) en los retos de hoy
+let mundoVisto = 1; // mundo que se ve en el camino (◀ ▶)
 let jugando = null; // { nivel, fecha, diario } del nivel en curso; se fija al empezar (puede acabar pasada la medianoche)
 
 const leerRecord = (clave) => Number(leer(clave)) || 0;
@@ -256,9 +257,11 @@ function abrirPrevia(j) {
   actual = j;
   eleccion = leerEleccion(j);
   nivelElegido = siguienteNivel(leerEstrellas(j.id));
+  mundoVisto = mundoDe(nivelElegido);
   vistaHoy = false;
   pintarPrevia(j);
   mostrar('previa');
+  document.querySelector('.camino .actual')?.scrollIntoView({ block: 'center' }); // el camino empieza en tu nivel
 }
 
 // Nombre, instrucciones, botones de modo/dificultad y, según el modo, récord y gráfica o la cuadrícula de niveles.
@@ -279,108 +282,125 @@ function pintarPrevia(j) {
   pintarHistorial(j);
 }
 
-// Modo Niveles: total de estrellas, selector de mundo (◀ ▶) con la pestaña 📅 Hoy, los niveles del mundo
-// (o los 3 diarios) con su reto y estrellas, y el objetivo.
+const textoEstrellas = (e) => `${'⭐'.repeat(e)}${'☆'.repeat(3 - e)}`;
+
+// Modo Niveles: total, 📅 retos de hoy, cartel del mundo (◀ ▶) y camino de sus 10 niveles (de abajo arriba).
+// Tocar un nivel o un reto abre su tarjeta; el botón grande juega siempre el siguiente nivel.
 function pintarNiveles(j) {
   const estrellas = leerEstrellas(j.id);
   const hoy = fechaLocal();
   const diarios = diariosConHoy(j.id);
   const delDia = diarios[hoy];
-  const mundo = mundoDe(nivelElegido);
+  const siguiente = siguienteNivel(estrellas);
   const grupo = (titulo, clase) => {
     const caja = el('div', clase);
     caja.setAttribute('role', 'group');
     caja.setAttribute('aria-label', titulo);
     return caja;
   };
-  // Tras elegir se repinta y el foco vuelve al botón equivalente (`selector`) de esa fila
-  // (o al nombre del mundo, si una flecha ha quedado desactivada).
-  const repintar = (fila, selector = '[aria-pressed="true"]') => {
-    pintarNiveles(j);
-    const b = $('previa-niveles').querySelector(`[aria-label="${fila}"] ${selector}`);
-    (b && !b.disabled ? b : $('previa-niveles').querySelector('.nombre-mundo'))?.focus();
-  };
-  // Al cambiar de mundo se elige su primer nivel libre sin estrellas (o el primero del mundo).
-  const irAMundo = (m, selector) => {
-    const primero = (m - 1) * NIVELES_POR_MUNDO + 1;
-    nivelElegido = primero;
-    for (let n = primero + NIVELES_POR_MUNDO - 1; n >= primero; n--) if (nivelLibre(estrellas, n) && !(estrellas[n - 1] > 0)) nivelElegido = n;
-    vistaHoy = false;
-    repintar('Mundo', selector);
-  };
-  const flecha = (texto, clase, etiqueta, destino, disabled) => {
+
+  const retos = grupo('Retos de hoy', 'retos-hoy');
+  delDia.niveles.forEach((n, i) => {
+    const e = delDia.estrellas[i] || 0;
+    const reto = configNivel(j.id, n).reto;
+    const b = el('button', e > 0 ? 'hecho' : '');
+    b.append(el('span', '', `${n} ${ICONO_RETO[reto]}`), el('small', '', textoEstrellas(e)));
+    b.setAttribute('aria-label', `Reto de hoy ${i + 1}, nivel ${n}, ${NOMBRE_RETO[reto]}, ${e} de 3 estrellas`);
+    b.onclick = () => {
+      vistaHoy = true;
+      diarioElegido = i;
+      abrirTarjeta(j);
+    };
+    retos.append(b);
+  });
+
+  // Cartel: ◀ nombre y variante (explicada) ▶; ▶ llega hasta el mundo más alto desbloqueado.
+  const mundo = mundoVisto;
+  const primero = (mundo - 1) * NIVELES_POR_MUNDO + 1;
+  const hechos = estrellas.slice(primero - 1, primero - 1 + NIVELES_POR_MUNDO).filter((e) => e > 0).length;
+  const variante = varianteDe(j.id, mundo);
+  const cartel = grupo('Mundo', 'cartel');
+  if (siguiente === primero && siguiente > 1) cartel.classList.add('nuevo'); // recién abierto: entra con animación
+  const flecha = (texto, clase, etiqueta, destino, apagada) => {
     const b = el('button', clase, texto);
     b.setAttribute('aria-label', etiqueta);
-    b.disabled = disabled;
-    b.onclick = () => irAMundo(destino, '.' + clase);
+    b.disabled = apagada;
+    b.onclick = () => {
+      mundoVisto = destino;
+      pintarNiveles(j);
+      // El foco se queda en la flecha; si se ha apagado, pasa a la otra.
+      const otra = clase === 'anterior' ? 'siguiente' : 'anterior';
+      const misma = $('previa-niveles').querySelector(`.cartel .${clase}`);
+      (misma.disabled ? $('previa-niveles').querySelector(`.cartel .${otra}`) : misma).focus();
+    };
     return b;
   };
-
-  // Completo si sus 10 niveles tienen ⭐ (la lista puede acabar a mitad del mundo).
-  const completo = estrellas.slice((mundo - 1) * NIVELES_POR_MUNDO, mundo * NIVELES_POR_MUNDO).filter((e) => e > 0).length === NIVELES_POR_MUNDO;
-  const variante = varianteDe(j.id, mundo);
-  const nombre = el('button', 'nombre-mundo', `Mundo ${mundo}${variante ? ` · ${NOMBRE_VARIANTE[variante]}` : ''}${completo ? ' ✓' : ''}`);
-  nombre.setAttribute('aria-pressed', !vistaHoy);
-  nombre.onclick = () => irAMundo(mundo);
-  const hechos = delDia.estrellas.filter((e) => e > 0).length;
-  const pestanaHoy = el('button', 'hoy', `📅 Hoy ${hechos}/3`);
-  pestanaHoy.setAttribute('aria-pressed', vistaHoy);
-  pestanaHoy.setAttribute('aria-label', `Niveles de hoy, ${hechos} de 3 superados`);
-  pestanaHoy.onclick = () => {
-    vistaHoy = true;
-    diarioElegido = Math.max(0, delDia.estrellas.findIndex((e) => !(e > 0)));
-    repintar('Mundo');
-  };
-  const mundos = grupo('Mundo', 'mundos');
-  mundos.append(
+  const nombre = el('div', 'nombre-mundo');
+  nombre.append(
+    el('strong', '', `Mundo ${mundo}${variante ? ` · ${NOMBRE_VARIANTE[variante]}` : ''}`),
+    el('small', '', `${variante ? `${DESCRIPCION_VARIANTE[variante]} · ` : ''}${hechos}/${NIVELES_POR_MUNDO}`),
+  );
+  cartel.append(
     flecha('◀', 'anterior', 'Mundo anterior', mundo - 1, mundo === 1),
     nombre,
-    flecha('▶', 'siguiente', 'Mundo siguiente', mundo + 1, mundo >= mundoDe(siguienteNivel(estrellas))), // hasta el más alto desbloqueado
-    pestanaHoy,
+    flecha('▶', 'siguiente', 'Mundo siguiente', mundo + 1, mundo >= mundoDe(siguiente)),
   );
 
-  // Botón de un nivel: número, icono del reto y estrellas.
-  const casilla = (n, e, libre, pulsado, etiqueta, alPulsar) => {
+  const camino = grupo(`Niveles del mundo ${mundo}`, 'camino');
+  for (let n = primero; n < primero + NIVELES_POR_MUNDO; n++) {
+    const libre = nivelLibre(estrellas, n);
+    const e = estrellas[n - 1] || 0;
     const reto = configNivel(j.id, n).reto; // el reto real en este juego (los que no cambian nada salen como Normal)
-    const b = el('button', reto === 'normal' ? '' : 'reto');
-    b.append(el('span', '', libre ? `${n}` : `🔒${n}`), el('small', '', libre ? `${ICONO_RETO[reto]}${'⭐'.repeat(e)}${'☆'.repeat(3 - e)}` : ''));
-    b.disabled = !libre;
-    b.setAttribute('aria-pressed', pulsado);
-    b.setAttribute('aria-label', libre ? `${etiqueta}, ${NOMBRE_RETO[reto]}, ${e} de 3 estrellas` : `${etiqueta}, bloqueado`);
-    b.onclick = alPulsar;
-    return b;
-  };
-
-  let rejilla;
-  if (vistaHoy) {
-    rejilla = grupo('Diarios', 'niveles diarios');
-    delDia.niveles.forEach((n, i) => {
-      rejilla.append(casilla(n, delDia.estrellas[i] || 0, true, i === diarioElegido, `Diario ${i + 1}, nivel ${n}`, () => {
-        diarioElegido = i;
-        repintar('Diarios');
-      }));
-    });
-  } else {
-    rejilla = grupo('Nivel', 'niveles');
-    for (let n = (mundo - 1) * NIVELES_POR_MUNDO + 1; n <= mundo * NIVELES_POR_MUNDO; n++) {
-      rejilla.append(casilla(n, estrellas[n - 1] || 0, nivelLibre(estrellas, n), n === nivelElegido, `Nivel ${n}`, () => {
-        nivelElegido = n;
-        repintar('Nivel');
-      }));
+    const clases = [n === siguiente ? 'actual' : e > 0 ? 'hecho' : '', reto === 'jefe' ? 'jefe' : ''].join(' ').trim();
+    const b = el('button', clases);
+    b.append(el('span', '', libre ? `${n}` : `🔒${n}`), el('small', '', libre ? `${ICONO_RETO[reto]}${textoEstrellas(e)}` : ''));
+    if (n === siguiente) {
+      const yo = el('span', 'yo', '🧑');
+      yo.setAttribute('aria-hidden', 'true');
+      b.append(yo);
     }
+    b.disabled = !libre;
+    b.setAttribute('aria-label', libre ? `Nivel ${n}, ${NOMBRE_RETO[reto]}, ${e} de 3 estrellas` : `Nivel ${n}, bloqueado`);
+    b.onclick = () => {
+      vistaHoy = false;
+      nivelElegido = n;
+      abrirTarjeta(j);
+    };
+    camino.append(b);
   }
 
-  const n = nivelJugado();
-  const cfg = configNivel(j.id, n);
-  const cabecera = vistaHoy
-    ? `📅 Diario ${diarioElegido + 1}/3 · Nivel ${n}${cfg.variante ? ` · ${NOMBRE_VARIANTE[cfg.variante]}` : ''}`
-    : `Nivel ${n}`;
-  const objetivo = el('p', 'objetivo', `${cabecera} · ${NOMBRE_RETO[cfg.reto]}\n${cfg.texto}`);
-  objetivo.setAttribute('aria-live', 'polite'); // se anuncia al cambiar de nivel
   const racha = rachaDiaria(diarios, hoy);
   const total = el('p', 'total-estrellas', `⭐ ${estrellasDelJuego(j.id)}${racha ? ` · 📅🔥 ${racha}` : ''}`);
-  $('previa-niveles').replaceChildren(total, mundos, rejilla, objetivo);
-  $('btn-jugar').textContent = vistaHoy ? `▶ Jugar diario ${diarioElegido + 1}` : `▶ Jugar nivel ${n}`;
+  $('previa-niveles').replaceChildren(total, el('h3', 'categoria', '📅 Retos de hoy'), retos, cartel, camino);
+  $('btn-jugar').textContent = `▶ Jugar nivel ${siguiente}`;
+}
+
+// Tarjeta (diálogo) del nivel o reto elegido: objetivo, tus estrellas y botón para jugarlo.
+function abrirTarjeta(j) {
+  const n = nivelJugado();
+  const cfg = configNivel(j.id, n);
+  const deVariante = cfg.variante ? ` · ${NOMBRE_VARIANTE[cfg.variante]}` : '';
+  let titulo;
+  let e;
+  let extra = '';
+  let boton;
+  if (vistaHoy) {
+    const diarios = diariosConHoy(j.id);
+    const racha = rachaDiaria(diarios, fechaLocal());
+    e = diarios[fechaLocal()].estrellas[diarioElegido] || 0;
+    titulo = `📅 Reto de hoy ${diarioElegido + 1}/3 · Nivel ${n}`;
+    extra = racha ? `Supera los 3 hoy para mantener tu 📅🔥 ${racha}` : 'Supera los 3 hoy para empezar una racha 📅🔥';
+    boton = `▶ Jugar reto ${diarioElegido + 1}`;
+  } else {
+    e = leerEstrellas(j.id)[n - 1] || 0;
+    titulo = `Nivel ${n}`;
+    boton = e > 0 && e < 3 ? '▶ Jugar por ⭐⭐⭐' : '▶ Jugar';
+  }
+  $('tarjeta-titulo').textContent = `${titulo}${deVariante} · ${NOMBRE_RETO[cfg.reto]}`;
+  $('tarjeta-texto').textContent = [`Tienes ${textoEstrellas(e)}`, cfg.texto, extra].filter(Boolean).join('\n');
+  $('tarjeta-jugar').textContent = boton;
+  $('tarjeta-nivel').classList.toggle('diaria', vistaHoy);
+  $('tarjeta-nivel').showModal();
 }
 
 // Icono de cada modo en su baldosa y carita de cada dificultad.
@@ -601,7 +621,22 @@ for (const habilidad of HABILIDADES) {
 pintarEntreno();
 pintarAvisosDiarios();
 
-$('btn-jugar').onclick = jugar;
+// En Niveles, el botón grande juega siempre el siguiente nivel (aunque antes se mirara otro en su tarjeta).
+$('btn-jugar').onclick = () => {
+  if (eleccion.modo === 'niveles') {
+    vistaHoy = false;
+    nivelElegido = siguienteNivel(leerEstrellas(actual.id));
+  }
+  jugar();
+};
+$('tarjeta-jugar').onclick = () => {
+  $('tarjeta-nivel').close();
+  jugar();
+};
+// Tocar fuera de la tarjeta (en el fondo oscuro) la cierra.
+$('tarjeta-nivel').onclick = (e) => {
+  if (e.target === e.currentTarget) e.currentTarget.close();
+};
 $('btn-repetir').onclick = jugar;
 for (const b of document.querySelectorAll('.btn-menu')) b.onclick = () => mostrar('menu');
 
