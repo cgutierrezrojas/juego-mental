@@ -27,7 +27,8 @@ import {
 } from './games/estadisticas.js';
 import { MODOS, DIFICULTADES, claveRecord, esDe, filtrar, etiqueta } from './games/modos.js';
 import {
-  NUM_NIVELES, NOMBRE_RETO, ICONO_RETO, configNivel, estrellasDe, nivelLibre, conEstrellas, totalEstrellas, desdeAntiguo, siguienteNivel,
+  NUM_NIVELES, NOMBRE_RETO, ICONO_RETO, NOMBRE_VARIANTE, NIVELES_POR_MUNDO, mundoDe, varianteDe, configNivel, estrellasDe, nivelLibre,
+  conEstrellas, totalEstrellas, desdeAntiguo, siguienteNivel, nivelesDelDia, diarioCompleto, rachaDiaria, podarDiarios, estrellasDiarias,
 } from './games/niveles.js';
 
 const JUEGOS = [
@@ -58,6 +59,8 @@ let parar = null; // detiene el juego en curso (la devuelve start)
 let inicio = 0; // cuándo empezó el juego en curso (tras la cuenta atrás), para medir su duración
 let eleccion = { modo: 'normal', dificultad: 'normal' }; // modo y dificultad elegidos para el juego abierto
 let nivelElegido = 1; // nivel seleccionado en el modo Niveles
+let vistaHoy = false; // en Niveles: pestaña 📅 Hoy (los 3 diarios) en vez de los mundos
+let diarioElegido = 0; // diario seleccionado (0–2) en la pestaña Hoy
 
 const leerRecord = (clave) => Number(leer(clave)) || 0;
 
@@ -70,17 +73,61 @@ function leerEleccion(j) {
   };
 }
 
-// Estrellas por nivel de un juego (`estrellas:<id>` = JSON con 50 números 0–3). Si aún no hay,
+// Estrellas por nivel de un juego (`estrellas:<id>` = JSON con un número 0–3 por nivel). Si aún no hay,
 // el progreso de la versión anterior (`niveles:<id>` = nivel más alto superado) cuenta como 1 ⭐ por nivel.
 function leerEstrellas(id) {
   try {
     const estrellas = JSON.parse(leer('estrellas:' + id));
-    // Siempre 50 números: un dato corto o con huecos no debe marcar mundos como completos.
-    if (Array.isArray(estrellas)) return Array.from({ length: NUM_NIVELES }, (_, i) => Number(estrellas[i]) || 0);
+    // Al menos 50 números y sin huecos: un dato corto o con huecos no debe marcar mundos como completos.
+    if (Array.isArray(estrellas)) return Array.from({ length: Math.max(NUM_NIVELES, estrellas.length) }, (_, i) => Number(estrellas[i]) || 0);
   } catch {
     // dato roto: se usa el progreso antiguo
   }
   return desdeAntiguo(Number(leer('niveles:' + id)) || 0);
+}
+
+// Niveles diarios de un juego: `diarios:<id>` = JSON { 'AAAA-MM-DD': { niveles: [n, n, n], estrellas: [e, e, e] } }.
+function leerDiarios(id) {
+  try {
+    const diarios = JSON.parse(leer('diarios:' + id));
+    // Solo días válidos: un dato roto no debe romper el menú.
+    if (diarios && typeof diarios === 'object') {
+      return Object.fromEntries(Object.entries(diarios).filter(([, d]) => Array.isArray(d?.niveles) && Array.isArray(d?.estrellas)));
+    }
+  } catch {
+    // dato roto: sin diarios
+  }
+  return {};
+}
+
+const guardarDiarios = (id, diarios) => guardar('diarios:' + id, JSON.stringify(podarDiarios(diarios)));
+
+// Diarios del juego con los de hoy: se eligen (y se guardan) la primera vez que se piden en el día, según tu nivel.
+function diariosConHoy(id) {
+  const diarios = leerDiarios(id);
+  const hoy = fechaLocal();
+  if (!diarios[hoy]) {
+    diarios[hoy] = { niveles: nivelesDelDia(siguienteNivel(leerEstrellas(id))), estrellas: [0, 0, 0] };
+    guardarDiarios(id, diarios);
+  }
+  return diarios;
+}
+
+// Cuántos diarios de hoy están superados (0–3).
+const diariosHechos = (id) => (leerDiarios(id)[fechaLocal()]?.estrellas ?? []).filter((e) => e > 0).length;
+
+// Estrellas de los niveles más las de los diarios.
+const estrellasDelJuego = (id) => totalEstrellas(leerEstrellas(id)) + estrellasDiarias(leerDiarios(id));
+
+// Nivel que se juega: el elegido o, en la pestaña Hoy, el del diario elegido.
+const nivelJugado = () => (vistaHoy ? diariosConHoy(actual.id)[fechaLocal()].niveles[diarioElegido] : nivelElegido);
+
+// Menú: 📅 en las tarjetas de los juegos con diarios de hoy sin terminar.
+function pintarAvisosDiarios() {
+  const hoy = fechaLocal();
+  for (const b of document.querySelectorAll('.tarjeta[data-juego]')) {
+    b.classList.toggle('diario-pendiente', !diarioCompleto(leerDiarios(b.dataset.juego)[hoy]));
+  }
 }
 
 // "245 ms", "12 movimientos" o solo "7" si el juego no tiene unidad.
@@ -197,13 +244,17 @@ function mostrar(id) {
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== id;
   $('btn-salir').hidden = id !== 'juego';
   $('btn-estadisticas').hidden = id !== 'menu';
-  if (id === 'menu') pintarEntreno();
+  if (id === 'menu') {
+    pintarEntreno();
+    pintarAvisosDiarios();
+  }
 }
 
 function abrirPrevia(j) {
   actual = j;
   eleccion = leerEleccion(j);
   nivelElegido = siguienteNivel(leerEstrellas(j.id));
+  vistaHoy = false;
   pintarPrevia(j);
   mostrar('previa');
 }
@@ -226,61 +277,106 @@ function pintarPrevia(j) {
   pintarHistorial(j);
 }
 
-// Modo Niveles: total de estrellas, mundos (de 10 niveles), niveles del mundo con su reto y estrellas, y el objetivo.
+// Modo Niveles: total de estrellas, selector de mundo (◀ ▶) con la pestaña 📅 Hoy, los niveles del mundo
+// (o los 3 diarios) con su reto y estrellas, y el objetivo.
 function pintarNiveles(j) {
   const estrellas = leerEstrellas(j.id);
-  const mundo = Math.ceil(nivelElegido / 10);
+  const hoy = fechaLocal();
+  const diarios = diariosConHoy(j.id);
+  const delDia = diarios[hoy];
+  const mundo = mundoDe(nivelElegido);
   const grupo = (titulo, clase) => {
     const caja = el('div', clase);
     caja.setAttribute('role', 'group');
     caja.setAttribute('aria-label', titulo);
     return caja;
   };
-  // Al elegir, se repinta y el foco vuelve al botón elegido de esa fila.
-  const elegirNivel = (n, fila) => {
-    nivelElegido = n;
+  // Tras elegir se repinta y el foco vuelve al botón equivalente (`selector`) de esa fila.
+  const repintar = (fila, selector = '[aria-pressed="true"]') => {
     pintarNiveles(j);
-    $('previa-niveles').querySelector(`[aria-label="${fila}"] [aria-pressed="true"]`)?.focus();
+    $('previa-niveles').querySelector(`[aria-label="${fila}"] ${selector}`)?.focus();
+  };
+  // Al cambiar de mundo se elige su primer nivel libre sin estrellas (o el primero del mundo).
+  const irAMundo = (m, selector) => {
+    const primero = (m - 1) * NIVELES_POR_MUNDO + 1;
+    nivelElegido = primero;
+    for (let n = primero + NIVELES_POR_MUNDO - 1; n >= primero; n--) if (nivelLibre(estrellas, n) && !(estrellas[n - 1] > 0)) nivelElegido = n;
+    vistaHoy = false;
+    repintar('Mundo', selector);
+  };
+  const flecha = (texto, clase, etiqueta, destino, disabled) => {
+    const b = el('button', clase, texto);
+    b.setAttribute('aria-label', etiqueta);
+    b.disabled = disabled;
+    b.onclick = () => irAMundo(destino, '.' + clase);
+    return b;
   };
 
+  // Completo si sus 10 niveles tienen ⭐ (la lista puede acabar a mitad del mundo).
+  const completo = estrellas.slice((mundo - 1) * NIVELES_POR_MUNDO, mundo * NIVELES_POR_MUNDO).filter((e) => e > 0).length === NIVELES_POR_MUNDO;
+  const variante = varianteDe(j.id, mundo);
+  const nombre = el('button', 'nombre-mundo', `Mundo ${mundo}${variante ? ` · ${NOMBRE_VARIANTE[variante]}` : ''}${completo ? ' ✓' : ''}`);
+  nombre.setAttribute('aria-pressed', !vistaHoy);
+  nombre.onclick = () => irAMundo(mundo);
+  const hechos = delDia.estrellas.filter((e) => e > 0).length;
+  const pestanaHoy = el('button', 'hoy', `📅 Hoy ${hechos}/3`);
+  pestanaHoy.setAttribute('aria-pressed', vistaHoy);
+  pestanaHoy.setAttribute('aria-label', `Niveles de hoy, ${hechos} de 3 superados`);
+  pestanaHoy.onclick = () => {
+    vistaHoy = true;
+    diarioElegido = Math.max(0, delDia.estrellas.findIndex((e) => !(e > 0)));
+    repintar('Mundo');
+  };
   const mundos = grupo('Mundo', 'mundos');
-  for (let m = 1; m <= NUM_NIVELES / 10; m++) {
-    const primero = (m - 1) * 10 + 1;
-    const libre = nivelLibre(estrellas, primero);
-    const completo = estrellas.slice(primero - 1, primero + 9).every((e) => e > 0);
-    const b = el('button', '', `${libre ? '' : '🔒'}${m}${completo ? ' ✓' : ''}`);
-    b.disabled = !libre;
-    b.setAttribute('aria-pressed', m === mundo);
-    b.setAttribute('aria-label', `Mundo ${m}${completo ? ', completo' : libre ? '' : ', bloqueado'}`);
-    // Al cambiar de mundo se elige su primer nivel libre sin estrellas (o el primero del mundo).
-    b.onclick = () => {
-      let destino = primero;
-      for (let n = primero + 9; n >= primero; n--) if (nivelLibre(estrellas, n) && !(estrellas[n - 1] > 0)) destino = n;
-      elegirNivel(destino, 'Mundo');
-    };
-    mundos.append(b);
-  }
+  mundos.append(
+    flecha('◀', 'anterior', 'Mundo anterior', mundo - 1, mundo === 1),
+    nombre,
+    flecha('▶', 'siguiente', 'Mundo siguiente', mundo + 1, mundo >= mundoDe(siguienteNivel(estrellas))), // hasta el más alto desbloqueado
+    pestanaHoy,
+  );
 
-  const rejilla = grupo('Nivel', 'niveles');
-  for (let n = (mundo - 1) * 10 + 1; n <= mundo * 10; n++) {
-    const libre = nivelLibre(estrellas, n);
-    const e = estrellas[n - 1] || 0;
+  // Botón de un nivel: número, icono del reto y estrellas.
+  const casilla = (n, e, libre, pulsado, etiqueta, alPulsar) => {
     const reto = configNivel(j.id, n).reto; // el reto real en este juego (los que no cambian nada salen como Normal)
     const b = el('button', reto === 'normal' ? '' : 'reto');
     b.append(el('span', '', libre ? `${n}` : `🔒${n}`), el('small', '', libre ? `${ICONO_RETO[reto]}${'⭐'.repeat(e)}${'☆'.repeat(3 - e)}` : ''));
     b.disabled = !libre;
-    b.setAttribute('aria-pressed', n === nivelElegido);
-    b.setAttribute('aria-label', libre ? `Nivel ${n}, ${NOMBRE_RETO[reto]}, ${e} de 3 estrellas` : `Nivel ${n}, bloqueado`);
-    b.onclick = () => elegirNivel(n, 'Nivel');
-    rejilla.append(b);
+    b.setAttribute('aria-pressed', pulsado);
+    b.setAttribute('aria-label', libre ? `${etiqueta}, ${NOMBRE_RETO[reto]}, ${e} de 3 estrellas` : `${etiqueta}, bloqueado`);
+    b.onclick = alPulsar;
+    return b;
+  };
+
+  let rejilla;
+  if (vistaHoy) {
+    rejilla = grupo('Diarios', 'niveles diarios');
+    delDia.niveles.forEach((n, i) => {
+      rejilla.append(casilla(n, delDia.estrellas[i] || 0, true, i === diarioElegido, `Diario ${i + 1}, nivel ${n}`, () => {
+        diarioElegido = i;
+        repintar('Diarios');
+      }));
+    });
+  } else {
+    rejilla = grupo('Nivel', 'niveles');
+    for (let n = (mundo - 1) * NIVELES_POR_MUNDO + 1; n <= mundo * NIVELES_POR_MUNDO; n++) {
+      rejilla.append(casilla(n, estrellas[n - 1] || 0, nivelLibre(estrellas, n), n === nivelElegido, `Nivel ${n}`, () => {
+        nivelElegido = n;
+        repintar('Nivel');
+      }));
+    }
   }
 
-  const cfg = configNivel(j.id, nivelElegido);
-  const objetivo = el('p', 'objetivo', `Nivel ${nivelElegido} · ${NOMBRE_RETO[cfg.reto]}\n${cfg.texto}`);
+  const n = nivelJugado();
+  const cfg = configNivel(j.id, n);
+  const cabecera = vistaHoy
+    ? `📅 Diario ${diarioElegido + 1}/3 · Nivel ${n}${cfg.variante ? ` · ${NOMBRE_VARIANTE[cfg.variante]}` : ''}`
+    : `Nivel ${n}`;
+  const objetivo = el('p', 'objetivo', `${cabecera} · ${NOMBRE_RETO[cfg.reto]}\n${cfg.texto}`);
   objetivo.setAttribute('aria-live', 'polite'); // se anuncia al cambiar de nivel
-  const total = el('p', 'total-estrellas', `⭐ ${totalEstrellas(estrellas)}/${NUM_NIVELES * 3}`);
+  const racha = rachaDiaria(diarios, hoy);
+  const total = el('p', 'total-estrellas', `⭐ ${estrellasDelJuego(j.id)}${racha ? ` · 📅🔥 ${racha}` : ''}`);
   $('previa-niveles').replaceChildren(total, mundos, rejilla, objetivo);
-  $('btn-jugar').textContent = `▶ Jugar nivel ${nivelElegido}`;
+  $('btn-jugar').textContent = vistaHoy ? `▶ Jugar diario ${diarioElegido + 1}` : `▶ Jugar nivel ${n}`;
 }
 
 // Icono de cada modo en su baldosa y carita de cada dificultad.
@@ -291,7 +387,7 @@ const CARA = { facil: '🙂', normal: '😐', dificil: '😈' };
 function subtituloModo(j, modo) {
   if (modo === 'rapido') return '30 s';
   if (modo === 'sinfallo') return '1 vida';
-  if (modo === 'niveles') return `⭐ ${totalEstrellas(leerEstrellas(j.id))}`;
+  if (modo === 'niveles') return `⭐ ${estrellasDelJuego(j.id)} · 📅 ${diariosHechos(j.id)}/3`;
   return j.duracion ?? '60 s';
 }
 
@@ -336,7 +432,7 @@ function elegir(j, e) {
 // Lo que recibe start: la elección o, en Niveles, la configuración del nivel elegido.
 function opcionesDeJuego() {
   if (eleccion.modo !== 'niveles') return eleccion;
-  const nivel = configNivel(actual.id, nivelElegido);
+  const nivel = configNivel(actual.id, nivelJugado());
   return { modo: 'niveles', dificultad: nivel.dificultad, nivel };
 }
 
@@ -370,7 +466,8 @@ function terminar(puntos) {
   const entrenoAntes = entrenoCompleto(hoy, idsPorCategoria, historiales());
   const enNiveles = eleccion.modo === 'niveles';
   const partida = { fecha: hoy, cuando: Date.now(), puntos, ms: Date.now() - inicio, ...eleccion };
-  if (enNiveles) Object.assign(partida, { dificultad: configNivel(actual.id, nivelElegido).dificultad, nivel: nivelElegido });
+  const nivel = enNiveles ? nivelJugado() : 0;
+  if (enNiveles) Object.assign(partida, { dificultad: configNivel(actual.id, nivel).dificultad, nivel });
   guardarPartida(actual.id, partida);
   // ¿Esta partida es la que completa el entrenamiento de hoy?
   const entrenoHoy = !entrenoAntes && entrenoCompleto(hoy, idsPorCategoria, historiales());
@@ -379,21 +476,37 @@ function terminar(puntos) {
   $('final-entreno').hidden = !entrenoHoy;
 
   if (enNiveles) {
-    // Niveles: sin récord; se guarda la mejor marca de estrellas y Repetir pasa a "Siguiente nivel" o "Reintentar".
-    const cfg = configNivel(actual.id, nivelElegido);
+    // Niveles: sin récord; se guarda la mejor marca de estrellas (del nivel o del diario)
+    // y Repetir pasa a "Siguiente nivel" / "Siguiente diario" o "Reintentar".
+    const cfg = configNivel(actual.id, nivel);
     const conseguidas = estrellasDe(puntos, cfg.metas, actual.menorEsMejor);
-    guardar('estrellas:' + actual.id, JSON.stringify(conEstrellas(leerEstrellas(actual.id), nivelElegido, conseguidas)));
     const signo = actual.menorEsMejor ? '≤' : '';
-    $('final-modo').textContent = `🪜 Nivel ${nivelElegido} · ${NOMBRE_RETO[cfg.reto]}`;
-    $('final-nivel').textContent = !conseguidas
+    let texto = !conseguidas
       ? `Nivel no superado (⭐ con ${signo}${cfg.metas[0]} ${cfg.unidad})`
       : `${'⭐'.repeat(conseguidas)}${'☆'.repeat(3 - conseguidas)} ¡Superado!` +
         (conseguidas < 3 ? ` · ${'⭐'.repeat(conseguidas + 1)} con ${signo}${cfg.metas[conseguidas]} ${cfg.unidad}` : '');
+    let siguiente = conseguidas > 0;
+    if (vistaHoy) {
+      const diarios = diariosConHoy(actual.id);
+      const dia = diarios[hoy];
+      const antes = diarioCompleto(dia);
+      dia.estrellas[diarioElegido] = Math.max(dia.estrellas[diarioElegido] || 0, conseguidas);
+      guardarDiarios(actual.id, diarios);
+      $('final-modo').textContent = `📅 Diario ${diarioElegido + 1}/3 · Nivel ${nivel} · ${NOMBRE_RETO[cfg.reto]}`;
+      if (!antes && diarioCompleto(dia)) texto += ` · ¡Diarios de hoy completos! 📅🔥 ${rachaDiaria(diarios, hoy)}`;
+      const pendiente = dia.estrellas.findIndex((e) => !(e > 0));
+      siguiente &&= pendiente !== -1;
+      if (siguiente) diarioElegido = pendiente;
+      $('btn-repetir').textContent = siguiente ? 'Siguiente diario' : 'Reintentar';
+    } else {
+      guardar('estrellas:' + actual.id, JSON.stringify(conEstrellas(leerEstrellas(actual.id), nivel, conseguidas)));
+      $('final-modo').textContent = `🪜 Nivel ${nivel} · ${NOMBRE_RETO[cfg.reto]}`;
+      if (siguiente) nivelElegido++;
+      $('btn-repetir').textContent = siguiente ? 'Siguiente nivel' : 'Reintentar';
+    }
+    $('final-nivel').textContent = texto;
     $('final-nivel').hidden = false;
     $('final-record').hidden = true;
-    const siguiente = conseguidas > 0 && nivelElegido < NUM_NIVELES;
-    if (siguiente) nivelElegido++;
-    $('btn-repetir').textContent = siguiente ? 'Siguiente nivel' : 'Reintentar';
     celebrar ||= conseguidas > 0;
   } else {
     const clave = claveRecord(actual.id, eleccion.modo, eleccion.dificultad);
@@ -470,6 +583,7 @@ for (const habilidad of HABILIDADES) {
   const rejilla = el('div', 'rejilla menu-juegos');
   for (const j of juegos) {
     const b = el('button', 'tarjeta color');
+    b.dataset.juego = j.id;
     b.style.setProperty('--c', `var(--${j.color})`);
     b.append(el('span', 'icono', j.icono), el('span', '', j.nombre));
     b.onclick = () => abrirPrevia(j);
@@ -479,6 +593,7 @@ for (const habilidad of HABILIDADES) {
 }
 
 pintarEntreno();
+pintarAvisosDiarios();
 
 $('btn-jugar').onclick = jugar;
 $('btn-repetir').onclick = jugar;

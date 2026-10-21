@@ -756,3 +756,20 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 #final-nivel { font-size: 1.15rem; }
 /* Neón: el nivel elegido conserva el borde de reto */
 [data-tema="oscuro"] .niveles button.reto[aria-pressed="true"] { border-color: var(--amarillo); }
+
+/* Niveles sin fin: selector ◀ Mundo N ▶ con la pestaña 📅 Hoy, y los 3 diarios */
+.mundos .anterior,
+.mundos .siguiente { flex: 0 0 36px; }
+.mundos .nombre-mundo { flex: 3; }
+.mundos .hoy { flex: 1.6; }
+.niveles.diarios { grid-template-columns: repeat(3, 1fr); }
+
+/* Menú: 📅 en la esquina de los juegos con diarios de hoy pendientes */
+button.tarjeta { position: relative; }
+.tarjeta.diario-pendiente::after {
+  content: '📅';
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font-size: 0.75rem;
+}
