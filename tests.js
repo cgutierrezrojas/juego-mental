@@ -590,6 +590,33 @@ probar('niveles: diarios y su racha', () => {
   assert(Object.keys(podado).length === 60 && !('2026-01-001' in podado) && '2026-01-070' in podado);
 });
 
+// --- final.js ---
+import { barraFinal, fraseEstrellas, fraseRecord } from './games/final.js';
+
+probar('final: barra de metas', () => {
+  const redondo = (b) => [b.relleno, ...b.marcas].map((x) => Math.round(x * 100)).join();
+  assert(redondo(barraFinal(16, [12, 15, 18])) === '67,40,60,80', redondo(barraFinal(16, [12, 15, 18])));
+  assert(redondo(barraFinal(447, [447, 402, 358], true)) === '40,40,60,80', 'menos es mejor: a la derecha, mejor');
+  assert(barraFinal(0, [12, 15, 18]).relleno === 0 && barraFinal(99, [12, 15, 18]).relleno === 1, 'se recorta a 0–1');
+  const iguales = barraFinal(20, [20, 20]);
+  assert(iguales.marcas[0] === iguales.marcas[1] && iguales.relleno > 0 && iguales.relleno < 1, JSON.stringify(iguales));
+  assert(barraFinal(5, [0]).relleno === 1, 'marca 0 no divide entre 0');
+});
+
+probar('final: frases', () => {
+  assert(fraseEstrellas(16, [12, 15, 18], 2, 'aciertos') === 'Te faltaron 2 aciertos para ⭐⭐⭐');
+  assert(fraseEstrellas(17, [12, 15, 18], 2, 'aciertos') === 'Te faltó 1 acierto para ⭐⭐⭐');
+  assert(fraseEstrellas(4, [5, 7, 8], 0, 'colores') === 'Te faltó 1 color para ⭐');
+  assert(fraseEstrellas(414, [447, 402, 358], 1, 'ms', true) === 'Te faltó bajar 12 ms para ⭐⭐');
+  assert(fraseEstrellas(20, [12, 15, 18], 3, 'aciertos') === '¡Las 3 estrellas!');
+  assert(fraseRecord(23, 21, 'puntos') === '🏆 2 puntos mejor que tu récord anterior');
+  assert(fraseRecord(23, 0, 'puntos') === '¡Tu primer récord!');
+  assert(fraseRecord(21, 21, 'puntos') === '¡Igualaste tu récord (21)!');
+  assert(fraseRecord(18, 21, 'puntos') === 'A 3 puntos de tu récord (21)');
+  assert(fraseRecord(250, 240, 'ms', true) === 'A 10 ms de tu récord (240)');
+  assert(fraseRecord(239, 240, 'ms', true) === '🏆 1 ms mejor que tu récord anterior');
+});
+
 // --- mayor.js ---
 import { generarPar } from './games/mayor.js';
 
