@@ -276,9 +276,39 @@ function pintarEstadisticas() {
   );
 }
 
+// Ayuda de la primera vez: un aviso encima de lo que explica (resaltado), hasta que se cierra con ✕.
+const AYUDAS = {
+  menu: { objetivo: '#entreno', texto: '👋 ¡Bienvenido! Empieza por ☀️ Tu día: 3 juegos para entrenar cada día y mantener tu racha 🔥. Toca cualquier juego para ver sus modos.' },
+  modos: { objetivo: '#previa-modos', texto: 'Elige un modo y una dificultad. 🪜 Niveles es un camino sin fin con estrellas y 3 retos nuevos cada día.' },
+  niveles: { objetivo: '.camino', texto: '🧑 marca tu nivel. Toca un nivel para ver su objetivo, o juega el siguiente con el botón grande.' },
+  final: { objetivo: '#final-barra', texto: 'La barra muestra cuánto te faltó: las ⭐ en Niveles, y tu media 📊 y tu récord 🏆 en los demás modos.' },
+};
+const AYUDA_DE_PANTALLA = { menu: 'menu', final: 'final' }; // la previa elige la suya al pintarse
+
+// Quita el aviso que hubiera y, si `sitio` no se ha visto aún y lo que explica está a la vista, lo muestra.
+function mostrarAyuda(sitio) {
+  document.querySelector('.ayuda')?.remove();
+  document.querySelector('.resaltado')?.classList.remove('resaltado');
+  if (!sitio || leer('ayuda:' + sitio)) return;
+  const objetivo = document.querySelector(AYUDAS[sitio].objetivo);
+  if (!objetivo || objetivo.hidden) return;
+  const aviso = el('div', 'ayuda');
+  aviso.setAttribute('role', 'note');
+  const cerrar = el('button', '', '✕');
+  cerrar.setAttribute('aria-label', 'Cerrar la ayuda');
+  cerrar.onclick = () => {
+    guardar('ayuda:' + sitio, '1');
+    mostrarAyuda(null);
+  };
+  aviso.append(el('p', '', AYUDAS[sitio].texto), cerrar);
+  objetivo.before(aviso);
+  objetivo.classList.add('resaltado');
+}
+
 function mostrar(id) {
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== id;
   $('btn-salir').hidden = id !== 'juego';
+  $('btn-ayuda').hidden = id === 'juego';
   $('btn-estadisticas').hidden = id !== 'menu';
   if (id !== 'final') {
     temporizadores.forEach(clearTimeout);
@@ -288,6 +318,7 @@ function mostrar(id) {
     pintarEntreno();
     pintarProgreso();
   }
+  if (id !== 'previa') mostrarAyuda(AYUDA_DE_PANTALLA[id]);
 }
 
 function abrirPrevia(j) {
@@ -314,6 +345,7 @@ function pintarPrevia(j) {
   $('previa-historial').hidden = enNiveles;
   $('previa-niveles').hidden = !enNiveles;
   if (enNiveles) return pintarNiveles(j);
+  mostrarAyuda('modos');
   const record = leerRecord(claveRecord(j.id, eleccion.modo, eleccion.dificultad));
   $('previa-record').textContent = record ? conUnidad(j, record) : '—';
   pintarHistorial(j);
@@ -411,6 +443,7 @@ function pintarNiveles(j) {
   const total = el('p', 'total-estrellas', `⭐ ${estrellasDelJuego(j.id)}${racha ? ` · 📅🔥 ${racha}` : ''}`);
   $('previa-niveles').replaceChildren(total, el('h3', 'categoria', '📅 Retos de hoy'), retos, cartel, camino);
   $('btn-jugar').textContent = `▶ Jugar nivel ${siguiente}`;
+  mostrarAyuda('niveles'); // también al cambiar de mundo, que redibuja el camino
 }
 
 // Tarjeta (diálogo) del nivel o reto elegido: objetivo, tus estrellas y botón para jugarlo.
@@ -712,6 +745,7 @@ for (const habilidad of HABILIDADES) {
 
 pintarEntreno();
 pintarProgreso();
+mostrarAyuda('menu');
 
 // En Niveles, el botón grande juega siempre el siguiente nivel (aunque antes se mirara otro en su tarjeta).
 $('btn-jugar').onclick = () => {
@@ -738,6 +772,15 @@ $('btn-mejorar').onclick = () => {
   jugar();
 };
 for (const b of document.querySelectorAll('.btn-menu')) b.onclick = () => mostrar('menu');
+
+// ❓: vuelve a activar todos los avisos y muestra el de la pantalla actual.
+$('btn-ayuda').onclick = () => {
+  for (const sitio of Object.keys(AYUDAS)) guardar('ayuda:' + sitio, '');
+  const pantalla = [...document.querySelectorAll('main > section')].find((s) => !s.hidden).id;
+  if (pantalla === 'previa') pintarPrevia(actual);
+  else mostrarAyuda(AYUDA_DE_PANTALLA[pantalla]);
+  document.querySelector('.ayuda')?.scrollIntoView({ block: 'center' });
+};
 
 $('btn-estadisticas').onclick = () => {
   pintarEstadisticas();

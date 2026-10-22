@@ -890,3 +890,40 @@ button.tarjeta { position: relative; }
   font-size: 0.7rem;
 }
 [data-tema="oscuro"] .tarjeta .aviso-retos { background: var(--fondo); color: var(--morado); border-color: var(--morado); }
+
+/* F4: ayuda de la primera vez */
+.ayuda {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 2px solid var(--acento);
+  border-left-width: 6px;
+  border-radius: 12px;
+  background: var(--superficie);
+  box-shadow: var(--relieve);
+  text-align: left;
+  animation: entrar 0.25s ease-out;
+}
+.ayuda p { flex: 1; margin: 0; font-size: 0.95rem; font-weight: 700; }
+.ayuda button { padding: 2px 8px; font-size: 0.9rem; box-shadow: none; }
+.ayuda::after { /* flecha hacia lo que explica */
+  content: '';
+  position: absolute;
+  left: 28px;
+  bottom: -12px;
+  border: 10px solid transparent;
+  border-bottom: 0;
+  border-top-color: var(--acento);
+}
+.resaltado {
+  outline: 3px solid var(--acento);
+  outline-offset: 4px;
+  animation: resaltar 1.4s ease-in-out infinite;
+}
+@keyframes resaltar { 50% { outline-color: transparent; } }
+@media (prefers-reduced-motion: reduce) {
+  .ayuda,
+  .resaltado { animation: none; }
+}
