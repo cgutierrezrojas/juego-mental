@@ -773,7 +773,8 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 [data-tema="oscuro"] .camino button.actual { background: transparent; color: var(--acento); border-color: var(--acento); box-shadow: 0 0 12px var(--acento); }
 
 /* Tarjeta del nivel: diálogo anclado abajo */
-#tarjeta-nivel {
+#tarjeta-nivel,
+#dialogo-nube {
   width: min(420px, 100% - 24px);
   margin: auto auto calc(12px + env(safe-area-inset-bottom));
   padding: 0;
@@ -785,9 +786,11 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3);
 }
 #tarjeta-nivel.diaria { border-top-color: var(--azul); }
-#tarjeta-nivel[open] { animation: subir 0.2s ease-out; }
+#tarjeta-nivel[open],
+#dialogo-nube[open] { animation: subir 0.2s ease-out; }
 @keyframes subir { from { translate: 0 40px; opacity: 0; } }
-#tarjeta-nivel::backdrop { background: rgba(0, 0, 0, 0.4); }
+#tarjeta-nivel::backdrop,
+#dialogo-nube::backdrop { background: rgba(0, 0, 0, 0.4); }
 .tarjeta-dentro { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
 .tarjeta-dentro h3 { margin: 0 40px 0 0; }
 .tarjeta-dentro p { margin: 0; font-weight: 700; white-space: pre-line; }
@@ -933,3 +936,27 @@ button.tarjeta { position: relative; }
 #copia p { margin: 0; }
 #copia-estado { font-weight: 700; }
 #copia-estado:empty { display: none; }
+
+/* G2: nube y ranking */
+#nube { display: flex; flex-direction: column; gap: 8px; }
+#nube p { margin: 0; }
+#nube .estado-nube { font-weight: 700; }
+#nube a { color: inherit; font-size: 0.85rem; }
+#dialogo-nube { border-top-color: var(--azul); }
+#ranking-lista { margin: 0; padding: 0; list-style-position: inside; text-align: left; }
+#ranking-lista li {
+  display: list-item;
+  margin-bottom: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--superficie);
+  box-shadow: var(--relieve);
+  font-weight: 700;
+}
+[data-tema="oscuro"] #ranking-lista li { border: 1px solid rgba(255, 255, 255, 0.2); }
+#ranking-lista li.propia { outline: 3px solid var(--acento); }
+#ranking-lista .valor { float: right; }
+#ranking-lista li.sin-datos { list-style: none; box-shadow: none; background: none; }
+#ranking-tu { margin: 0; font-weight: 800; }
+#ranking-tu:empty { display: none; }
+#ranking-tipo { font: inherit; font-weight: 700; padding: 10px; border-radius: 12px; }

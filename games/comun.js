@@ -1,4 +1,5 @@
 // Piezas que usan todos los juegos.
+import { esClaveDelJuego } from './copia.js';
 
 // Entero al azar entre 0 y n-1. `rnd` se puede cambiar en las pruebas.
 export function azar(n, rnd = Math.random) {
@@ -37,6 +38,7 @@ export function leer(clave) {
 export function guardar(clave, valor) {
   try {
     localStorage.setItem(clave, valor);
+    if (esClaveDelJuego(clave)) localStorage.setItem('nube:cambio', Date.now()); // para saber si hay que subirlo a la nube
   } catch {
     // sin localStorage: no se guarda
   }

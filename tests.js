@@ -637,6 +637,34 @@ probar('copia de seguridad: solo claves del juego, ida y vuelta', () => {
   }
 });
 
+// --- sincro.js ---
+import { tieneProgreso, decidirSincro, datosRanking } from './games/sincro.js';
+
+probar('nube: cuándo subir, bajar o preguntar', () => {
+  assert(tieneProgreso({ 'record:calculo': '5' }) && !tieneProgreso({ 'ajuste:tema': 'oscuro', 'ayuda:menu': '1' }));
+  const d = (o) => decidirSincro({ hayLocal: true, hayNube: true, vinculado: true, cambioLocal: 10, actualizadoNube: 10, ...o });
+  assert(d({ hayNube: false }) === 'subir' && d({ hayNube: false, hayLocal: false }) === 'nada');
+  assert(d({ hayLocal: false }) === 'bajar');
+  assert(d({ vinculado: false }) === 'preguntar' && d({ vinculado: false, actualizadoNube: 99 }) === 'preguntar');
+  assert(d({ actualizadoNube: 20 }) === 'bajar' && d({ cambioLocal: 20 }) === 'subir' && d({}) === 'nada');
+});
+
+probar('nube: datos del ranking', () => {
+  const datos = {
+    'estrellas:calculo': '[3,2,1]',
+    'estrellas:mayor': 'roto',
+    'diarios:mayor': JSON.stringify({ '2026-10-22': { niveles: [1, 3, 5], estrellas: [3, 1, 0] } }),
+    'record:calculo': '23',
+    'record:calculo:rapido:normal': '40', // otro modo: no cuenta
+    'record:rayo': '50', // imposible (< 80 ms)
+    'record:parejas': '9',
+    'otra-web:record:x': '1',
+  };
+  const r = datosRanking(datos);
+  assert(r.estrellas === 10, `estrellas ${r.estrellas}`);
+  assert(JSON.stringify(r.records) === '{"calculo":23,"parejas":9}', JSON.stringify(r.records));
+});
+
 // --- mayor.js ---
 import { generarPar } from './games/mayor.js';
 

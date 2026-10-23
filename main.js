@@ -32,6 +32,8 @@ import {
 } from './games/niveles.js';
 import { barraFinal, fraseEstrellas, fraseRecord } from './games/final.js';
 import { esClaveDelJuego, crearCopia, leerCopia } from './games/copia.js';
+import { tieneProgreso, decidirSincro, datosRanking } from './games/sincro.js';
+import { CONFIG } from './firebase-config.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -64,6 +66,9 @@ let nivelElegido = 1; // nivel seleccionado en el modo Niveles
 let vistaHoy = false; // en Niveles: pestaña 📅 Hoy (los 3 diarios) en vez de los mundos
 let diarioElegido = 0; // diario seleccionado (0–2) en los retos de hoy
 let mundoVisto = 1; // mundo que se ve en el camino (◀ ▶)
+let nube = null; // ☁️ módulo games/nube.js, cuando ha cargado
+let usuario = null; // usuario con sesión, o null
+let estadoNube = ''; // texto de estado del bloque Nube
 let temporizadores = []; // sonidos y confeti pendientes del final; se cancelan al salir de él
 let jugando = null; // { nivel, fecha, diario } del nivel en curso; se fija al empezar (puede acabar pasada la medianoche)
 
@@ -320,6 +325,8 @@ function mostrar(id) {
     pintarProgreso();
   }
   if (id !== 'previa') mostrarAyuda(AYUDA_DE_PANTALLA[id]);
+  $('btn-ranking').hidden = id !== 'menu' || !usuario;
+  if (id === 'menu' || id === 'final') subir().catch(() => {}); // sin conexión: se reintenta la próxima vez
 }
 
 function abrirPrevia(j) {
@@ -805,6 +812,14 @@ function datosGuardados() {
   }
 }
 
+// Cambia todo el progreso del juego por `datos` ({ clave: valor }); las claves que no estén se borran.
+function sustituirProgreso(datos) {
+  for (const [clave] of datosGuardados()) if (esClaveDelJuego(clave)) localStorage.removeItem(clave);
+  for (const [clave, valor] of Object.entries(datos)) if (esClaveDelJuego(clave) && typeof valor === 'string') guardar(clave, valor);
+}
+
+const datosDelJuego = () => Object.fromEntries(datosGuardados().filter(([clave]) => esClaveDelJuego(clave)));
+
 $('btn-exportar').onclick = async () => {
   const nombre = `juego-mental-${fechaLocal()}.json`;
   const archivo = new File([crearCopia(datosGuardados(), fechaLocal())], nombre, { type: 'application/json' });
@@ -834,8 +849,7 @@ $('archivo-copia').onchange = async () => {
   try {
     const datos = leerCopia(await archivo.text());
     if (!confirm('Esto sustituye tu progreso actual por el de la copia. ¿Seguir?')) return;
-    for (const [clave] of datosGuardados()) if (esClaveDelJuego(clave)) localStorage.removeItem(clave);
-    for (const [clave, valor] of Object.entries(datos)) guardar(clave, valor);
+    sustituirProgreso(datos);
     location.reload();
   } catch (e) {
     $('copia-estado').textContent = `✗ ${e.message}`;
@@ -844,6 +858,212 @@ $('archivo-copia').onchange = async () => {
 
 // Pide al navegador que no borre los datos por su cuenta (por falta de espacio); borrarlos a mano sigue siendo posible.
 navigator.storage?.persist?.().catch(() => {});
+
+// ☁️ Nube (Firebase): sesión con Google, progreso sincronizado y ranking. Sin CONFIG, no aparece nada de esto.
+
+// Bloque "☁️ Nube" de 📊: entrar, o la cuenta con su estado, el apodo del ranking y las opciones.
+function pintarNube() {
+  const caja = $('nube');
+  caja.hidden = !CONFIG;
+  if (!CONFIG) return;
+  const boton = (texto, alPulsar) => {
+    const b = el('button', '', texto);
+    b.onclick = alPulsar;
+    return b;
+  };
+  const privacidad = el('a', '', 'Política de privacidad');
+  privacidad.href = 'privacidad.html';
+  const partes = [el('h3', 'categoria', '☁️ Nube')];
+  if (!nube) {
+    partes.push(el('p', 'sin-datos', estadoNube || 'Conectando con la nube…'));
+  } else if (!usuario) {
+    partes.push(
+      el('p', 'sin-datos', 'Entra con tu cuenta de Google para guardar tu progreso en la nube y competir en el ranking.'),
+      boton('Entrar con Google', () => nube.entrar().catch(() => avisarNube('No se pudo entrar. Inténtalo de nuevo.'))),
+    );
+  } else {
+    const apodo = leer('nube:apodo');
+    partes.push(
+      el('p', '', `Conectado como ${usuario.email}`),
+      el('p', 'estado-nube', estadoNube),
+      boton('🏆 Ver el ranking', abrirRanking),
+      boton(apodo ? `✏️ Apodo en el ranking: ${apodo}` : '✏️ Aparecer en el ranking', () => pedirApodo(false)),
+      boton('Salir', () => nube.salir()),
+      boton('Borrar mis datos de la nube', borrarNube),
+    );
+  }
+  partes.push(privacidad);
+  caja.replaceChildren(...partes);
+}
+
+function avisarNube(texto) {
+  estadoNube = texto;
+  pintarNube();
+}
+
+async function alCambiarUsuario(u) {
+  usuario = u;
+  estadoNube = '';
+  $('btn-ranking').hidden = !u || $('menu').hidden;
+  pintarNube();
+  if (u) await sincronizar();
+}
+
+// Al tener sesión: decide si subir, bajar o preguntar (ver decidirSincro).
+async function sincronizar() {
+  try {
+    avisarNube('Sincronizando…');
+    const local = datosDelJuego();
+    if (tieneProgreso(local) && !leer('nube:cambio')) guardar('nube:cambio', Date.now()); // progreso de antes de la nube
+    const enNube = await nube.leerProgreso(usuario.uid);
+    const decision = decidirSincro({
+      hayLocal: tieneProgreso(local),
+      hayNube: tieneProgreso(enNube?.datos ?? {}),
+      vinculado: leer('nube:uid') === usuario.uid,
+      cambioLocal: Number(leer('nube:cambio')) || 0,
+      actualizadoNube: enNube?.actualizado ?? 0,
+    });
+    if (decision === 'preguntar') return preguntarSincro(enNube);
+    if (decision === 'bajar') return bajar(enNube);
+    guardar('nube:uid', usuario.uid);
+    await subir();
+    pedirApodo(true);
+  } catch {
+    avisarNube('Sin conexión con la nube: se sincronizará más tarde.');
+  }
+}
+
+// Este celular y la nube tienen progreso distinto y aún no se han vinculado: que elija la persona.
+function preguntarSincro(enNube) {
+  avisarNube('Elige qué progreso conservar.');
+  const dialogo = $('dialogo-nube');
+  $('usar-nube').onclick = () => {
+    dialogo.close();
+    bajar(enNube);
+  };
+  $('usar-local').onclick = async () => {
+    dialogo.close();
+    guardar('nube:uid', usuario.uid);
+    guardar('nube:cambio', Date.now()); // el de este celular pasa a ser el más reciente
+    await subir().catch(() => avisarNube('Sin conexión con la nube: se sincronizará más tarde.'));
+    pedirApodo(true);
+  };
+  dialogo.showModal();
+}
+
+// Trae el progreso de la nube a este celular y recarga la app con él.
+function bajar(enNube) {
+  sustituirProgreso(enNube.datos);
+  guardar('nube:cambio', enNube.actualizado);
+  guardar('nube:subido', enNube.actualizado);
+  guardar('nube:uid', usuario.uid);
+  location.reload();
+}
+
+// Sube el progreso (y la fila del ranking, si hay apodo) si ha cambiado desde la última vez.
+async function subir() {
+  if (!nube || !usuario || leer('nube:uid') !== usuario.uid) return;
+  const cambio = Number(leer('nube:cambio')) || 0;
+  if (cambio > (Number(leer('nube:subido')) || 0)) {
+    const datos = datosDelJuego();
+    await nube.guardarProgreso(usuario.uid, datos, cambio);
+    const apodo = leer('nube:apodo');
+    if (apodo) await nube.guardarRanking(usuario.uid, { apodo, ...datosRanking(datos), actualizado: cambio });
+    guardar('nube:subido', cambio);
+  }
+  avisarNube(`✓ Sincronizado (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`);
+}
+
+// Apodo del ranking (2–20 caracteres; vacío = no aparecer). `primeraVez`: solo se pregunta una vez por celular.
+async function pedirApodo(primeraVez) {
+  if (primeraVez && leer('nube:preguntado')) return;
+  guardar('nube:preguntado', '1');
+  const texto = prompt('¿Quieres aparecer en el ranking? Escribe un apodo (de 2 a 20 caracteres; nunca se muestra tu nombre ni tu correo). Déjalo vacío para no aparecer.', leer('nube:apodo') || '');
+  if (texto === null) return; // cancelado: no cambia nada
+  const apodo = texto.trim().slice(0, 20);
+  try {
+    if (apodo.length >= 2) {
+      guardar('nube:apodo', apodo);
+      await nube.guardarRanking(usuario.uid, { apodo, ...datosRanking(datosDelJuego()), actualizado: Date.now() });
+    } else {
+      guardar('nube:apodo', '');
+      await nube.quitarRanking(usuario.uid);
+    }
+    pintarNube();
+  } catch {
+    avisarNube('No se pudo guardar el apodo (¿sin conexión?).');
+  }
+}
+
+async function borrarNube() {
+  if (!confirm('Se borrarán tu progreso guardado en la nube y tu fila del ranking. El progreso de este celular se queda. ¿Seguir?')) return;
+  try {
+    await nube.borrarTodo(usuario.uid);
+    for (const clave of ['nube:uid', 'nube:subido', 'nube:apodo', 'nube:preguntado']) guardar(clave, '');
+    await nube.salir();
+    avisarNube('✓ Tus datos de la nube se han borrado.');
+  } catch {
+    avisarNube('No se pudieron borrar (¿sin conexión?). Inténtalo de nuevo.');
+  }
+}
+
+// 🏆 Ranking: "⭐ General" (total de estrellas) o el récord Normal·Normal de un juego; top 20 y tu puesto.
+function abrirRanking() {
+  if (!$('ranking-tipo').options.length) {
+    $('ranking-tipo').append(new Option('⭐ General (estrellas)', ''), ...JUEGOS.map((j) => new Option(`${j.icono} ${j.nombre}`, j.id)));
+    $('ranking-tipo').onchange = pintarRanking;
+  }
+  mostrar('ranking');
+  pintarRanking();
+}
+
+async function pintarRanking() {
+  const j = JUEGOS.find((x) => x.id === $('ranking-tipo').value);
+  const campo = j ? `records.${j.id}` : 'estrellas';
+  const menor = Boolean(j?.menorEsMejor);
+  const valorDe = (fila) => (j ? fila.records?.[j.id] : fila.estrellas);
+  const conSufijo = (v) => (j ? conUnidad(j, v) : `${v} ⭐`);
+  $('ranking-lista').replaceChildren(el('li', 'sin-datos', 'Cargando…'));
+  $('ranking-tu').textContent = '';
+  try {
+    const filas = await nube.top(campo, menor);
+    $('ranking-lista').replaceChildren(
+      ...(filas.length
+        ? filas.map((f) => {
+            const li = el('li', f.uid === usuario.uid ? 'propia' : '');
+            li.append(el('span', '', f.apodo), el('span', 'valor', conSufijo(valorDe(f))));
+            return li;
+          })
+        : [el('li', 'sin-datos', 'Aún no hay nadie aquí. ¡Sé el primero!')]),
+    );
+    const mio = valorDe(datosRanking(datosDelJuego()));
+    if (!leer('nube:apodo')) $('ranking-tu').textContent = 'No apareces en el ranking: ponte un apodo en 📊 › ☁️ Nube.';
+    else if (mio && !filas.some((f) => f.uid === usuario.uid)) {
+      $('ranking-tu').textContent = `Tú: puesto ${await nube.puesto(campo, mio, menor)} (${conSufijo(mio)})`;
+    }
+  } catch {
+    $('ranking-lista').replaceChildren(el('li', 'sin-datos', 'No se pudo cargar el ranking (¿sin conexión?).'));
+  }
+}
+
+$('btn-ranking').onclick = abrirRanking;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) subir().catch(() => {});
+});
+
+if (CONFIG) {
+  import('./games/nube.js')
+    .then((modulo) => {
+      nube = modulo;
+      pintarNube();
+      return modulo.iniciar(CONFIG, alCambiarUsuario);
+    })
+    .catch(() => {
+      nube = null;
+      avisarNube('No se pudo conectar con la nube (¿sin conexión?). Tu progreso sigue guardado en este celular.');
+    });
+}
+pintarNube();
 
 // Funcionamiento sin conexión. Solo va en localhost o HTTPS; si falla, la app sigue igual.
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

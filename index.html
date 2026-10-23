@@ -21,6 +21,7 @@
     <!-- Barra fija en todas las pantallas: ✕ (solo jugando) a la izquierda, ajustes a la derecha -->
     <header id="barra">
       <button id="btn-estadisticas" aria-label="Estadísticas">📊</button>
+      <button id="btn-ranking" aria-label="Ranking" hidden>🏆</button>
       <button id="btn-salir" aria-label="Salir al menú" hidden>✕</button>
       <div id="esquina">
         <button id="btn-ayuda" aria-label="Ver la ayuda otra vez">❓</button>
@@ -50,6 +51,23 @@
       <button id="btn-jugar" class="grande color" style="--c: var(--acento)">▶ Jugar</button>
       <button class="btn-menu">Menú</button>
     </section>
+
+    <section id="ranking" hidden>
+      <h2>🏆 Ranking</h2>
+      <select id="ranking-tipo" aria-label="Qué ranking ver"></select>
+      <ol id="ranking-lista"></ol>
+      <p id="ranking-tu"></p>
+      <button class="btn-menu">Menú</button>
+    </section>
+
+    <dialog id="dialogo-nube" aria-labelledby="dialogo-nube-titulo">
+      <div class="tarjeta-dentro">
+        <h3 id="dialogo-nube-titulo">¿Qué progreso quieres conservar?</h3>
+        <p>Tu cuenta ya tiene progreso en la nube y este celular también tiene el suyo. Elige con cuál te quedas; el otro se sustituye.</p>
+        <button id="usar-nube" class="grande color" style="--c: var(--azul)">☁️ El de la nube</button>
+        <button id="usar-local">📱 El de este celular</button>
+      </div>
+    </dialog>
 
     <dialog id="tarjeta-nivel" aria-labelledby="tarjeta-titulo">
       <div class="tarjeta-dentro">
@@ -83,6 +101,7 @@
     <section id="estadisticas" hidden>
       <h2>Estadísticas</h2>
       <div id="estadisticas-contenido"></div>
+      <div id="nube" hidden></div>
       <div id="copia">
         <h3 class="categoria">💾 Copia de seguridad</h3>
         <p class="sin-datos">Tu progreso se guarda solo en este móvil. Guarda una copia (en Drive, WhatsApp…) para no perderlo si borras los datos o cambias de móvil.</p>
