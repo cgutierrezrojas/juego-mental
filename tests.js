@@ -617,6 +617,26 @@ probar('final: frases', () => {
   assert(fraseRecord(239, 240, 'ms', true) === '🏆 1 ms mejor que tu récord anterior');
 });
 
+// --- copia.js ---
+import { esClaveDelJuego, crearCopia, leerCopia } from './games/copia.js';
+
+probar('copia de seguridad: solo claves del juego, ida y vuelta', () => {
+  assert(esClaveDelJuego('record:calculo') && esClaveDelJuego('diarios:mayor') && !esClaveDelJuego('otra-web:x'));
+  const texto = crearCopia([['record:calculo', '23'], ['estrellas:mayor', '[3,2]'], ['otra-web:x', 'no']], '2026-10-23');
+  const copia = JSON.parse(texto);
+  assert(copia.app === 'juego-mental' && copia.version === 1 && copia.fecha === '2026-10-23');
+  assert(!('otra-web:x' in copia.datos), 'no copia claves de otras webs');
+  const datos = leerCopia(texto);
+  assert(datos['record:calculo'] === '23' && datos['estrellas:mayor'] === '[3,2]' && Object.keys(datos).length === 2);
+  const raro = leerCopia(JSON.stringify({ app: 'juego-mental', datos: { 'record:x': 5, 'malo:y': 'z', 'ajuste:tema': 'oscuro' } }));
+  assert(Object.keys(raro).join() === 'ajuste:tema', 'descarta valores que no son texto y claves ajenas');
+  for (const malo of ['no es json', '{"app":"otra","datos":{}}', 'null', '{"app":"juego-mental"}']) {
+    let fallo = false;
+    try { leerCopia(malo); } catch { fallo = true; }
+    assert(fallo, `debería rechazar ${malo}`);
+  }
+});
+
 // --- mayor.js ---
 import { generarPar } from './games/mayor.js';
 

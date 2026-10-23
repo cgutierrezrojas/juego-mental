@@ -927,3 +927,9 @@ button.tarjeta { position: relative; }
   .ayuda,
   .resaltado { animation: none; }
 }
+
+/* G1: copia de seguridad (en 📊) */
+#copia { display: flex; flex-direction: column; gap: 8px; }
+#copia p { margin: 0; }
+#copia-estado { font-weight: 700; }
+#copia-estado:empty { display: none; }

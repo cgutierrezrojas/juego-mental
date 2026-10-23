@@ -83,6 +83,14 @@
     <section id="estadisticas" hidden>
       <h2>Estadísticas</h2>
       <div id="estadisticas-contenido"></div>
+      <div id="copia">
+        <h3 class="categoria">💾 Copia de seguridad</h3>
+        <p class="sin-datos">Tu progreso se guarda solo en este móvil. Guarda una copia (en Drive, WhatsApp…) para no perderlo si borras los datos o cambias de móvil.</p>
+        <button id="btn-exportar">⬇️ Guardar copia</button>
+        <button id="btn-importar">⬆️ Recuperar copia</button>
+        <input id="archivo-copia" type="file" accept=".json,application/json" hidden>
+        <p id="copia-estado" role="status"></p>
+      </div>
       <button class="btn-menu">Menú</button>
     </section>
   </main>

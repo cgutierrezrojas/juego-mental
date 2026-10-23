@@ -31,6 +31,7 @@ import {
   conEstrellas, totalEstrellas, desdeAntiguo, siguienteNivel, nivelesDelDia, diarioCompleto, rachaDiaria, podarDiarios, estrellasDiarias,
 } from './games/niveles.js';
 import { barraFinal, fraseEstrellas, fraseRecord } from './games/final.js';
+import { esClaveDelJuego, crearCopia, leerCopia } from './games/copia.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -794,6 +795,55 @@ $('btn-salir').onclick = () => {
   callar();
   mostrar('menu');
 };
+
+// 💾 Copia de seguridad: guarda el progreso en un archivo (en el móvil, con el menú de compartir) o lo recupera de uno.
+function datosGuardados() {
+  try {
+    return Object.keys(localStorage).map((clave) => [clave, localStorage.getItem(clave)]);
+  } catch {
+    return []; // sin localStorage (modo privado): no hay nada que copiar
+  }
+}
+
+$('btn-exportar').onclick = async () => {
+  const nombre = `juego-mental-${fechaLocal()}.json`;
+  const archivo = new File([crearCopia(datosGuardados(), fechaLocal())], nombre, { type: 'application/json' });
+  // En el móvil, el menú de compartir deja guardarla en Drive, mandarla por WhatsApp…; en el ordenador, se descarga.
+  if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [archivo] })) {
+    try {
+      await navigator.share({ files: [archivo], title: 'Copia de Juego Mental' });
+      $('copia-estado').textContent = '✓ Copia lista';
+    } catch {
+      // se canceló el menú de compartir
+    }
+    return;
+  }
+  const enlace = el('a');
+  enlace.href = URL.createObjectURL(archivo);
+  enlace.download = nombre;
+  enlace.click();
+  setTimeout(() => URL.revokeObjectURL(enlace.href), 1000);
+  $('copia-estado').textContent = `✓ Copia guardada como ${nombre}`;
+};
+
+$('btn-importar').onclick = () => $('archivo-copia').click();
+$('archivo-copia').onchange = async () => {
+  const archivo = $('archivo-copia').files[0];
+  $('archivo-copia').value = ''; // para poder elegir el mismo archivo otra vez
+  if (!archivo) return;
+  try {
+    const datos = leerCopia(await archivo.text());
+    if (!confirm('Esto sustituye tu progreso actual por el de la copia. ¿Seguir?')) return;
+    for (const [clave] of datosGuardados()) if (esClaveDelJuego(clave)) localStorage.removeItem(clave);
+    for (const [clave, valor] of Object.entries(datos)) guardar(clave, valor);
+    location.reload();
+  } catch (e) {
+    $('copia-estado').textContent = `✗ ${e.message}`;
+  }
+};
+
+// Pide al navegador que no borre los datos por su cuenta (por falta de espacio); borrarlos a mano sigue siendo posible.
+navigator.storage?.persist?.().catch(() => {});
 
 // Funcionamiento sin conexión. Solo va en localhost o HTTPS; si falla, la app sigue igual.
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
