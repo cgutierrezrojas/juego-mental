@@ -774,7 +774,8 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 
 /* Tarjeta del nivel: diálogo anclado abajo */
 #tarjeta-nivel,
-#dialogo-nube {
+#dialogo-nube,
+#dialogo-pregunta {
   width: min(420px, 100% - 24px);
   margin: auto auto calc(12px + env(safe-area-inset-bottom));
   padding: 0;
@@ -787,10 +788,12 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 }
 #tarjeta-nivel.diaria { border-top-color: var(--azul); }
 #tarjeta-nivel[open],
-#dialogo-nube[open] { animation: subir 0.2s ease-out; }
+#dialogo-nube[open],
+#dialogo-pregunta[open] { animation: subir 0.2s ease-out; }
 @keyframes subir { from { translate: 0 40px; opacity: 0; } }
 #tarjeta-nivel::backdrop,
-#dialogo-nube::backdrop { background: rgba(0, 0, 0, 0.4); }
+#dialogo-nube::backdrop,
+#dialogo-pregunta::backdrop { background: rgba(0, 0, 0, 0.4); }
 .tarjeta-dentro { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
 .tarjeta-dentro h3 { margin: 0 40px 0 0; }
 .tarjeta-dentro p { margin: 0; font-weight: 700; white-space: pre-line; }
@@ -976,3 +979,14 @@ button.tarjeta { position: relative; }
 #sugerencia-cuenta[hidden] { display: none; }
 #sugerencia-cuenta p { flex: 1 1 100%; margin: 0; font-weight: 700; }
 #sugerencia-cuenta button { padding: 6px 12px; font-size: 0.9rem; }
+
+/* Ventana propia de preguntas (en lugar de confirm/prompt) */
+#pregunta-campo {
+  font: inherit;
+  font-weight: 700;
+  padding: 12px;
+  border: 2px solid var(--acento);
+  border-radius: 12px;
+  background: var(--superficie);
+  color: var(--texto);
+}

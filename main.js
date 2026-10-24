@@ -283,6 +283,27 @@ function pintarEstadisticas() {
   );
 }
 
+// Ventana propia en lugar de confirm()/prompt(), que muestran la dirección de la web ("… dice").
+// Con `campo` (texto inicial) pide un texto y devuelve lo escrito; sin él, devuelve true. Si se cancela, null.
+function preguntar({ titulo, texto, boton, campo = null }) {
+  const dialogo = $('dialogo-pregunta');
+  const entrada = $('pregunta-campo');
+  $('pregunta-titulo').textContent = titulo;
+  $('pregunta-texto').textContent = texto;
+  $('pregunta-si').textContent = boton;
+  entrada.hidden = campo === null;
+  entrada.value = campo ?? '';
+  dialogo.returnValue = '';
+  dialogo.showModal();
+  if (campo !== null) entrada.select();
+  return new Promise((responder) => {
+    dialogo.addEventListener('close', () => {
+      if (dialogo.returnValue !== 'si') responder(null);
+      else responder(campo === null ? true : entrada.value);
+    }, { once: true });
+  });
+}
+
 // Ayuda de la primera vez: un aviso encima de lo que explica (resaltado), hasta que se cierra con ✕.
 const AYUDAS = {
   menu: { objetivo: '#entreno', texto: '👋 ¡Bienvenido! Empieza por ☀️ Tu día: 3 juegos para entrenar cada día y mantener tu racha 🔥. Toca cualquier juego para ver sus modos.' },
@@ -850,7 +871,7 @@ $('archivo-copia').onchange = async () => {
   if (!archivo) return;
   try {
     const datos = leerCopia(await archivo.text());
-    if (!confirm('Esto sustituye tu progreso actual por el de la copia. ¿Seguir?')) return;
+    if (!(await preguntar({ titulo: '⬆️ Recuperar copia', texto: 'Tu progreso actual se sustituirá por el de la copia.', boton: 'Recuperar' }))) return;
     sustituirProgreso(datos);
     location.reload();
   } catch (e) {
@@ -997,7 +1018,12 @@ async function pedirApodo(primeraVez) {
   if (primeraVez && leer('nube:preguntado')) return;
   guardar('nube:preguntado', '1');
   const propuesta = leer('nube:apodo') || (usuario.isAnonymous ? `Invitado-${10000 + Math.floor(Math.random() * 90000)}` : '');
-  const texto = prompt('¿Quieres aparecer en el ranking? Escribe un apodo (de 2 a 20 caracteres; nunca se muestra tu nombre ni tu correo). Déjalo vacío para no aparecer.', propuesta);
+  const texto = await preguntar({
+    titulo: '🏆 Tu apodo en el ranking',
+    texto: 'De 2 a 20 caracteres. Nunca se muestran tu nombre ni tu correo. Déjalo vacío para no aparecer.',
+    boton: 'Guardar',
+    campo: propuesta,
+  });
   if (texto === null) return; // cancelado: no cambia nada
   const apodo = texto.trim().slice(0, 20);
   try {
@@ -1051,7 +1077,12 @@ function pintarSugerencia() {
 }
 
 async function borrarNube() {
-  if (!confirm('Se borrarán tu progreso guardado en la nube y tu fila del ranking. El progreso de este celular se queda. ¿Seguir?')) return;
+  const seguro = await preguntar({
+    titulo: 'Borrar mis datos de la nube',
+    texto: 'Se borrarán tu progreso guardado en la nube y tu fila del ranking. El progreso de este celular se queda.',
+    boton: 'Borrar',
+  });
+  if (!seguro) return;
   try {
     await nube.borrarTodo(usuario.uid);
     for (const clave of ['nube:uid', 'nube:subido', 'nube:apodo', 'nube:preguntado']) guardar(clave, '');

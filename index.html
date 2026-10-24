@@ -61,6 +61,16 @@
       <button class="btn-menu">Menú</button>
     </section>
 
+    <dialog id="dialogo-pregunta" aria-labelledby="pregunta-titulo">
+      <form method="dialog" class="tarjeta-dentro">
+        <h3 id="pregunta-titulo"></h3>
+        <p id="pregunta-texto"></p>
+        <input id="pregunta-campo" maxlength="20" autocomplete="nickname" aria-labelledby="pregunta-titulo" hidden>
+        <button id="pregunta-si" value="si" class="grande color" style="--c: var(--acento)"></button>
+        <button value="no">Cancelar</button>
+      </form>
+    </dialog>
+
     <dialog id="dialogo-nube" aria-labelledby="dialogo-nube-titulo">
       <div class="tarjeta-dentro">
         <h3 id="dialogo-nube-titulo">¿Qué progreso quieres conservar?</h3>
