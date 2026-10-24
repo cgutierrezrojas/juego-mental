@@ -1602,12 +1602,12 @@ function pintarDuelo(duelo, aviso) {
   const rival = nombreRival(duelo);
   const m = marcador(duelo, uid, INFO_JUEGOS, terminado);
   const caja = el('div', 'marcador-duelo');
-  const lado = (nombre, valor) => {
+  const lado = (nombre, apodo, valor) => {
     const l = el('div');
-    l.append(el('span', '', nombre), el('strong', '', `${valor}`));
+    l.append(el('span', 'quien', nombre), el('small', 'apodo-duelo', apodo), el('strong', '', `${valor}`));
     return l;
   };
-  caja.append(lado(`Tú (${leer('nube:apodo')})`, m.mio), el('span', 'vs', 'vs'), lado(rival ?? '¿?', rival ? m.suyo : '–'));
+  caja.append(lado('Tú', leer('nube:apodo'), m.mio), el('span', 'vs', 'vs'), lado('Rival', rival ?? 'por llegar', rival ? m.suyo : '–'));
   let situacion = `quedan ${horasRestantes(duelo)} h`;
   if (estado === 'caducado') situacion = 'caducado sin rival';
   if (terminado) situacion = 'terminado';
