@@ -37,6 +37,7 @@ import { tieneProgreso, decidirSincro, datosRanking } from './games/sincro.js';
 import { CONFIG } from './firebase-config.js';
 import { LOGROS, progreso, logrosNuevos } from './games/logros.js';
 import { PLAZO, elegirJuegos, marcador, estadoDuelo, resultadoPara, verRival } from './games/duelos.js';
+import { codigoAmigo, normalizarCodigo, amigosDe } from './games/amigos.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -421,6 +422,8 @@ function mostrar(id) {
   }
   if (id !== 'previa') mostrarAyuda(AYUDA_DE_PANTALLA[id]);
   $('btn-ranking').hidden = id !== 'menu' || !usuario;
+  if (id !== 'amigos') dejarDeEscuchar();
+  if (id !== 'juego' && estadoApp !== 'conectado') ponerEstado('conectado');
   if (id === 'menu' || id === 'final') subir().catch(() => {}); // sin conexión: se reintenta la próxima vez
 }
 
@@ -640,6 +643,7 @@ function opcionesDeJuego() {
 function jugar() {
   const tablero = $('tablero');
   mostrar('juego');
+  ponerEstado('jugando');
   let n = 3;
   let id;
   parar = () => clearTimeout(id);
@@ -1039,7 +1043,13 @@ function pintarNube() {
       boton('🏆 Ver el ranking', abrirRanking),
       boton(apodo ? `✏️ Apodo en el ranking: ${apodo}` : '✏️ Aparecer en el ranking', () => pedirApodo(false)),
     );
-    if (!usuario.isAnonymous) partes.push(boton('Salir', () => nube.salir())); // un invitado que sale pierde su cuenta
+    // Un invitado que sale pierde su cuenta: solo pueden salir las cuentas de Google.
+    if (!usuario.isAnonymous) {
+      partes.push(boton('Salir', async () => {
+        await nube.pararEstados();
+        nube.salir();
+      }));
+    }
     partes.push(boton('Borrar mis datos de la nube', borrarNube));
   }
   partes.push(privacidad);
@@ -1058,7 +1068,12 @@ async function alCambiarUsuario(u) {
   pintarSugerencia();
   $('btn-ranking').hidden = !u || $('menu').hidden;
   pintarNube();
-  if (u) await sincronizar();
+  if (u) {
+    nube.iniciarEstados(u.uid);
+    ponerEstado(estadoApp);
+    await sincronizar();
+    actualizarPerfil();
+  }
   pintarAvisoDuelos(true);
   if (dueloEnlace) {
     if (u) {
@@ -1154,6 +1169,7 @@ async function pedirApodo(primeraVez) {
     if (apodo.length >= 2) {
       guardar('nube:apodo', apodo);
       await nube.guardarRanking(usuario.uid, { apodo, ...datosRanking(datosDelJuego()), actualizado: Date.now() });
+      await actualizarPerfil();
     } else {
       guardar('nube:apodo', '');
       await nube.quitarRanking(usuario.uid);
@@ -1210,6 +1226,7 @@ async function borrarNube() {
   try {
     await nube.borrarTodo(usuario.uid);
     for (const clave of ['nube:uid', 'nube:subido', 'nube:apodo', 'nube:preguntado']) guardar(clave, '');
+    await nube.pararEstados();
     await nube.salir();
     avisarNube('✓ Tus datos de la nube se han borrado.');
   } catch {
@@ -1246,7 +1263,10 @@ async function pintarRanking() {
               const retar = el('button', 'retar', '⚔️');
               retar.setAttribute('aria-label', `Desafiar a ${f.apodo}`);
               retar.onclick = () => abrirNuevoDuelo({ uid: f.uid, apodo: f.apodo });
-              li.append(retar);
+              const amigo = el('button', 'retar', '👥');
+              amigo.setAttribute('aria-label', `Agregar a ${f.apodo} como amigo`);
+              amigo.onclick = () => agregarAmigo(f.uid, f.apodo);
+              li.append(retar, amigo);
             }
             return li;
           })
@@ -1265,6 +1285,7 @@ async function pintarRanking() {
 $('btn-ranking').onclick = abrirRanking;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) subir().catch(() => {});
+  ponerEstado(document.hidden ? 'ausente' : $('juego').hidden ? 'conectado' : 'jugando');
 });
 
 if (CONFIG) {
@@ -1346,7 +1367,11 @@ async function asegurarDuelista() {
 // Menú: botón ⚔️ con cuántos duelos esperan tu turno (o te invitan).
 async function pintarAvisoDuelos(forzar = false) {
   $('btn-duelos').hidden = !CONFIG;
-  if (!usuario || !nube) return ($('aviso-duelos').textContent = '');
+  $('btn-amigos').hidden = !CONFIG;
+  if (!usuario || !nube) {
+    $('aviso-amigos').textContent = '';
+    return ($('aviso-duelos').textContent = '');
+  }
   if (!forzar && Date.now() - avisoDuelosCuando < 60000) return;
   avisoDuelosCuando = Date.now();
   try {
@@ -1355,6 +1380,8 @@ async function pintarAvisoDuelos(forzar = false) {
     const todos = [...mios, ...invit.filter((d) => !d.jugadores.includes(usuario.uid) && !ocultos[d.id])].map(conLocal);
     const pendientes = todos.filter((d) => ['tu-turno', 'invitacion'].includes(estadoDuelo(d, usuario.uid, Date.now()))).length;
     $('aviso-duelos').textContent = pendientes ? `${pendientes} tu turno` : '';
+    const { recibidas } = amigosDe(await nube.misSolicitudes(usuario.uid), usuario.uid);
+    $('aviso-amigos').textContent = recibidas.length ? `${recibidas.length} nueva${recibidas.length > 1 ? 's' : ''}` : '';
   } catch {
     // sin conexión: sin aviso
   }
@@ -1645,6 +1672,8 @@ function pintarDuelo(duelo, aviso) {
   if (!terminado && estado !== 'caducado' && siguiente) {
     partes.push(boton(`▶ Jugar ${INFO_JUEGOS[siguiente].nombre}`, 'grande color', () => jugarDuelo(duelo, siguiente)));
   }
+  const uidRival = duelo.jugadores.find((j) => j !== uid);
+  if (uidRival) partes.push(boton(`👥 Agregar a ${rival} como amigo`, '', () => agregarAmigo(uidRival, rival)));
   if (duelo.jugadores.length < 2 && estado !== 'caducado' && !duelo.invitado) {
     partes.push(boton('📤 Compartir enlace', '', () => compartirDuelo(duelo)));
   }
@@ -1678,6 +1707,201 @@ function volverAlDuelo() {
 $('btn-duelos').onclick = abrirDuelos;
 $('btn-nuevo-duelo').onclick = () => abrirNuevoDuelo();
 for (const b of document.querySelectorAll('.btn-volver-duelos')) b.onclick = abrirDuelos;
+
+// 👥 Amigos y estados (lógica pura en games/amigos.js). Necesitan sesión y apodo, como los duelos.
+const NOMBRE_ESTADO = { conectado: '🟢 Conectado', jugando: '🎮 Jugando', ausente: '🌙 Ausente', desconectado: '⚫ Desconectado' };
+let estadoApp = 'conectado'; // lo que estoy haciendo (lo que se publica, salvo en modo invisible)
+let escuchas = []; // estados de amigos que se escuchan mientras está abierta la pantalla de amigos
+
+function ponerEstado(estado) {
+  estadoApp = estado;
+  if (nube && usuario) nube.ponerEstado(leer('ajuste:invisible') === '1' ? 'desconectado' : estado);
+}
+
+function dejarDeEscuchar() {
+  escuchas.forEach((parar) => parar());
+  escuchas = [];
+}
+
+// Perfil público (apodo y código de amigo): se guarda al entrar y al cambiar el apodo.
+async function actualizarPerfil() {
+  const apodo = leer('nube:apodo');
+  if (nube && usuario && apodo) await nube.guardarPerfil(usuario.uid, apodo, codigoAmigo(usuario.uid)).catch(() => {});
+}
+
+// Amigos y solicitudes; de paso, actualiza quién puede ver mi estado.
+async function cargarAmigos() {
+  const datos = amigosDe(await nube.misSolicitudes(usuario.uid), usuario.uid);
+  nube.guardarAmigosEstados(usuario.uid, datos.amigos.map((a) => a.uid));
+  return datos;
+}
+
+async function compartirTexto(texto, alCopiar) {
+  if (navigator.share) {
+    try {
+      await navigator.share({ text: texto });
+    } catch {
+      // se canceló
+    }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(texto);
+    alCopiar?.();
+  } catch {
+    // sin portapapeles
+  }
+}
+
+async function abrirAmigos(aviso = '') {
+  if (!(await asegurarDuelista())) return;
+  mostrar('amigos');
+  pintarAmigos(aviso);
+}
+
+async function pintarAmigos(aviso = '') {
+  dejarDeEscuchar();
+  const caja = $('amigos-contenido');
+  caja.replaceChildren(el('p', 'sin-datos', 'Cargando…'));
+  try {
+    const { amigos, recibidas, enviadas } = await cargarAmigos();
+    const boton = (texto, alPulsar, clase = '') => {
+      const b = el('button', clase, texto);
+      b.onclick = alPulsar;
+      return b;
+    };
+    const fila = (...hijos) => {
+      const f = el('div', 'fila-amigo');
+      f.append(...hijos);
+      return f;
+    };
+    const partes = aviso ? [el('p', 'aviso-duelo', aviso)] : [];
+
+    const codigo = codigoAmigo(usuario.uid);
+    const tuyo = el('div', 'tu-codigo');
+    tuyo.append(el('span', '', 'Tu código de amigo'), el('strong', '', codigo));
+    const estadoCopia = el('p', 'estado-duelo', '');
+    partes.push(
+      tuyo,
+      boton('📤 Compartir mi código', () => compartirTexto(
+        `👥 Agrégame en Juego Mental con mi código ${codigo}: https://cgutierrezrojas.github.io/juego-mental/`,
+        () => (estadoCopia.textContent = '✓ Código copiado'),
+      )),
+      boton('➕ Agregar por código', agregarPorCodigo),
+      estadoCopia,
+    );
+
+    if (nube.hayEstados()) {
+      const invisible = leer('ajuste:invisible') === '1';
+      const modos = el('div', 'opciones-duelo');
+      modos.setAttribute('role', 'group');
+      modos.setAttribute('aria-label', 'Tu estado');
+      for (const [valor, texto] of [['0', '🟢 Automático'], ['1', '👻 Invisible']]) {
+        const b = boton(texto, () => {
+          guardar('ajuste:invisible', valor);
+          ponerEstado(estadoApp);
+          pintarAmigos();
+        });
+        b.setAttribute('aria-pressed', (valor === '1') === invisible);
+        modos.append(b);
+      }
+      partes.push(el('h3', 'categoria', 'Tu estado'), modos, el('p', 'sin-datos', invisible ? 'Tus amigos te ven desconectado.' : 'Tus amigos ven si estás conectado, jugando o ausente.'));
+    }
+
+    if (recibidas.length) {
+      partes.push(el('h3', 'categoria', '📨 Quieren ser tus amigos'));
+      for (const r of recibidas) {
+        partes.push(fila(
+          el('span', 'nombre-amigo', r.apodo),
+          boton('Aceptar', async () => {
+            await nube.aceptarSolicitud(r.id).catch(() => {});
+            pintarAmigos(`✓ ${r.apodo} ya es tu amigo.`);
+          }, 'color'),
+          boton('Rechazar', async () => {
+            await nube.borrarSolicitud(r.id).catch(() => {});
+            pintarAmigos();
+          }),
+        ));
+      }
+    }
+    if (enviadas.length) {
+      partes.push(el('h3', 'categoria', '⏳ Esperando respuesta'));
+      for (const e of enviadas) {
+        partes.push(fila(el('span', 'nombre-amigo', e.apodo), boton('Cancelar', async () => {
+          await nube.borrarSolicitud(e.id).catch(() => {});
+          pintarAmigos();
+        })));
+      }
+    }
+
+    partes.push(el('h3', 'categoria', `👥 Tus amigos (${amigos.length})`));
+    if (!amigos.length) partes.push(el('p', 'sin-datos', 'Aún no tienes amigos. Comparte tu código o agrega a alguien desde el ranking o un duelo.'));
+    for (const a of amigos) {
+      const estado = el('span', 'estado-amigo', nube.hayEstados() ? '⚫' : '');
+      estado.setAttribute('role', 'img');
+      estado.setAttribute('aria-label', NOMBRE_ESTADO.desconectado);
+      if (nube.hayEstados()) {
+        escuchas.push(nube.verEstado(a.uid, (e) => {
+          estado.textContent = NOMBRE_ESTADO[e].split(' ')[0];
+          estado.setAttribute('aria-label', NOMBRE_ESTADO[e]);
+          estado.title = NOMBRE_ESTADO[e];
+        }));
+      }
+      const retar = boton('⚔️', () => abrirNuevoDuelo({ uid: a.uid, apodo: a.apodo }));
+      retar.setAttribute('aria-label', `Desafiar a ${a.apodo}`);
+      const quitar = boton('✕', async () => {
+        const seguro = await preguntar({ titulo: 'Quitar amigo', texto: `${a.apodo} dejará de estar en tu lista de amigos.`, boton: 'Quitar' });
+        if (!seguro) return;
+        await nube.borrarSolicitud(a.id).catch(() => {});
+        pintarAmigos();
+      });
+      quitar.setAttribute('aria-label', `Quitar a ${a.apodo}`);
+      partes.push(fila(estado, el('span', 'nombre-amigo', a.apodo), retar, quitar));
+    }
+    caja.replaceChildren(...partes);
+  } catch {
+    caja.replaceChildren(el('p', 'sin-datos', 'No se pudieron cargar tus amigos (¿sin conexión?).'));
+  }
+}
+
+async function agregarPorCodigo() {
+  const texto = await preguntar({ titulo: '➕ Agregar por código', texto: 'Escribe el código de amigo de la otra persona (por ejemplo K7Q-29F).', boton: 'Buscar', campo: '' });
+  if (texto === null) return;
+  const codigo = normalizarCodigo(texto);
+  if (!codigo) return pintarAmigos('Ese código no parece válido: son 6 letras o números, como K7Q-29F.');
+  if (codigo === codigoAmigo(usuario.uid)) return pintarAmigos('Ese es tu propio código 🙂');
+  try {
+    const perfil = await nube.buscarPorCodigo(codigo);
+    if (!perfil) return pintarAmigos(`No hay nadie con el código ${codigo}.`);
+    agregarAmigo(perfil.id, perfil.apodo);
+  } catch {
+    pintarAmigos('No se pudo buscar (¿sin conexión?).');
+  }
+}
+
+// Envía una solicitud de amistad (o acepta la que esa persona ya me había enviado) y abre la pantalla de amigos.
+async function agregarAmigo(uid, apodo) {
+  if (!(await asegurarDuelista())) return;
+  try {
+    const { amigos, recibidas, enviadas } = await cargarAmigos();
+    let aviso;
+    const suya = recibidas.find((r) => r.uid === uid);
+    if (amigos.some((a) => a.uid === uid)) aviso = `${apodo} ya es tu amigo.`;
+    else if (enviadas.some((e) => e.uid === uid)) aviso = `Ya le enviaste una solicitud a ${apodo}.`;
+    else if (suya) {
+      await nube.aceptarSolicitud(suya.id);
+      aviso = `✓ ${apodo} ya es tu amigo.`;
+    } else {
+      await nube.enviarSolicitud(usuario.uid, uid, leer('nube:apodo'), apodo);
+      aviso = `📨 Solicitud enviada a ${apodo}.`;
+    }
+    abrirAmigos(aviso);
+  } catch {
+    abrirAmigos('No se pudo enviar la solicitud (¿sin conexión?).');
+  }
+}
+
+$('btn-amigos').onclick = () => abrirAmigos();
 
 // Funcionamiento sin conexión. Solo va en localhost o HTTPS; si falla, la app sigue igual.
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

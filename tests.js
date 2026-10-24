@@ -733,6 +733,27 @@ probar('duelos: estados', () => {
   assert(!verRival(duelo(), 'a', 'calculo', false) && verRival(duelo({ resultados: { a: { calculo: 3 } } }), 'a', 'calculo', false) && verRival(duelo(), 'a', 'calculo', true));
 });
 
+// --- amigos.js ---
+import { codigoAmigo, normalizarCodigo, amigosDe } from './games/amigos.js';
+
+probar('amigos: código de amigo y solicitudes', () => {
+  const c = codigoAmigo('uidDePrueba123');
+  assert(/^[A-Z2-9]{3}-[A-Z2-9]{3}$/.test(c) && c === codigoAmigo('uidDePrueba123'), c);
+  assert(codigoAmigo('otro-uid') !== c, 'uids distintos, códigos distintos');
+  const vistos = new Set(Array.from({ length: 2000 }, (_, i) => codigoAmigo(`uid${i}`)));
+  assert(vistos.size > 1990, `pocas colisiones: ${vistos.size}`);
+  assert(normalizarCodigo(c.toLowerCase().replace('-', ' ')) === c && normalizarCodigo('ABC') === null && normalizarCodigo('AB0-DEF') === null);
+  const s = [
+    { id: '1', de: 'yo', para: 'ana', nombreDe: 'Yo', nombrePara: 'Ana', estado: 'aceptada' },
+    { id: '2', de: 'leo', para: 'yo', nombreDe: 'Leo', nombrePara: 'Yo', estado: 'pendiente' },
+    { id: '3', de: 'yo', para: 'sol', nombreDe: 'Yo', nombrePara: 'Sol', estado: 'pendiente' },
+    { id: '4', de: 'bea', para: 'yo', nombreDe: 'Bea', nombrePara: 'Yo', estado: 'aceptada' },
+    { id: '5', de: 'x', para: 'z', nombreDe: 'X', nombrePara: 'Z', estado: 'aceptada' },
+  ];
+  const r = amigosDe(s, 'yo');
+  assert(r.amigos.map((a) => a.apodo).join() === 'Ana,Bea' && r.recibidas[0].uid === 'leo' && r.enviadas[0].uid === 'sol', JSON.stringify(r));
+});
+
 // --- mayor.js y menos.js ---
 import { generarPar } from './games/mayor.js';
 import { generarParMenor } from './games/menos.js';

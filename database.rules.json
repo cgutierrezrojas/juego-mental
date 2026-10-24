@@ -1,0 +1,17 @@
+{
+  "rules": {
+    "estado": {
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".read": "auth != null && (auth.uid === $uid || root.child('amigos').child($uid).child(auth.uid).exists())",
+        ".validate": "newData.hasChildren(['estado', 'cuando']) && newData.child('estado').isString() && newData.child('estado').val().matches(/^(conectado|jugando|ausente|desconectado)$/)"
+      }
+    },
+    "amigos": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    }
+  }
+}

@@ -6,6 +6,8 @@ let auth;
 let db;
 let au; // módulo firebase-auth
 let fs; // módulo firebase-firestore
+let rt; // módulo firebase-database (estados en línea), solo si la configuración trae databaseURL
+let base; // la Realtime Database
 
 // Arranca Firebase y avisa con alCambiar(usuario | null) cada vez que se entra o se sale.
 export async function iniciar(config, alCambiar) {
@@ -19,6 +21,10 @@ export async function iniciar(config, alCambiar) {
   const firebase = app.initializeApp(config);
   auth = au.getAuth(firebase);
   db = fs.getFirestore(firebase);
+  if (config.databaseURL) {
+    rt = await import(SDK + 'firebase-database.js');
+    base = rt.getDatabase(firebase);
+  }
   au.getRedirectResult(auth).catch(() => {}); // por si se entró con redirección
   au.onAuthStateChanged(auth, alCambiar);
 }
@@ -68,7 +74,16 @@ export async function leerProgreso(uid) {
 export const guardarProgreso = (uid, datos, actualizado) => fs.setDoc(documento('usuarios', uid), { datos, actualizado });
 export const guardarRanking = (uid, fila) => fs.setDoc(documento('ranking', uid), fila);
 export const quitarRanking = (uid) => fs.deleteDoc(documento('ranking', uid));
-export const borrarTodo = (uid) => Promise.all([fs.deleteDoc(documento('usuarios', uid)), quitarRanking(uid)]);
+// Borra todo lo de esta persona en la nube: progreso, ranking, perfil y solicitudes de amistad.
+export async function borrarTodo(uid) {
+  const solicitudes = await misSolicitudes(uid).catch(() => []);
+  await Promise.all([
+    fs.deleteDoc(documento('usuarios', uid)),
+    quitarRanking(uid),
+    fs.deleteDoc(documento('perfiles', uid)),
+    ...solicitudes.map((s) => borrarSolicitud(s.id)),
+  ]);
+}
 
 // Mejores filas del ranking por `campo` ('estrellas' o 'records.<id>'); en "menos es mejor", de menor a mayor.
 export async function top(campo, menorEsMejor, cuantos = 20) {
@@ -96,7 +111,8 @@ export async function leerDuelo(id) {
   return d.exists() ? conId(d) : null;
 }
 
-const buscar = async (...filtros) => (await fs.getDocs(fs.query(fs.collection(db, 'duelos'), ...filtros))).docs.map(conId);
+const buscarEn = async (coleccion, ...filtros) => (await fs.getDocs(fs.query(fs.collection(db, coleccion), ...filtros))).docs.map(conId);
+const buscar = (...filtros) => buscarEn('duelos', ...filtros);
 
 // ponytail: sin orden en la consulta (evita índices compuestos); se ordena al pintar. Basta para pocos duelos por persona.
 export const misDuelos = (uid) => buscar(fs.where('jugadores', 'array-contains', uid), fs.limit(60));
@@ -118,3 +134,71 @@ export function unirseDuelo(id, uid, apodo) {
 
 export const anotarDuelo = (id, uid, juego, puntos) => fs.updateDoc(fs.doc(db, 'duelos', id), { [`resultados.${uid}.${juego}`]: puntos });
 export const borrarDuelo = (id) => fs.deleteDoc(fs.doc(db, 'duelos', id));
+
+// --- Amigos (`perfiles/{uid}` con apodo y código; `solicitudes/{de_para}`: pendiente o aceptada) ---
+
+export const guardarPerfil = (uid, apodo, codigo) => fs.setDoc(documento('perfiles', uid), { apodo, codigo });
+
+export async function buscarPorCodigo(codigo) {
+  const [perfil] = await buscarEn('perfiles', fs.where('codigo', '==', codigo), fs.limit(1));
+  return perfil ?? null;
+}
+
+export async function misSolicitudes(uid) {
+  const [enviadas, recibidas] = await Promise.all([
+    buscarEn('solicitudes', fs.where('de', '==', uid)),
+    buscarEn('solicitudes', fs.where('para', '==', uid)),
+  ]);
+  return [...enviadas, ...recibidas];
+}
+
+export const enviarSolicitud = (de, para, nombreDe, nombrePara) =>
+  fs.setDoc(fs.doc(db, 'solicitudes', `${de}_${para}`), { de, para, nombreDe, nombrePara, estado: 'pendiente', creada: Date.now() });
+export const aceptarSolicitud = (id) => fs.updateDoc(fs.doc(db, 'solicitudes', id), { estado: 'aceptada' });
+export const borrarSolicitud = (id) => fs.deleteDoc(fs.doc(db, 'solicitudes', id));
+
+// --- Estados en línea (Realtime Database: `estado/{uid}` y `amigos/{uid}`, que dice quién puede verlo) ---
+
+let refEstado = null;
+let estadoDeseado = 'conectado';
+let dejarDeEscuchar = null;
+
+export const hayEstados = () => Boolean(rt);
+
+// Al conectarse, deja preparado "desconectado" para cuando se cierre la app o se pierda la conexión.
+export function iniciarEstados(uid) {
+  if (!rt) return;
+  dejarDeEscuchar?.();
+  refEstado = rt.ref(base, `estado/${uid}`);
+  dejarDeEscuchar = rt.onValue(rt.ref(base, '.info/connected'), (conectado) => {
+    if (!conectado.val()) return;
+    rt.onDisconnect(refEstado).set({ estado: 'desconectado', cuando: rt.serverTimestamp() })
+      .then(() => ponerEstado(estadoDeseado))
+      .catch(() => {});
+  });
+}
+
+export function ponerEstado(estado) {
+  estadoDeseado = estado;
+  if (refEstado) rt.set(refEstado, { estado, cuando: rt.serverTimestamp() }).catch(() => {});
+}
+
+// Antes de cerrar sesión (después ya no se puede escribir).
+export async function pararEstados() {
+  dejarDeEscuchar?.();
+  dejarDeEscuchar = null;
+  if (refEstado) await rt.set(refEstado, { estado: 'desconectado', cuando: rt.serverTimestamp() }).catch(() => {});
+  refEstado = null;
+}
+
+// Avisa con alCambiar(estado) cada vez que cambia el estado de un amigo. Devuelve la función para dejar de escuchar.
+export function verEstado(uid, alCambiar) {
+  if (!rt) return () => {};
+  return rt.onValue(rt.ref(base, `estado/${uid}`), (d) => alCambiar(d.val()?.estado ?? 'desconectado'), () => alCambiar('desconectado'));
+}
+
+// Lista de amigos que pueden ver mi estado.
+export function guardarAmigosEstados(uid, uids) {
+  if (!rt) return Promise.resolve();
+  return rt.set(rt.ref(base, `amigos/${uid}`), Object.fromEntries(uids.map((u) => [u, true]))).catch(() => {});
+}

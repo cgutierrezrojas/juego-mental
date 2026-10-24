@@ -1051,3 +1051,18 @@ button.tarjeta { position: relative; }
 .fila-juego-duelo span + span { position: relative; text-align: center; }
 .fila-juego-duelo .gana { color: var(--ok); font-weight: 900; }
 .fila-juego-duelo .gana::after { content: ' ✓'; position: absolute; } /* el ✓ no descentra el número */
+
+/* D2: amigos y estados */
+.fila-social { display: flex; gap: 8px; }
+.fila-social .boton-duelos { flex: 1; padding: 12px 10px; font-size: 1rem; }
+.fila-social .boton-duelos[hidden] { display: none; }
+#aviso-amigos:not(:empty) { padding: 2px 8px; border-radius: 10px; background: var(--morado); color: #fff; font-size: 0.8rem; }
+#amigos-contenido { display: flex; flex-direction: column; gap: 8px; }
+.tu-codigo { display: flex; flex-direction: column; align-items: center; padding: 12px; border: 2px dashed var(--acento); border-radius: 14px; font-weight: 700; }
+.tu-codigo strong { font-size: 1.8rem; letter-spacing: 3px; color: var(--acento); }
+.fila-amigo { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 12px; background: var(--superficie); box-shadow: var(--relieve); text-align: left; }
+[data-tema="oscuro"] .fila-amigo { border: 1px solid rgba(255, 255, 255, 0.2); }
+.fila-amigo .nombre-amigo { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+.fila-amigo button { padding: 6px 10px; font-size: 0.9rem; box-shadow: none; }
+.fila-amigo button.color { --c: var(--acento); }
+.estado-amigo { font-size: 1rem; }
