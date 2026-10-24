@@ -675,6 +675,20 @@ probar('nube: datos del ranking', () => {
   assert(JSON.stringify(r.records) === '{"calculo":23,"parejas":9}', JSON.stringify(r.records));
 });
 
+// --- logros.js ---
+import { LOGROS, progreso, logrosNuevos } from './games/logros.js';
+
+probar('logros: progreso y nuevos', () => {
+  assert(new Set(LOGROS.map((l) => l.id)).size === LOGROS.length, 'ids únicos');
+  const r = { partidas: 12, estrellas: 34, jefes: 1, mejorRacha: 2 };
+  const estrellas50 = LOGROS.find((l) => l.id === 'estrellas-50');
+  assert(JSON.stringify(progreso(estrellas50, r)) === '{"valor":34,"conseguido":false}');
+  assert(progreso(LOGROS.find((l) => l.id === 'partidas-10'), r).valor === 10, 'no pasa de la meta');
+  const nuevos = logrosNuevos(r, { primera: '2026-10-20' }).map((l) => l.id).join();
+  assert(nuevos === 'partidas-10,jefe-1', nuevos);
+  assert(logrosNuevos({}, {}).length === 0, 'sin datos, ninguno');
+});
+
 // --- mayor.js ---
 import { generarPar } from './games/mayor.js';
 

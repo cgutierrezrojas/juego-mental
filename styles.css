@@ -990,3 +990,24 @@ button.tarjeta { position: relative; }
   background: var(--superficie);
   color: var(--texto);
 }
+
+/* H2: logros */
+.logros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.logro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border: 2px solid rgba(128, 128, 128, 0.3);
+  border-radius: 12px;
+  opacity: 0.55;
+  filter: grayscale(1);
+}
+.logro.conseguido { opacity: 1; filter: none; border-color: var(--amarillo); background: var(--superficie); box-shadow: var(--relieve); }
+[data-tema="oscuro"] .logro.conseguido { box-shadow: 0 0 8px var(--amarillo); }
+.icono-logro { font-size: 1.8rem; }
+.logro strong { font-size: 0.8rem; }
+.logro small { font-size: 0.65rem; line-height: 1.2; }
+.logro .progreso-logro { font-weight: 800; }
+#final-logros { margin: 0; font-weight: 900; color: var(--amarillo); white-space: pre-line; }

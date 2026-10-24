@@ -34,6 +34,7 @@ import { barraFinal, fraseEstrellas, fraseRecord } from './games/final.js';
 import { esClaveDelJuego, crearCopia, leerCopia } from './games/copia.js';
 import { tieneProgreso, decidirSincro, datosRanking } from './games/sincro.js';
 import { CONFIG } from './firebase-config.js';
+import { LOGROS, progreso, logrosNuevos } from './games/logros.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -169,6 +170,43 @@ function pintarProgreso() {
   $('retos-pendientes').replaceChildren(...(retos.children.length ? [el('h3', 'categoria', '📅 Retos de hoy pendientes'), retos] : []));
 }
 
+// 🏅 Logros: datos para comprobarlos, los conseguidos (`logros:conseguidos` = { id: fecha }) y apuntar los nuevos.
+function resumenLogros() {
+  const hist = historiales();
+  const listas = JUEGOS.map((j) => leerEstrellas(j.id));
+  const diasRetos = new Set(JUEGOS.flatMap((j) => Object.entries(leerDiarios(j.id)).filter(([, d]) => diarioCompleto(d)).map(([fecha]) => fecha)));
+  return {
+    partidas: Number(leer('contador:partidas')) || 0,
+    mejorRacha: mejorRacha(idsPorCategoria, hist),
+    entrenos: entrenosCompletados(idsPorCategoria, hist),
+    juegosJugados: JUEGOS.filter((j) => hist[j.id].length).length,
+    estrellas: JUEGOS.reduce((suma, j) => suma + estrellasDelJuego(j.id), 0),
+    jefes: listas.reduce((suma, l) => suma + l.filter((e, i) => (i + 1) % NIVELES_POR_MUNDO === 0 && e > 0).length, 0),
+    tresEstrellas: listas.flat().filter((e) => e === 3).length,
+    pasadoNivel50: listas.some((l) => siguienteNivel(l) > NUM_NIVELES) ? 1 : 0,
+    diasRetos: diasRetos.size,
+    victorias: Number(leer('duelos:victorias')) || 0,
+  };
+}
+
+function leerLogros() {
+  try {
+    const conseguidos = JSON.parse(leer('logros:conseguidos'));
+    return conseguidos && typeof conseguidos === 'object' ? conseguidos : {};
+  } catch {
+    return {};
+  }
+}
+
+// Apunta (con la fecha de hoy) los logros recién conseguidos y los devuelve.
+function apuntarLogros() {
+  const conseguidos = leerLogros();
+  const nuevos = logrosNuevos(resumenLogros(), conseguidos);
+  for (const l of nuevos) conseguidos[l.id] = fechaLocal();
+  if (nuevos.length) guardar('logros:conseguidos', JSON.stringify(conseguidos));
+  return nuevos;
+}
+
 // "245 ms", "12 movimientos" o solo "7" si el juego no tiene unidad.
 const conUnidad = (j, n) => (j.unidad ? `${n} ${j.unidad}` : `${n}`);
 
@@ -279,8 +317,30 @@ function pintarEstadisticas() {
     records.append(el('li', '', `${j.icono} ${j.nombre}: ${r ? conUnidad(j, r) : '—'}`));
   }
 
+  const conseguidos = leerLogros();
+  const datos = resumenLogros();
+  const medallas = el('div', 'logros');
+  let cuantos = 0;
+  for (const l of LOGROS) {
+    const { valor, conseguido } = progreso(l, datos);
+    if (conseguido) cuantos++;
+    const medalla = el('div', conseguido ? 'logro conseguido' : 'logro');
+    medalla.setAttribute('role', 'img');
+    medalla.setAttribute('aria-label', `${l.nombre}: ${l.texto}. ${conseguido ? 'Conseguido' : `${valor} de ${l.meta}`}`);
+    const [a, m, d] = (conseguidos[l.id] ?? '').split('-');
+    medalla.append(
+      el('span', 'icono-logro', l.icono),
+      el('strong', '', l.nombre),
+      el('small', '', l.texto),
+      el('small', 'progreso-logro', conseguido ? (d ? `✓ ${d}/${m}/${a}` : '✓') : `${valor}/${l.meta}`),
+    );
+    medallas.append(medalla);
+  }
+
   $('estadisticas-contenido').replaceChildren(
     resumen,
+    el('h3', 'categoria', `🏅 Logros ${cuantos}/${LOGROS.length}`),
+    medallas,
     el('h3', 'categoria', 'Perfil por habilidad'),
     barras,
     el('h3', 'categoria', 'Récords'),
@@ -697,6 +757,10 @@ function terminar(puntos) {
     celebrar ||= nuevo;
   }
 
+  const logros = apuntarLogros();
+  $('final-logros').textContent = logros.map((l) => `🏅 ¡Logro desbloqueado! ${l.icono} ${l.nombre}`).join('\n');
+  $('final-logros').hidden = !logros.length;
+  celebrar ||= logros.length > 0;
   $('final-titular').textContent = titular;
   $('final-titular').hidden = !titular;
   $('final-titular').classList.toggle('mal', titular === 'No superado');
@@ -779,6 +843,7 @@ for (const habilidad of HABILIDADES) {
   $('lista-juegos').append(el('h3', 'categoria', `${ICONO_HABILIDAD[habilidad]} ${habilidad}`), rejilla);
 }
 
+apuntarLogros(); // lo conseguido antes de existir los logros se apunta sin celebrarlo
 pintarEntreno();
 pintarProgreso();
 mostrarAyuda('menu');
