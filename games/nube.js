@@ -8,6 +8,7 @@ let au; // módulo firebase-auth
 let fs; // módulo firebase-firestore
 let rt; // módulo firebase-database (estados en línea), solo si la configuración trae databaseURL
 let base; // la Realtime Database
+let desfase = 0; // diferencia entre el reloj del servidor y el de este celular (ms)
 
 // Arranca Firebase y avisa con alCambiar(usuario | null) cada vez que se entra o se sale.
 export async function iniciar(config, alCambiar) {
@@ -24,6 +25,7 @@ export async function iniciar(config, alCambiar) {
   if (config.databaseURL) {
     rt = await import(SDK + 'firebase-database.js');
     base = rt.getDatabase(firebase);
+    rt.onValue(rt.ref(base, '.info/serverTimeOffset'), (d) => (desfase = d.val() ?? 0));
   }
   au.getRedirectResult(auth).catch(() => {}); // por si se entró con redirección
   au.onAuthStateChanged(auth, alCambiar);
@@ -215,3 +217,28 @@ export function guardarAmigosEstados(uid, uids) {
   if (!rt) return Promise.resolve();
   return rt.set(rt.ref(base, `amigos/${uid}`), Object.fromEntries(uids.map((u) => [u, true]))).catch(() => {});
 }
+
+// --- Duelos en vivo (`vivo/{sala}` e `invitaciones/{uid}/{sala}`; ver games/vivo.js y database.rules.json) ---
+
+export const ahoraServidor = () => Date.now() + desfase;
+
+// Crea la sala y avisa al amigo. Devuelve el id de la sala.
+export async function crearSalaVivo(sala) {
+  const ref = rt.push(rt.ref(base, 'vivo'));
+  await rt.set(ref, sala);
+  await rt.set(rt.ref(base, `invitaciones/${sala.invitado}/${ref.key}`), {
+    de: sala.anfitrion, nombre: sala.nombres[sala.anfitrion], juego: sala.juego, dificultad: sala.dificultad, cuando: rt.serverTimestamp(),
+  });
+  return ref.key;
+}
+
+export const verSala = (id, alCambiar) => rt.onValue(rt.ref(base, `vivo/${id}`), (d) => alCambiar(d.val()), () => alCambiar(null));
+export const cambiarSala = (id, cambios) => rt.update(rt.ref(base, `vivo/${id}`), cambios);
+export const borrarSala = (id) => rt.remove(rt.ref(base, `vivo/${id}`)).catch(() => {});
+// Si se cierra la app o se pierde la conexión en mitad de la partida, consta como que se fue.
+export const prepararAbandono = (id, uid) => rt.onDisconnect(rt.ref(base, `vivo/${id}/fuera/${uid}`)).set(true).catch(() => {});
+export const cancelarAbandono = (id, uid) => rt.onDisconnect(rt.ref(base, `vivo/${id}/fuera/${uid}`)).cancel().catch(() => {});
+
+export const escucharInvitaciones = (uid, alLlegar) =>
+  rt.onChildAdded(rt.ref(base, `invitaciones/${uid}`), (d) => alLlegar(d.key, d.val()), () => {});
+export const borrarInvitacion = (uid, sala) => rt.remove(rt.ref(base, `invitaciones/${uid}/${sala}`)).catch(() => {});

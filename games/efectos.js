@@ -85,4 +85,5 @@ export function destello(elemento, ok, conSonido = true) {
   elemento.classList.add(ok ? 'ok' : 'mal');
   if (conSonido) sonar(ok ? 'acierto' : 'fallo');
   vibrar(ok ? 30 : [60, 40, 60]);
+  globalThis.dispatchEvent?.(new CustomEvent('respuesta', { detail: ok })); // para el marcador de los duelos en vivo
 }

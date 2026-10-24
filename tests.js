@@ -754,6 +754,20 @@ probar('amigos: código de amigo y solicitudes', () => {
   assert(r.amigos.map((a) => a.apodo).join() === 'Ana,Bea' && r.recibidas[0].uid === 'leo' && r.enviadas[0].uid === 'sol', JSON.stringify(r));
 });
 
+// --- vivo.js ---
+import { JUEGOS_VIVO, rivalDe, resultadoVivo } from './games/vivo.js';
+
+probar('duelos en vivo: juegos y resultado', () => {
+  assert(JUEGOS_VIVO.every((id) => TODOS_LOS_JUEGOS.includes(id)) && !JUEGOS_VIVO.includes('puzzle'), 'solo juegos con reloj');
+  const sala = (o) => ({ anfitrion: 'a', invitado: 'b', ...o });
+  assert(rivalDe(sala(), 'a') === 'b' && rivalDe(sala(), 'b') === 'a');
+  assert(resultadoVivo(sala(), 'a') === null && resultadoVivo(sala({ fin: { a: 10 } }), 'a') === null, 'falta el rival');
+  assert(resultadoVivo(sala({ fin: { a: 10, b: 8 } }), 'a') === 'v' && resultadoVivo(sala({ fin: { a: 10, b: 8 } }), 'b') === 'd');
+  assert(resultadoVivo(sala({ fin: { a: 9, b: 9 } }), 'b') === 'e');
+  assert(resultadoVivo(sala({ fuera: { b: true } }), 'a') === 'v' && resultadoVivo(sala({ fuera: { b: true } }), 'b') === 'd', 'quien se va pierde');
+  assert(resultadoVivo(sala({ fin: { a: 3, b: 12 }, fuera: { b: true } }), 'a') === 'd', 'irse después de terminar no cuenta');
+});
+
 // --- mayor.js y menos.js ---
 import { generarPar } from './games/mayor.js';
 import { generarParMenor } from './games/menos.js';

@@ -775,7 +775,8 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 /* Tarjeta del nivel: diálogo anclado abajo */
 #tarjeta-nivel,
 #dialogo-nube,
-#dialogo-pregunta {
+#dialogo-pregunta,
+#dialogo-vivo {
   width: min(420px, 100% - 24px);
   margin: auto auto calc(12px + env(safe-area-inset-bottom));
   padding: 0;
@@ -789,11 +790,13 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 #tarjeta-nivel.diaria { border-top-color: var(--azul); }
 #tarjeta-nivel[open],
 #dialogo-nube[open],
-#dialogo-pregunta[open] { animation: subir 0.2s ease-out; }
+#dialogo-pregunta[open],
+#dialogo-vivo[open] { animation: subir 0.2s ease-out; }
 @keyframes subir { from { translate: 0 40px; opacity: 0; } }
 #tarjeta-nivel::backdrop,
 #dialogo-nube::backdrop,
-#dialogo-pregunta::backdrop { background: rgba(0, 0, 0, 0.4); }
+#dialogo-pregunta::backdrop,
+#dialogo-vivo::backdrop { background: rgba(0, 0, 0, 0.4); }
 .tarjeta-dentro { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
 .tarjeta-dentro h3 { margin: 0 40px 0 0; }
 .tarjeta-dentro p { margin: 0; font-weight: 700; white-space: pre-line; }
@@ -1066,3 +1069,18 @@ button.tarjeta { position: relative; }
 .fila-amigo button { padding: 6px 10px; font-size: 0.9rem; box-shadow: none; }
 .fila-amigo button.color { --c: var(--acento); }
 .estado-amigo { font-size: 1rem; }
+
+/* D3: duelos en vivo */
+#vivo-contenido { display: flex; flex-direction: column; gap: 8px; }
+#marcador-vivo {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border: 2px solid var(--acento);
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 900;
+  text-align: center;
+}
+#marcador-vivo[hidden] { display: none; }
+#dialogo-vivo { border-top-color: var(--morado); }
+.marcador-final-vivo { margin: 0; font-size: 1.2rem; font-weight: 800; }

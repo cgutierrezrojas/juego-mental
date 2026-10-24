@@ -84,6 +84,21 @@
       <button class="btn-menu">Menú</button>
     </section>
 
+    <section id="vivo" hidden>
+      <h2>⚡ Duelo en vivo</h2>
+      <div id="vivo-contenido"></div>
+      <button class="btn-menu">Menú</button>
+    </section>
+
+    <dialog id="dialogo-vivo" aria-labelledby="vivo-titulo">
+      <div class="tarjeta-dentro">
+        <h3 id="vivo-titulo">⚡ ¡Te retan en vivo!</h3>
+        <p id="vivo-texto"></p>
+        <button id="vivo-aceptar" class="grande color" style="--c: var(--acento)">⚡ Aceptar</button>
+        <button id="vivo-rechazar">Ahora no</button>
+      </div>
+    </dialog>
+
     <section id="ranking" hidden>
       <h2>🏆 Ranking</h2>
       <select id="ranking-tipo" aria-label="Qué ranking ver"></select>
@@ -121,6 +136,7 @@
     </dialog>
 
     <section id="juego" hidden>
+      <p id="marcador-vivo" aria-live="polite" hidden></p>
       <div id="tablero"></div>
     </section>
 

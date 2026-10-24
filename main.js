@@ -38,6 +38,7 @@ import { CONFIG } from './firebase-config.js';
 import { LOGROS, progreso, logrosNuevos } from './games/logros.js';
 import { PLAZO, elegirJuegos, marcador, estadoDuelo, resultadoPara, verRival } from './games/duelos.js';
 import { codigoAmigo, normalizarCodigo, amigosDe } from './games/amigos.js';
+import { JUEGOS_VIVO, rivalDe, resultadoVivo } from './games/vivo.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -423,6 +424,7 @@ function mostrar(id) {
   if (id !== 'previa') mostrarAyuda(AYUDA_DE_PANTALLA[id]);
   $('btn-ranking').hidden = id !== 'menu' || !usuario;
   if (id !== 'amigos') dejarDeEscuchar();
+  if (id !== 'juego') revisarInvitacionPendiente();
   if (id !== 'juego' && estadoApp !== 'conectado') ponerEstado('conectado');
   if (id === 'menu' || id === 'final') subir().catch(() => {}); // sin conexión: se reintenta la próxima vez
 }
@@ -431,6 +433,7 @@ function abrirPrevia(j) {
   actual = j;
   eleccion = leerEleccion(j);
   enDuelo = null;
+  enVivo = null;
   nivelElegido = siguienteNivel(leerEstrellas(j.id));
   mundoVisto = mundoDe(nivelElegido);
   vistaHoy = false;
@@ -774,6 +777,12 @@ function terminar(puntos) {
     ? `${$('final-modo').textContent}: ${[...$('final-estrellas').children].map((s) => (s.classList.contains('ganada') ? '⭐' : '☆')).join('')} (${puntos} ${unidad})`
     : `${$('final-modo').textContent}: ${conUnidad(actual, puntos)}${titular ? ` · ${titular}` : ''}`;
   textoCompartir = `${actual.icono} ${actual.nombre} — ${resultado}\n¿Me superas? Juega a Juego Mental: https://cgutierrezrojas.github.io/juego-mental/`;
+  if (enVivo) {
+    nube.cambiarSala(enVivo.id, { [`fin/${usuario.uid}`]: puntos }).catch(() => {});
+    $('final-modo').textContent = `⚡ En vivo vs ${enVivo.rival}`;
+    $('btn-repetir').textContent = '⚡ Ver el resultado';
+    $('btn-mejorar').hidden = true;
+  }
   if (enDuelo) {
     anotarEnDuelo(puntos);
     $('final-modo').textContent = `⚔️ Duelo${enDuelo.rival ? ` vs ${enDuelo.rival}` : ''} · juego ${enDuelo.numero}/${enDuelo.total}`;
@@ -887,7 +896,7 @@ $('tarjeta-jugar').onclick = () => {
 $('tarjeta-nivel').onclick = (e) => {
   if (e.target === e.currentTarget) e.currentTarget.close();
 };
-$('btn-repetir').onclick = () => (enDuelo ? volverAlDuelo() : jugar());
+$('btn-repetir').onclick = () => (enDuelo ? volverAlDuelo() : enVivo ? verResultadoVivo() : jugar());
 // 📤 Compartir: el menú de compartir del sistema o, si no lo hay, copiar el texto.
 $('btn-compartir').onclick = async () => {
   if (navigator.share) {
@@ -931,6 +940,14 @@ $('btn-estadisticas').onclick = () => {
 
 // ✕: vuelve al menú sin guardar la puntuación.
 $('btn-salir').onclick = async () => {
+  if (enVivo && parar) {
+    const salir = await preguntar({ titulo: '¿Salir del duelo en vivo?', texto: 'Si sales, pierdes el duelo.', boton: 'Salir' });
+    if (!salir || !parar) return;
+    nube.cambiarSala(enVivo.id, { [`fuera/${usuario.uid}`]: true }).catch(() => {});
+    enVivo = null;
+    $('marcador-vivo').hidden = true;
+    salirDeSala();
+  }
   if (enDuelo && parar) {
     const salir = await preguntar({ titulo: '¿Salir del duelo?', texto: 'Si sales, este juego cuenta como perdido.', boton: 'Salir' });
     if (!salir || !parar) return;
@@ -1071,6 +1088,7 @@ async function alCambiarUsuario(u) {
   if (u) {
     nube.iniciarEstados(u.uid);
     ponerEstado(estadoApp);
+    if (nube.hayEstados()) nube.escucharInvitaciones(u.uid, recibirInvitacion);
     await sincronizar();
     actualizarPerfil();
   }
@@ -1844,10 +1862,15 @@ async function pintarAmigos(aviso = '') {
       if (nube.hayEstados()) {
         escuchas.push(nube.verEstado(a.uid, (e) => {
           estado.textContent = NOMBRE_ESTADO[e].split(' ')[0];
+          vivo.disabled = e !== 'conectado';
           estado.setAttribute('aria-label', NOMBRE_ESTADO[e]);
           estado.title = NOMBRE_ESTADO[e];
         }));
       }
+      const vivo = boton('⚡', () => abrirRetoVivo(a));
+      vivo.setAttribute('aria-label', `Retar en vivo a ${a.apodo} (tiene que estar conectado)`);
+      vivo.disabled = true;
+      vivo.hidden = !nube.hayEstados();
       const retar = boton('⚔️', () => abrirNuevoDuelo({ uid: a.uid, apodo: a.apodo }));
       retar.setAttribute('aria-label', `Desafiar a ${a.apodo}`);
       const quitar = boton('✕', async () => {
@@ -1857,7 +1880,7 @@ async function pintarAmigos(aviso = '') {
         pintarAmigos();
       });
       quitar.setAttribute('aria-label', `Quitar a ${a.apodo}`);
-      partes.push(fila(estado, el('span', 'nombre-amigo', a.apodo), retar, quitar));
+      partes.push(fila(estado, el('span', 'nombre-amigo', a.apodo), vivo, retar, quitar));
     }
     caja.replaceChildren(...partes);
   } catch {
@@ -1903,6 +1926,234 @@ async function agregarAmigo(uid, apodo) {
 }
 
 $('btn-amigos').onclick = () => abrirAmigos();
+
+// ⚡ Duelos en vivo con un amigo conectado (reglas puras en games/vivo.js; sala en la Realtime Database).
+let enVivo = null; // { id, rival, juego } mientras se juega una partida en vivo
+let salaVivo = null; // { id, sala, parar, programada, misPuntos } de la sala abierta
+let invitacionPendiente = null; // reto recibido mientras se jugaba otra cosa
+
+function salirDeSala() {
+  salaVivo?.parar();
+  salaVivo = null;
+}
+
+// Elegir juego y dificultad para retar en vivo a un amigo.
+let retoVivo = null;
+function abrirRetoVivo(amigo) {
+  retoVivo = { amigo, juego: JUEGOS_VIVO[0], dificultad: 'normal' };
+  mostrar('vivo');
+  pintarRetoVivo();
+}
+
+function pintarRetoVivo() {
+  const r = retoVivo;
+  const grupo = (titulo, opciones, elegido, alElegir) => {
+    const caja = el('div', 'opciones-duelo');
+    caja.setAttribute('role', 'group');
+    caja.setAttribute('aria-label', titulo);
+    for (const [valor, texto] of opciones) {
+      const b = el('button', '', texto);
+      b.setAttribute('aria-pressed', valor === elegido);
+      b.onclick = () => {
+        alElegir(valor);
+        pintarRetoVivo();
+        $('vivo-contenido').querySelector(`[aria-label="${titulo}"] button[aria-pressed="true"]`)?.focus();
+      };
+      caja.append(b);
+    }
+    return [el('h3', 'categoria', titulo), caja];
+  };
+  const enviar = el('button', 'grande color', `⚡ Retar a ${r.amigo.apodo}`);
+  enviar.style.setProperty('--c', 'var(--acento)');
+  enviar.onclick = () => enviarRetoVivo(enviar);
+  $('vivo-contenido').replaceChildren(
+    el('p', 'titulo-duelo', `⚡ En vivo contra ${r.amigo.apodo}`),
+    el('p', 'sin-datos', 'Jugáis a la vez el mismo juego y veis el marcador del otro en directo.'),
+    ...grupo('Juego', JUEGOS_VIVO.map((id) => [id, `${INFO_JUEGOS[id].icono} ${INFO_JUEGOS[id].nombre}`]), r.juego, (v) => (r.juego = v)),
+    ...grupo('Dificultad', Object.entries(DIFICULTADES).map(([d, nombre]) => [d, `${CARA[d]} ${nombre}`]), r.dificultad, (v) => (r.dificultad = v)),
+    enviar,
+    el('p', 'estado-duelo', ''),
+  );
+}
+
+async function enviarRetoVivo(boton) {
+  const r = retoVivo;
+  boton.disabled = true;
+  try {
+    const id = await nube.crearSalaVivo({
+      anfitrion: usuario.uid,
+      invitado: r.amigo.uid,
+      nombres: { [usuario.uid]: leer('nube:apodo'), [r.amigo.uid]: r.amigo.apodo },
+      juego: r.juego,
+      dificultad: r.dificultad,
+      estado: 'invitando',
+    });
+    entrarEnSala(id);
+  } catch {
+    boton.disabled = false;
+    $('vivo-contenido').querySelector('.estado-duelo').textContent = `No se pudo enviar el reto. ¿${r.amigo.apodo} sigue siendo tu amigo y hay conexión?`;
+  }
+}
+
+// Escucha la sala: espera, cuenta atrás sincronizada, marcador en directo y resultado.
+function entrarEnSala(id) {
+  salirDeSala();
+  salaVivo = { id, sala: null, programada: false, misPuntos: 0, parar: () => {} };
+  salaVivo.parar = nube.verSala(id, (sala) => {
+    if (!salaVivo || salaVivo.id !== id) return;
+    salaVivo.sala = sala;
+    if (sala?.estado === 'aceptada' && sala.inicio && !salaVivo.programada) {
+      salaVivo.programada = true;
+      // jugar() hace su cuenta atrás de 3 s: se llama 3 s antes del inicio común.
+      setTimeout(() => salaVivo?.id === id && jugarVivo(), Math.max(0, sala.inicio - nube.ahoraServidor() - 3000));
+    }
+    if (enVivo && sala) pintarMarcadorVivo(sala);
+    if (!$('vivo').hidden) pintarSalaVivo();
+  });
+  mostrar('vivo');
+  pintarSalaVivo();
+}
+
+function pintarSalaVivo() {
+  const { id, sala } = salaVivo ?? {};
+  const caja = $('vivo-contenido');
+  const boton = (texto, clase, alPulsar) => {
+    const b = el('button', clase, texto);
+    if (clase.includes('color')) b.style.setProperty('--c', 'var(--acento)');
+    b.onclick = alPulsar;
+    return b;
+  };
+  if (!sala) return caja.replaceChildren(el('p', 'sin-datos', 'Este reto ya no existe.'), boton('Volver a Amigos', '', () => abrirAmigos()));
+  const rival = sala.nombres?.[rivalDe(sala, usuario.uid)] ?? 'tu rival';
+  const juego = INFO_JUEGOS[sala.juego];
+  const titulo = el('p', 'titulo-duelo', `⚡ ${juego.icono} ${juego.nombre} · ${DIFICULTADES[sala.dificultad]}`);
+  const resultado = resultadoVivo(sala, usuario.uid);
+  if (resultado) return pintarResultadoVivo(sala, resultado, titulo, rival, boton);
+  if (sala.estado === 'rechazada') {
+    return caja.replaceChildren(titulo, el('p', 'aviso-duelo', `${rival} no puede jugar ahora.`), boton('Volver a Amigos', '', () => {
+      nube.borrarSala(id);
+      abrirAmigos();
+    }));
+  }
+  if (sala.estado === 'invitando') {
+    return caja.replaceChildren(titulo, el('p', 'aviso-duelo', `⏳ Esperando a que ${rival} acepte…`), boton('Cancelar reto', '', () => {
+      nube.borrarInvitacion(sala.invitado, id);
+      nube.borrarSala(id);
+      salirDeSala();
+      abrirAmigos();
+    }));
+  }
+  const fin = sala.fin?.[usuario.uid];
+  if (fin !== undefined) return caja.replaceChildren(titulo, el('p', 'aviso-duelo', `Hiciste ${fin}. ⏳ Esperando a que ${rival} termine…`));
+  const segundos = Math.max(0, Math.ceil((sala.inicio - nube.ahoraServidor()) / 1000));
+  caja.replaceChildren(titulo, el('p', 'aviso-duelo', `¡${rival} aceptó! Empezáis a la vez en ${segundos} s…`));
+}
+
+function pintarResultadoVivo(sala, resultado, titulo, rival, boton) {
+  const id = salaVivo.id;
+  const clave = `vivo-${id}`;
+  const resultados = leerJSON('duelos:resultados');
+  if (!resultados[clave]) {
+    resultados[clave] = resultado;
+    guardar('duelos:resultados', JSON.stringify(resultados));
+    apuntarLogros();
+    if (resultado === 'v') {
+      confeti();
+      sonar('record');
+    }
+    nube.cancelarAbandono(id, usuario.uid);
+    // El anfitrión borra la sala un rato después (el rival ya ha tenido tiempo de verla).
+    if (sala.anfitrion === usuario.uid) setTimeout(() => nube.borrarSala(id), 60000);
+  }
+  const mio = sala.fin?.[usuario.uid];
+  const suyo = sala.fin?.[rivalDe(sala, usuario.uid)];
+  const textos = { v: '🏆 ¡Ganaste el duelo en vivo!', d: 'Perdiste esta vez. ¡A por la revancha!', e: '🤝 Empate' };
+  const detalle = suyo === undefined ? `${rival} se fue antes de terminar.` : mio === undefined ? 'Te fuiste antes de terminar.' : `Tú ${mio} · ${rival} ${suyo}`;
+  $('vivo-contenido').replaceChildren(
+    titulo,
+    el('p', `resultado-duelo resultado-${resultado}`, textos[resultado]),
+    el('p', 'marcador-final-vivo', detalle),
+    boton('Volver a Amigos', '', () => {
+      salirDeSala();
+      abrirAmigos();
+    }),
+  );
+}
+
+// Reto recibido: se muestra al momento (o al terminar la partida en curso).
+function recibirInvitacion(id, invitacion) {
+  if (!invitacion || nube.ahoraServidor() - (invitacion.cuando ?? 0) > 120000) {
+    nube.borrarInvitacion(usuario.uid, id); // reto viejo: ya no vale
+    return;
+  }
+  if (!$('juego').hidden || $('dialogo-vivo').open) {
+    invitacionPendiente = { id, invitacion };
+    return;
+  }
+  const juego = INFO_JUEGOS[invitacion.juego];
+  $('vivo-texto').textContent = `${invitacion.nombre} te reta en vivo a ${juego.icono} ${juego.nombre} (${DIFICULTADES[invitacion.dificultad]}).`;
+  $('vivo-aceptar').onclick = async () => {
+    $('dialogo-vivo').close();
+    nube.borrarInvitacion(usuario.uid, id);
+    try {
+      await nube.cambiarSala(id, { estado: 'aceptada', inicio: nube.ahoraServidor() + 6000 });
+      entrarEnSala(id);
+    } catch {
+      abrirAmigos('Ese reto ya no está disponible.');
+    }
+  };
+  $('vivo-rechazar').onclick = () => {
+    $('dialogo-vivo').close();
+    nube.borrarInvitacion(usuario.uid, id);
+    nube.cambiarSala(id, { estado: 'rechazada' }).catch(() => {});
+  };
+  $('dialogo-vivo').showModal();
+  sonar('tic');
+}
+
+function revisarInvitacionPendiente() {
+  if (!invitacionPendiente || !$('juego').hidden) return;
+  const { id, invitacion } = invitacionPendiente;
+  invitacionPendiente = null;
+  recibirInvitacion(id, invitacion);
+}
+
+// Empieza la partida en vivo: modo Normal con la dificultad del reto; cada acierto se publica al momento.
+function jugarVivo() {
+  const { id, sala } = salaVivo;
+  actual = INFO_JUEGOS[sala.juego];
+  eleccion = { modo: 'normal', dificultad: sala.dificultad };
+  enDuelo = null;
+  enVivo = { id, rival: sala.nombres?.[rivalDe(sala, usuario.uid)] ?? 'Rival', juego: sala.juego };
+  salaVivo.misPuntos = 0;
+  nube.prepararAbandono(id, usuario.uid);
+  nube.cambiarSala(id, { [`puntos/${usuario.uid}`]: 0 }).catch(() => {});
+  jugar();
+  pintarMarcadorVivo(sala);
+}
+
+function pintarMarcadorVivo(sala) {
+  const marcadorVivo = $('marcador-vivo');
+  marcadorVivo.hidden = !enVivo;
+  if (!enVivo) return;
+  const rival = rivalDe(sala, usuario.uid);
+  const suyo = sala.fuera?.[rival] && sala.fin?.[rival] === undefined ? 'se fue' : sala.fin?.[rival] ?? sala.puntos?.[rival] ?? 0;
+  marcadorVivo.textContent = `⚡ Tú ${salaVivo?.misPuntos ?? 0} · ${enVivo.rival} ${suyo}`;
+}
+
+addEventListener('respuesta', (e) => {
+  if (!enVivo || !salaVivo || !e.detail) return;
+  salaVivo.misPuntos++;
+  nube.cambiarSala(salaVivo.id, { [`puntos/${usuario.uid}`]: salaVivo.misPuntos }).catch(() => {});
+  if (salaVivo.sala) pintarMarcadorVivo(salaVivo.sala);
+});
+
+function verResultadoVivo() {
+  enVivo = null;
+  $('marcador-vivo').hidden = true;
+  mostrar('vivo');
+  pintarSalaVivo();
+}
 
 // Funcionamiento sin conexión. Solo va en localhost o HTTPS; si falla, la app sigue igual.
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

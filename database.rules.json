@@ -12,6 +12,45 @@
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid"
       }
+    },
+    "vivo": {
+      "$sala": {
+        ".read": "auth != null && (data.child('anfitrion').val() === auth.uid || data.child('invitado').val() === auth.uid)",
+        ".write": "auth != null && ((!data.exists() && newData.child('anfitrion').val() === auth.uid && root.child('amigos').child(newData.child('invitado').val()).child(auth.uid).exists()) || (data.exists() && !newData.exists() && (data.child('anfitrion').val() === auth.uid || data.child('invitado').val() === auth.uid)))",
+        "estado": {
+          ".write": "auth != null && (root.child('vivo').child($sala).child('anfitrion').val() === auth.uid || root.child('vivo').child($sala).child('invitado').val() === auth.uid)",
+          ".validate": "newData.isString() && newData.val().matches(/^(invitando|aceptada|rechazada)$/)"
+        },
+        "inicio": {
+          ".write": "auth != null && root.child('vivo').child($sala).child('invitado').val() === auth.uid",
+          ".validate": "newData.isNumber()"
+        },
+        "puntos": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && (root.child('vivo').child($sala).child('anfitrion').val() === auth.uid || root.child('vivo').child($sala).child('invitado').val() === auth.uid)",
+            ".validate": "newData.isNumber()"
+          }
+        },
+        "fin": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && !data.exists() && (root.child('vivo').child($sala).child('anfitrion').val() === auth.uid || root.child('vivo').child($sala).child('invitado').val() === auth.uid)",
+            ".validate": "newData.isNumber()"
+          }
+        },
+        "fuera": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && (root.child('vivo').child($sala).child('anfitrion').val() === auth.uid || root.child('vivo').child($sala).child('invitado').val() === auth.uid)"
+          }
+        }
+      }
+    },
+    "invitaciones": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$sala": {
+          ".write": "auth != null && (auth.uid === $uid || (newData.exists() && newData.child('de').val() === auth.uid && root.child('amigos').child($uid).child(auth.uid).exists()) || (!newData.exists() && data.child('de').val() === auth.uid))"
+        }
+      }
     }
   }
 }
