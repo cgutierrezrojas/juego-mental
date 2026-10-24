@@ -44,16 +44,21 @@ const JUEGOS = [
   { id: 'puzzle', nombre: 'Puzzle', categoria: 'Lógica', icono: '🧩', color: 'amarillo', habilidad: 'Lógica', referencia: 30, unidad: 'movimientos', menorEsMejor: true, modos: ['normal', 'niveles'], duracion: 'sin tiempo', instrucciones: 'Ordena las fichas del 1 al 8 con los menos movimientos posibles.', juego: puzzle },
   { id: 'rayo', nombre: 'Rayo', categoria: 'Reacción', icono: '⚡', color: 'morado', habilidad: 'Reacción', referencia: 250, unidad: 'ms', menorEsMejor: true, sinDificultad: true, modos: ['normal', 'niveles'], duracion: '5 intentos', instrucciones: 'Cuando se ponga verde, ¡toca! 5 intentos; cuenta tu tiempo medio.', juego: rayo },
   { id: 'topos', nombre: 'Topos', categoria: 'Reacción', icono: '🔨', color: 'morado', habilidad: 'Reacción', referencia: 40, modos: ['normal', 'niveles'], duracion: '30 s', instrucciones: 'Toca cada topo antes de que se esconda. Tocar una casilla vacía resta. 30 segundos.', juego: topos },
-  { id: 'mayor', nombre: 'Mayor o menor', icono: '⚖️', color: 'rojo', habilidad: 'Cálculo', referencia: 35, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Toca la operación que da más. 60 segundos.', juego: mayor },
-  { id: 'distinto', nombre: 'El distinto', icono: '🎯', color: 'azul', habilidad: 'Atención', referencia: 25, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Toca el cuadrado de color distinto. 60 segundos.', juego: distinto },
-  { id: 'balanza', nombre: 'Balanza', icono: '🏋️', color: 'amarillo', habilidad: 'Lógica', referencia: 15, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Deduce cuánto pesa la fruta que se pregunta. 60 segundos.', juego: balanza },
-  { id: 'parejas', nombre: 'Parejas', icono: '🃏', color: 'verde', habilidad: 'Memoria', referencia: 9, unidad: 'intentos', menorEsMejor: true, modos: ['normal', 'niveles'], duracion: 'sin tiempo', instrucciones: 'Encuentra todas las parejas de cartas con los menos intentos posibles.', juego: parejas },
+  { id: 'mayor', nombre: 'Mayor o menor', categoria: 'Clásicos', icono: '⚖️', color: 'rojo', habilidad: 'Cálculo', referencia: 35, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Toca la operación que da más. 60 segundos.', juego: mayor },
+  { id: 'distinto', nombre: 'El distinto', categoria: 'Clásicos', icono: '🎯', color: 'azul', habilidad: 'Atención', referencia: 25, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Toca el cuadrado de color distinto. 60 segundos.', juego: distinto },
+  { id: 'balanza', nombre: 'Balanza', categoria: 'Lógica', icono: '🏋️', color: 'amarillo', habilidad: 'Lógica', referencia: 15, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Deduce cuánto pesa la fruta que se pregunta. 60 segundos.', juego: balanza },
+  { id: 'parejas', nombre: 'Parejas', categoria: 'Clásicos', icono: '🃏', color: 'verde', habilidad: 'Memoria', referencia: 9, unidad: 'intentos', menorEsMejor: true, modos: ['normal', 'niveles'], duracion: 'sin tiempo', instrucciones: 'Encuentra todas las parejas de cartas con los menos intentos posibles.', juego: parejas },
 ];
 
 const CATEGORIAS = ['Clásicos', 'Lógica', 'Reacción'];
 // Ids de los juegos de cada categoría, en el orden de CATEGORIAS (para el entrenamiento diario).
-// ponytail: añadir o reordenar juegos cambia qué pedían los entrenamientos pasados (y las rachas); guardar los días completados si importa.
-const idsPorCategoria = CATEGORIAS.map((c) => JUEGOS.filter((j) => j.categoria === c).map((j) => j.id));
+// Hasta el 24-10-2026 el entrenamiento elegía entre los 8 juegos originales; desde el 25, entre los 12.
+// Los días pasados siguen pidiendo lo mismo, así las rachas no cambian. Para añadir juegos: otro corte igual.
+const ORIGINALES = ['calculo', 'atencion', 'memoria', 'series', 'sobra', 'puzzle', 'rayo', 'topos'];
+const porCategoria = (juegos) => CATEGORIAS.map((c) => juegos.filter((j) => j.categoria === c).map((j) => j.id));
+const CATEGORIAS_ANTES = porCategoria(JUEGOS.filter((j) => ORIGINALES.includes(j.id)));
+const CATEGORIAS_AHORA = porCategoria(JUEGOS);
+const idsPorCategoria = (fecha) => (fecha < '2026-10-25' ? CATEGORIAS_ANTES : CATEGORIAS_AHORA);
 
 const HABILIDADES = ['Memoria', 'Cálculo', 'Atención', 'Lógica', 'Reacción'];
 

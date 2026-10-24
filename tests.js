@@ -479,6 +479,16 @@ probar('puzzle: más movimientos al barajar = más desordenado', () => {
   assert(poco < mucho, `media con 20: ${poco / 300}, con 300: ${mucho / 300}`);
 });
 
+probar('entrenamiento: con una función de fecha, los días pasados no cambian al añadir juegos', () => {
+  const antes = [['a', 'b'], ['c', 'd'], ['e']];
+  const ahora = [['a', 'b', 'x', 'y'], ['c', 'd', 'z'], ['e']];
+  const porFecha = (f) => (f < '2026-10-25' ? antes : ahora);
+  for (const dia of ['2026-10-01', '2026-10-24']) assert(entrenoDelDia(dia, porFecha).join() === entrenoDelDia(dia, antes).join(), dia);
+  const nuevos = new Set();
+  for (let d = 25; d <= 31; d++) for (const id of entrenoDelDia(`2026-10-${d}`, porFecha)) nuevos.add(id);
+  assert(['x', 'y', 'z'].some((id) => nuevos.has(id)), 'desde el corte salen los juegos nuevos');
+});
+
 // --- niveles.js ---
 import {
   NUM_NIVELES, retoDe, configNivel, estrellasDe, nivelLibre, conEstrellas, totalEstrellas, desdeAntiguo, siguienteNivel,

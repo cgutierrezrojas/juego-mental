@@ -24,8 +24,12 @@ function hash(texto) {
   return (h ^ (h >>> 16)) >>> 0; // mezcla los bits altos: sin esto, con % 2 el bit bajo casi alterna día a día
 }
 
-// Los 3 juegos del día: uno de cada categoría.
-export const entrenoDelDia = (fecha, categorias) => categorias.map((ids, i) => ids[hash(`${fecha}#${i}`) % ids.length]);
+// Los 3 juegos del día: uno de cada categoría. `categorias` puede ser una lista o una función fecha → lista
+// (así, al añadir juegos, los días pasados siguen pidiendo los mismos y las rachas no cambian).
+export function entrenoDelDia(fecha, categorias) {
+  const lista = typeof categorias === 'function' ? categorias(fecha) : categorias;
+  return lista.map((ids, i) => ids[hash(`${fecha}#${i}`) % ids.length]);
+}
 
 // Juegos con al menos una partida terminada en esa fecha.
 export const jugadosEn = (fecha, historiales) =>
