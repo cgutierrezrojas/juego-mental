@@ -69,6 +69,7 @@ let mundoVisto = 1; // mundo que se ve en el camino (◀ ▶)
 let nube = null; // ☁️ módulo games/nube.js, cuando ha cargado
 let usuario = null; // usuario con sesión, o null
 let estadoNube = ''; // texto de estado del bloque Nube
+let sesionLista = false; // ya se sabe si hay sesión (Firebase respondió)
 let temporizadores = []; // sonidos y confeti pendientes del final; se cancelan al salir de él
 let jugando = null; // { nivel, fecha, diario } del nivel en curso; se fija al empezar (puede acabar pasada la medianoche)
 
@@ -323,6 +324,7 @@ function mostrar(id) {
   if (id === 'menu') {
     pintarEntreno();
     pintarProgreso();
+    pintarSugerencia();
   }
   if (id !== 'previa') mostrarAyuda(AYUDA_DE_PANTALLA[id]);
   $('btn-ranking').hidden = id !== 'menu' || !usuario;
@@ -878,19 +880,33 @@ function pintarNube() {
     partes.push(el('p', 'sin-datos', estadoNube || 'Conectando con la nube…'));
   } else if (!usuario) {
     partes.push(
-      el('p', 'sin-datos', 'Entra con tu cuenta de Google para guardar tu progreso en la nube y competir en el ranking.'),
-      boton('Entrar con Google', () => nube.entrar().catch(() => avisarNube('No se pudo entrar. Inténtalo de nuevo.'))),
+      el('p', 'sin-datos', 'Entra con tu cuenta de Google para guardar tu progreso en la nube y competir en el ranking. O sigue como invitado (con un apodo) desde este celular.'),
+      boton('Entrar con Google (recomendado)', () => nube.entrar().catch(() => avisarNube('No se pudo entrar. Inténtalo de nuevo.'))),
+      boton('Seguir como invitado', () => nube.entrarInvitado().catch((e) => avisarNube(
+        e.code === 'auth/admin-restricted-operation' || e.code === 'auth/operation-not-allowed'
+          ? 'El modo invitado aún no está activado en Firebase.'
+          : 'No se pudo entrar como invitado (¿sin conexión?).',
+      ))),
     );
+    if (estadoNube) partes.push(el('p', 'estado-nube', estadoNube));
   } else {
     const apodo = leer('nube:apodo');
+    if (usuario.isAnonymous) {
+      partes.push(
+        el('p', '', '👤 Jugando como invitado'),
+        el('p', 'aviso-invitado', 'Tu progreso solo está ligado a este celular: si borras los datos o cambias de celular, lo perderás. Vincula tu cuenta de Google para guardarlo siempre.'),
+        boton('Vincular con Google', vincular),
+      );
+    } else {
+      partes.push(el('p', '', `Conectado como ${usuario.email}`));
+    }
     partes.push(
-      el('p', '', `Conectado como ${usuario.email}`),
       el('p', 'estado-nube', estadoNube),
       boton('🏆 Ver el ranking', abrirRanking),
       boton(apodo ? `✏️ Apodo en el ranking: ${apodo}` : '✏️ Aparecer en el ranking', () => pedirApodo(false)),
-      boton('Salir', () => nube.salir()),
-      boton('Borrar mis datos de la nube', borrarNube),
     );
+    if (!usuario.isAnonymous) partes.push(boton('Salir', () => nube.salir())); // un invitado que sale pierde su cuenta
+    partes.push(boton('Borrar mis datos de la nube', borrarNube));
   }
   partes.push(privacidad);
   caja.replaceChildren(...partes);
@@ -903,7 +919,9 @@ function avisarNube(texto) {
 
 async function alCambiarUsuario(u) {
   usuario = u;
+  sesionLista = true;
   estadoNube = '';
+  pintarSugerencia();
   $('btn-ranking').hidden = !u || $('menu').hidden;
   pintarNube();
   if (u) await sincronizar();
@@ -978,7 +996,8 @@ async function subir() {
 async function pedirApodo(primeraVez) {
   if (primeraVez && leer('nube:preguntado')) return;
   guardar('nube:preguntado', '1');
-  const texto = prompt('¿Quieres aparecer en el ranking? Escribe un apodo (de 2 a 20 caracteres; nunca se muestra tu nombre ni tu correo). Déjalo vacío para no aparecer.', leer('nube:apodo') || '');
+  const propuesta = leer('nube:apodo') || (usuario.isAnonymous ? `Invitado-${10000 + Math.floor(Math.random() * 90000)}` : '');
+  const texto = prompt('¿Quieres aparecer en el ranking? Escribe un apodo (de 2 a 20 caracteres; nunca se muestra tu nombre ni tu correo). Déjalo vacío para no aparecer.', propuesta);
   if (texto === null) return; // cancelado: no cambia nada
   const apodo = texto.trim().slice(0, 20);
   try {
@@ -993,6 +1012,42 @@ async function pedirApodo(primeraVez) {
   } catch {
     avisarNube('No se pudo guardar el apodo (¿sin conexión?).');
   }
+}
+
+// Invitado → cuenta de Google, sin perder el progreso ni el puesto en el ranking.
+async function vincular() {
+  try {
+    const resultado = await nube.vincularGoogle();
+    if (resultado === 'vinculada') {
+      usuario = nube.usuarioActual();
+      pintarSugerencia();
+      avisarNube('✓ Cuenta de Google vinculada: tu progreso ya está a salvo.');
+    }
+    // 'otra': esa cuenta de Google ya existía; al entrar con ella se sincroniza (y pregunta si hace falta).
+  } catch {
+    avisarNube('No se pudo vincular. Inténtalo de nuevo.');
+  }
+}
+
+// Menú: sugerencia de entrar con Google (sin sesión o como invitado). Al cerrarla, vuelve a los 7 días.
+function pintarSugerencia() {
+  const caja = $('sugerencia-cuenta');
+  const toca = CONFIG && sesionLista && (!usuario || usuario.isAnonymous) && leer('ayuda:menu') && Date.now() > (Number(leer('nube:sugerencia')) || 0);
+  caja.hidden = !toca;
+  if (!toca) return;
+  const ir = el('button', '', 'Ir a ☁️ Nube');
+  ir.onclick = () => {
+    pintarEstadisticas();
+    mostrar('estadisticas');
+    $('nube').scrollIntoView({ block: 'start' });
+  };
+  const cerrar = el('button', '', '✕');
+  cerrar.setAttribute('aria-label', 'Cerrar la sugerencia');
+  cerrar.onclick = () => {
+    guardar('nube:sugerencia', Date.now() + 7 * 24 * 60 * 60 * 1000);
+    caja.hidden = true;
+  };
+  caja.replaceChildren(el('p', '', '💡 Entra con Google para no perder tu progreso y competir en el ranking.'), ir, cerrar);
 }
 
 async function borrarNube() {

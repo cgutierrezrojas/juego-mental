@@ -38,6 +38,24 @@ export async function entrar() {
 }
 
 export const salir = () => au.signOut(auth);
+export const entrarInvitado = () => au.signInAnonymously(auth);
+export const usuarioActual = () => auth.currentUser;
+
+// Convierte la cuenta de invitado en la de Google sin perder nada (mismo uid): 'vinculada'.
+// Si esa cuenta de Google ya existía, se borra lo del invitado en la nube y se entra con ella: 'otra'.
+export async function vincularGoogle() {
+  const google = new au.GoogleAuthProvider();
+  try {
+    await au.linkWithPopup(auth.currentUser, google);
+    return 'vinculada';
+  } catch (e) {
+    if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return 'cancelada';
+    if (e.code !== 'auth/credential-already-in-use') throw e;
+    await borrarTodo(auth.currentUser.uid).catch(() => {});
+    await au.signInWithCredential(auth, au.GoogleAuthProvider.credentialFromError(e));
+    return 'otra';
+  }
+}
 
 const documento = (coleccion, uid) => fs.doc(db, coleccion, uid);
 

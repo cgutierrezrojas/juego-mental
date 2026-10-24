@@ -960,3 +960,19 @@ button.tarjeta { position: relative; }
 #ranking-tu { margin: 0; font-weight: 800; }
 #ranking-tu:empty { display: none; }
 #ranking-tipo { font: inherit; font-weight: 700; padding: 10px; border-radius: 12px; }
+
+/* G2b: invitado y sugerencia de entrar con Google */
+#nube .aviso-invitado { font-size: 0.9rem; font-weight: 700; color: var(--mal); }
+#sugerencia-cuenta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 2px dashed var(--azul);
+  border-radius: 12px;
+  text-align: left;
+}
+#sugerencia-cuenta[hidden] { display: none; }
+#sugerencia-cuenta p { flex: 1 1 100%; margin: 0; font-weight: 700; }
+#sugerencia-cuenta button { padding: 6px 12px; font-size: 0.9rem; }
