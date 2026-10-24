@@ -35,6 +35,7 @@ import { esClaveDelJuego, crearCopia, leerCopia } from './games/copia.js';
 import { tieneProgreso, decidirSincro, datosRanking } from './games/sincro.js';
 import { CONFIG } from './firebase-config.js';
 import { LOGROS, progreso, logrosNuevos } from './games/logros.js';
+import { PLAZO, elegirJuegos, marcador, estadoDuelo, resultadoPara, verRival } from './games/duelos.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -78,6 +79,7 @@ let estadoNube = ''; // texto de estado del bloque Nube
 let sesionLista = false; // ya se sabe si hay sesión (Firebase respondió)
 let temporizadores = []; // sonidos y confeti pendientes del final; se cancelan al salir de él
 let textoCompartir = ''; // resultado de la última partida, para 📤 Compartir
+let enDuelo = null; // { id, juego, rival, numero, total } mientras se juega un juego de un duelo
 let jugando = null; // { nivel, fecha, diario } del nivel en curso; se fija al empezar (puede acabar pasada la medianoche)
 
 const leerRecord = (clave) => Number(leer(clave)) || 0;
@@ -186,7 +188,7 @@ function resumenLogros() {
     tresEstrellas: listas.flat().filter((e) => e === 3).length,
     pasadoNivel50: listas.some((l) => siguienteNivel(l) > NUM_NIVELES) ? 1 : 0,
     diasRetos: diasRetos.size,
-    victorias: Number(leer('duelos:victorias')) || 0,
+    victorias: balanceDuelos().v,
   };
 }
 
@@ -412,6 +414,7 @@ function mostrar(id) {
     pintarEntreno();
     pintarProgreso();
     pintarSugerencia();
+    pintarAvisoDuelos();
   }
   if (id !== 'previa') mostrarAyuda(AYUDA_DE_PANTALLA[id]);
   $('btn-ranking').hidden = id !== 'menu' || !usuario;
@@ -421,6 +424,7 @@ function mostrar(id) {
 function abrirPrevia(j) {
   actual = j;
   eleccion = leerEleccion(j);
+  enDuelo = null;
   nivelElegido = siguienteNivel(leerEstrellas(j.id));
   mundoVisto = mundoDe(nivelElegido);
   vistaHoy = false;
@@ -763,6 +767,12 @@ function terminar(puntos) {
     ? `${$('final-modo').textContent}: ${[...$('final-estrellas').children].map((s) => (s.classList.contains('ganada') ? '⭐' : '☆')).join('')} (${puntos} ${unidad})`
     : `${$('final-modo').textContent}: ${conUnidad(actual, puntos)}${titular ? ` · ${titular}` : ''}`;
   textoCompartir = `${actual.icono} ${actual.nombre} — ${resultado}\n¿Me superas? Juega a Juego Mental: https://cgutierrezrojas.github.io/juego-mental/`;
+  if (enDuelo) {
+    anotarEnDuelo(puntos);
+    $('final-modo').textContent = `⚔️ Duelo${enDuelo.rival ? ` vs ${enDuelo.rival}` : ''} · juego ${enDuelo.numero}/${enDuelo.total}`;
+    $('btn-repetir').textContent = '⚔️ Volver al duelo';
+    $('btn-mejorar').hidden = true;
+  }
   const logros = apuntarLogros();
   $('final-logros').textContent = logros.map((l) => `🏅 ¡Logro desbloqueado! ${l.icono} ${l.nombre}`).join('\n');
   $('final-logros').hidden = !logros.length;
@@ -870,7 +880,7 @@ $('tarjeta-jugar').onclick = () => {
 $('tarjeta-nivel').onclick = (e) => {
   if (e.target === e.currentTarget) e.currentTarget.close();
 };
-$('btn-repetir').onclick = jugar;
+$('btn-repetir').onclick = () => (enDuelo ? volverAlDuelo() : jugar());
 // 📤 Compartir: el menú de compartir del sistema o, si no lo hay, copiar el texto.
 $('btn-compartir').onclick = async () => {
   if (navigator.share) {
@@ -913,7 +923,13 @@ $('btn-estadisticas').onclick = () => {
 };
 
 // ✕: vuelve al menú sin guardar la puntuación.
-$('btn-salir').onclick = () => {
+$('btn-salir').onclick = async () => {
+  if (enDuelo && parar) {
+    const salir = await preguntar({ titulo: '¿Salir del duelo?', texto: 'Si sales, este juego cuenta como perdido.', boton: 'Salir' });
+    if (!salir || !parar) return;
+    anotarEnDuelo(actual.menorEsMejor ? 99999 : 0);
+    enDuelo = null;
+  }
   if (parar) parar();
   parar = null;
   callar();
@@ -1040,6 +1056,17 @@ async function alCambiarUsuario(u) {
   $('btn-ranking').hidden = !u || $('menu').hidden;
   pintarNube();
   if (u) await sincronizar();
+  pintarAvisoDuelos(true);
+  if (dueloEnlace) {
+    if (u) {
+      const id = dueloEnlace;
+      dueloEnlace = null;
+      history.replaceState(null, '', location.pathname);
+      abrirDuelo(id);
+    } else {
+      asegurarDuelista(); // lleva a ☁️ Nube; al entrar se abre el duelo
+    }
+  }
 }
 
 // Al tener sesión: decide si subir, bajar o preguntar (ver decidirSincro).
@@ -1212,6 +1239,12 @@ async function pintarRanking() {
         ? filas.map((f) => {
             const li = el('li', f.uid === usuario.uid ? 'propia' : '');
             li.append(el('span', '', f.apodo), el('span', 'valor', conSufijo(valorDe(f))));
+            if (f.uid !== usuario.uid) {
+              const retar = el('button', 'retar', '⚔️');
+              retar.setAttribute('aria-label', `Desafiar a ${f.apodo}`);
+              retar.onclick = () => abrirNuevoDuelo({ uid: f.uid, apodo: f.apodo });
+              li.append(retar);
+            }
             return li;
           })
         : [el('li', 'sin-datos', 'Aún no hay nadie aquí. ¡Sé el primero!')]),
@@ -1244,6 +1277,399 @@ if (CONFIG) {
     });
 }
 pintarNube();
+
+// ⚔️ Duelos por turnos (reglas puras en games/duelos.js). Necesitan sesión en la nube y apodo.
+const INFO_JUEGOS = Object.fromEntries(JUEGOS.map((j) => [j.id, j]));
+const NOMBRE_RESULTADO = { v: 'ganaste', d: 'perdiste', e: 'empate' };
+let dueloEnlace = new URLSearchParams(location.search).get('duelo'); // duelo recibido por enlace (?duelo=ID)
+let avisoDuelosCuando = 0; // última consulta del aviso del menú (para no preguntar a la nube en cada vuelta)
+
+function leerJSON(clave) {
+  try {
+    const valor = JSON.parse(leer(clave));
+    return valor && typeof valor === 'object' ? valor : {};
+  } catch {
+    return {};
+  }
+}
+
+const nombreRival = (duelo) => duelo.nombres?.[duelo.jugadores.find((j) => j !== usuario.uid) ?? ''] ?? null;
+const horasRestantes = (duelo) => Math.max(0, Math.ceil((duelo.caduca - Date.now()) / 3600000));
+const iconosJuegos = (duelo) => duelo.juegos.map((id) => INFO_JUEGOS[id]?.icono ?? '').join(' ');
+
+function balanceDuelos() {
+  const resultados = Object.values(leerJSON('duelos:resultados'));
+  const cuenta = (r) => resultados.filter((x) => x === r).length;
+  return { v: cuenta('v'), d: cuenta('d'), e: cuenta('e') };
+}
+
+// El duelo con lo jugado en este celular que aún no esté en la nube (si falló la subida).
+function conLocal(duelo) {
+  const mios = leerJSON('duelos:jugados')[duelo.id] ?? {};
+  return { ...duelo, resultados: { ...duelo.resultados, [usuario.uid]: { ...mios, ...(duelo.resultados?.[usuario.uid] ?? {}) } } };
+}
+
+async function reintentarSubidas(duelo) {
+  const mios = leerJSON('duelos:jugados')[duelo.id] ?? {};
+  for (const [juego, puntos] of Object.entries(mios)) {
+    if (duelo.resultados?.[usuario.uid]?.[juego] === undefined) await nube.anotarDuelo(duelo.id, usuario.uid, juego, puntos).catch(() => {});
+  }
+}
+
+// Apunta en las estadísticas el resultado de un duelo terminado (una sola vez). Devuelve 'v'/'d'/'e' si es nuevo.
+function apuntarResultado(duelo) {
+  const resultados = leerJSON('duelos:resultados');
+  if (resultados[duelo.id]) return null;
+  resultados[duelo.id] = resultadoPara(duelo, usuario.uid, INFO_JUEGOS);
+  guardar('duelos:resultados', JSON.stringify(resultados));
+  apuntarLogros();
+  return resultados[duelo.id];
+}
+
+// Para jugar duelos hace falta sesión (Google o invitado) y apodo; si no, se lleva a ☁️ Nube o se pide el apodo.
+async function asegurarDuelista() {
+  if (!CONFIG) return false;
+  if (!usuario) {
+    pintarEstadisticas();
+    mostrar('estadisticas');
+    avisarNube('⚔️ Entra con Google o como invitado para jugar duelos.');
+    $('nube').scrollIntoView({ block: 'start' });
+    return false;
+  }
+  if (!leer('nube:apodo')) await pedirApodo(false);
+  return Boolean(leer('nube:apodo'));
+}
+
+// Menú: botón ⚔️ con cuántos duelos esperan tu turno (o te invitan).
+async function pintarAvisoDuelos(forzar = false) {
+  $('btn-duelos').hidden = !CONFIG;
+  if (!usuario || !nube) return ($('aviso-duelos').textContent = '');
+  if (!forzar && Date.now() - avisoDuelosCuando < 60000) return;
+  avisoDuelosCuando = Date.now();
+  try {
+    const ocultos = leerJSON('duelos:ocultos');
+    const [mios, invit] = await Promise.all([nube.misDuelos(usuario.uid), nube.invitaciones(usuario.uid)]);
+    const todos = [...mios, ...invit.filter((d) => !d.jugadores.includes(usuario.uid) && !ocultos[d.id])].map(conLocal);
+    const pendientes = todos.filter((d) => ['tu-turno', 'invitacion'].includes(estadoDuelo(d, usuario.uid, Date.now()))).length;
+    $('aviso-duelos').textContent = pendientes ? `${pendientes} tu turno` : '';
+  } catch {
+    // sin conexión: sin aviso
+  }
+}
+
+async function abrirDuelos() {
+  if (!(await asegurarDuelista())) return;
+  mostrar('duelos');
+  pintarDuelos();
+}
+
+// Bandeja: balance y duelos agrupados (invitaciones, tu turno, esperando, terminados).
+async function pintarDuelos() {
+  const { v, d, e } = balanceDuelos();
+  $('duelos-balance').textContent = `🏆 ${v} victorias · ${d} derrotas · ${e} empates`;
+  $('duelos-lista').replaceChildren(el('p', 'sin-datos', 'Cargando…'));
+  try {
+    const ahora = Date.now();
+    const ocultos = leerJSON('duelos:ocultos');
+    const [mios, invit] = await Promise.all([nube.misDuelos(usuario.uid), nube.invitaciones(usuario.uid)]);
+    const todos = [...mios, ...invit.filter((x) => !x.jugadores.includes(usuario.uid) && !ocultos[x.id])].map(conLocal);
+    const grupos = { invitacion: [], 'tu-turno': [], esperando: [], terminado: [] };
+    for (const duelo of todos.sort((a, b) => b.creado - a.creado)) {
+      const estado = estadoDuelo(duelo, usuario.uid, ahora);
+      if (estado === 'terminado') apuntarResultado(duelo);
+      grupos[estado === 'caducado' ? 'terminado' : estado]?.push({ duelo, estado });
+    }
+    const titulos = { invitacion: '📨 Te desafían', 'tu-turno': '▶ Tu turno', esperando: '⏳ Esperando al rival', terminado: '🏁 Terminados' };
+    const partes = [];
+    for (const [grupo, filas] of Object.entries(grupos)) {
+      if (!filas.length) continue;
+      partes.push(el('h3', 'categoria', titulos[grupo]), ...filas.slice(0, grupo === 'terminado' ? 10 : 50).map(filaDuelo));
+    }
+    $('duelos-lista').replaceChildren(...(partes.length ? partes : [el('p', 'sin-datos', 'Aún no tienes duelos. ¡Crea el primero!')]));
+    $('aviso-duelos').textContent = grupos['tu-turno'].length + grupos.invitacion.length ? `${grupos['tu-turno'].length + grupos.invitacion.length} tu turno` : '';
+  } catch {
+    $('duelos-lista').replaceChildren(el('p', 'sin-datos', 'No se pudieron cargar los duelos (¿sin conexión?).'));
+  }
+}
+
+function filaDuelo({ duelo, estado }) {
+  const rival = nombreRival(duelo);
+  let texto;
+  let detalle;
+  let clase = estado;
+  if (estado === 'invitacion') {
+    texto = `${duelo.nombres[duelo.anfitrion]} te desafía`;
+    detalle = `${iconosJuegos(duelo)} · quedan ${horasRestantes(duelo)} h`;
+  } else if (estado === 'caducado') {
+    texto = 'Sin rival';
+    detalle = 'caducado';
+  } else if (estado === 'terminado') {
+    const r = resultadoPara(duelo, usuario.uid, INFO_JUEGOS);
+    const m = marcador(duelo, usuario.uid, INFO_JUEGOS, true);
+    texto = `vs ${rival}`;
+    detalle = `${NOMBRE_RESULTADO[r]} ${m.mio}–${m.suyo}`;
+    clase += ` resultado-${r}`;
+  } else {
+    texto = rival ? `vs ${rival}` : duelo.azar ? '🎲 Buscando rival…' : '🔗 Esperando que acepten';
+    const jugados = Object.keys(duelo.resultados[usuario.uid] ?? {}).length;
+    detalle = `${iconosJuegos(duelo)} · ${jugados}/${duelo.juegos.length} · quedan ${horasRestantes(duelo)} h`;
+  }
+  const fila = el('button', `fila-duelo ${clase}`);
+  fila.append(el('span', '', texto), el('small', '', detalle));
+  fila.onclick = () => abrirDuelo(duelo.id);
+  return fila;
+}
+
+// --- Crear un duelo ---
+let nuevoDuelo = null; // opciones del duelo que se está creando
+
+async function abrirNuevoDuelo(rival = 'enlace') {
+  if (!(await asegurarDuelista())) return;
+  nuevoDuelo = { forma: 'azar', habilidad: HABILIDADES[0], elegidos: [], dificultad: 'normal', victoria: 'juegos', rival };
+  mostrar('nuevo-duelo');
+  pintarNuevoDuelo();
+}
+
+function pintarNuevoDuelo() {
+  const n = nuevoDuelo;
+  const grupo = (titulo, opciones, elegido, alElegir) => {
+    const caja = el('div', 'opciones-duelo');
+    caja.setAttribute('role', 'group');
+    caja.setAttribute('aria-label', titulo);
+    for (const [valor, texto] of opciones) {
+      const b = el('button', '', texto);
+      b.setAttribute('aria-pressed', Array.isArray(elegido) ? elegido.includes(valor) : valor === elegido);
+      b.onclick = () => {
+        alElegir(valor);
+        pintarNuevoDuelo();
+        $('nuevo-duelo-contenido').querySelector(`[aria-label="${titulo}"] button[aria-pressed="true"]`)?.focus();
+      };
+      caja.append(b);
+    }
+    return [el('h3', 'categoria', titulo), caja];
+  };
+  const partes = [
+    ...grupo('Juegos', [['azar', '🎲 3 al azar'], ['habilidad', '🧠 Habilidad'], ['elegir', '✋ Elegir']], n.forma, (v) => (n.forma = v)),
+  ];
+  if (n.forma === 'habilidad') {
+    partes.push(...grupo('Habilidad', HABILIDADES.map((h) => [h, `${ICONO_HABILIDAD[h]} ${h}`]), n.habilidad, (v) => (n.habilidad = v)));
+  }
+  if (n.forma === 'elegir') {
+    partes.push(...grupo(`Elige de 1 a 5 (${n.elegidos.length}/5)`, JUEGOS.map((j) => [j.id, `${j.icono} ${j.nombre}`]), n.elegidos, (id) => {
+      if (n.elegidos.includes(id)) n.elegidos = n.elegidos.filter((x) => x !== id);
+      else if (n.elegidos.length < 5) n.elegidos.push(id);
+    }));
+  }
+  partes.push(
+    ...grupo('Dificultad', Object.entries(DIFICULTADES).map(([d, nombre]) => [d, `${CARA[d]} ${nombre}`]), n.dificultad, (v) => (n.dificultad = v)),
+    ...grupo('Cómo se gana', [['juegos', 'Juego a juego'], ['puntos', 'Suma de puntos']], n.victoria, (v) => (n.victoria = v)),
+  );
+  if (typeof n.rival === 'object') {
+    partes.push(el('h3', 'categoria', 'Rival'), el('p', 'rival-elegido', `🏆 ${n.rival.apodo} (del ranking)`));
+  } else {
+    partes.push(
+      ...grupo('Rival', [['enlace', '🔗 Enlace'], ['azar', '🎲 Al azar']], n.rival, (v) => (n.rival = v)),
+      el('p', 'sin-datos', 'Para retar a alguien del ranking, toca ⚔️ junto a su nombre en 🏆 Ranking.'),
+    );
+  }
+  const crear = el('button', 'grande color', '⚔️ Crear y desafiar');
+  crear.style.setProperty('--c', 'var(--acento)');
+  crear.disabled = n.forma === 'elegir' && !n.elegidos.length;
+  crear.onclick = () => crearDuelo(crear);
+  partes.push(crear, el('p', 'estado-duelo', ''));
+  $('nuevo-duelo-contenido').replaceChildren(...partes);
+}
+
+async function crearDuelo(boton) {
+  const n = nuevoDuelo;
+  const apodo = leer('nube:apodo');
+  boton.disabled = true;
+  try {
+    const ahora = Date.now();
+    if (n.rival === 'azar') {
+      // Si alguien busca rival, se juega su duelo (con sus juegos); si no, se crea uno abierto.
+      const libres = (await nube.duelosAlAzar()).filter((d) => !d.jugadores.includes(usuario.uid) && d.caduca > ahora + 60000);
+      for (const d of libres) {
+        try {
+          await nube.unirseDuelo(d.id, usuario.uid, apodo);
+          return abrirDuelo(d.id, `🎲 Te has emparejado con ${d.nombres[d.anfitrion]}: jugáis los juegos que eligió.`);
+        } catch {
+          // otro se adelantó: se prueba el siguiente
+        }
+      }
+    }
+    const candidatos = n.forma === 'habilidad' ? JUEGOS.filter((j) => j.habilidad === n.habilidad) : JUEGOS;
+    const juegos = n.forma === 'elegir' ? n.elegidos : elegirJuegos(candidatos.map((j) => j.id));
+    const id = await nube.crearDuelo({
+      anfitrion: usuario.uid,
+      jugadores: [usuario.uid],
+      nombres: { [usuario.uid]: apodo },
+      invitado: typeof n.rival === 'object' ? n.rival.uid : null,
+      abierto: true,
+      azar: n.rival === 'azar',
+      juegos,
+      dificultad: n.dificultad,
+      victoria: n.victoria,
+      creado: ahora,
+      caduca: ahora + PLAZO,
+      resultados: {},
+    });
+    const avisos = {
+      enlace: '🔗 Duelo creado: manda el enlace a tu rival.',
+      azar: '🎲 Duelo creado: la próxima persona que busque rival jugará contra ti.',
+    };
+    await abrirDuelo(id, avisos[n.rival] ?? `📨 Desafío enviado a ${n.rival.apodo}: lo verá en sus duelos.`);
+    if (n.rival === 'enlace') compartirDuelo({ id, juegos });
+  } catch {
+    boton.disabled = false;
+    $('nuevo-duelo-contenido').querySelector('.estado-duelo').textContent = 'No se pudo crear el duelo (¿sin conexión?).';
+  }
+}
+
+async function compartirDuelo(duelo) {
+  const enlace = `https://cgutierrezrojas.github.io/juego-mental/?duelo=${duelo.id}`;
+  const texto = `⚔️ ${leer('nube:apodo')} te desafía a un duelo en Juego Mental (${iconosJuegos(duelo)}). ¡Acepta aquí! ${enlace}`;
+  if (navigator.share) {
+    try {
+      await navigator.share({ text: texto });
+    } catch {
+      // se canceló
+    }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(texto);
+    const estado = $('duelo-contenido').querySelector('.estado-duelo');
+    if (estado) estado.textContent = '✓ Enlace copiado: pégalo en WhatsApp o donde quieras.';
+  } catch {
+    // sin portapapeles
+  }
+}
+
+// --- Un duelo ---
+async function abrirDuelo(id, aviso = '') {
+  if (!(await asegurarDuelista())) return;
+  mostrar('duelo');
+  $('duelo-contenido').replaceChildren(el('p', 'sin-datos', 'Cargando…'));
+  try {
+    const duelo = await nube.leerDuelo(id);
+    if (!duelo) throw new Error('Este duelo ya no existe.');
+    await reintentarSubidas(duelo);
+    pintarDuelo(conLocal(duelo), aviso);
+  } catch (e) {
+    $('duelo-contenido').replaceChildren(el('p', 'sin-datos', e.message?.endsWith('.') ? e.message : 'No se pudo cargar el duelo (¿sin conexión?).'));
+  }
+}
+
+function pintarDuelo(duelo, aviso) {
+  const uid = usuario.uid;
+  const estado = estadoDuelo(duelo, uid, Date.now());
+  const terminado = estado === 'terminado';
+  const boton = (texto, clase, alPulsar) => {
+    const b = el('button', clase, texto);
+    if (clase.includes('color')) b.style.setProperty('--c', 'var(--acento)');
+    b.onclick = alPulsar;
+    return b;
+  };
+  const listaJuegos = el('p', '', duelo.juegos.map((id) => `${INFO_JUEGOS[id].icono} ${INFO_JUEGOS[id].nombre}`).join(' · '));
+  const reglas = `${duelo.victoria === 'puntos' ? 'Suma de puntos' : 'Juego a juego'} · ${DIFICULTADES[duelo.dificultad]}`;
+  const partes = aviso ? [el('p', 'aviso-duelo', aviso)] : [];
+
+  if (estado === 'invitacion' || estado === 'ajeno') {
+    partes.push(el('p', 'titulo-duelo', `⚔️ ${duelo.nombres[duelo.anfitrion]} te desafía`), listaJuegos, el('p', 'sin-datos', `${reglas} · quedan ${horasRestantes(duelo)} h`));
+    if (estado === 'invitacion') {
+      partes.push(boton('⚔️ Aceptar duelo', 'grande color', async () => {
+        try {
+          await nube.unirseDuelo(duelo.id, uid, leer('nube:apodo'));
+          abrirDuelo(duelo.id, '✓ Duelo aceptado. ¡Suerte!');
+        } catch (e) {
+          abrirDuelo(duelo.id, e.message);
+        }
+      }));
+      if (duelo.invitado === uid) {
+        partes.push(boton('Rechazar', '', () => {
+          guardar('duelos:ocultos', JSON.stringify({ ...leerJSON('duelos:ocultos'), [duelo.id]: true }));
+          abrirDuelos();
+        }));
+      }
+    } else {
+      partes.push(el('p', 'sin-datos', 'Este duelo ya tiene sus dos jugadores.'));
+    }
+    return $('duelo-contenido').replaceChildren(...partes);
+  }
+
+  const rival = nombreRival(duelo);
+  const m = marcador(duelo, uid, INFO_JUEGOS, terminado);
+  const caja = el('div', 'marcador-duelo');
+  const lado = (nombre, valor) => {
+    const l = el('div');
+    l.append(el('span', '', nombre), el('strong', '', `${valor}`));
+    return l;
+  };
+  caja.append(lado(`Tú (${leer('nube:apodo')})`, m.mio), el('span', 'vs', 'vs'), lado(rival ?? '¿?', rival ? m.suyo : '–'));
+  let situacion = `quedan ${horasRestantes(duelo)} h`;
+  if (estado === 'caducado') situacion = 'caducado sin rival';
+  if (terminado) situacion = 'terminado';
+  partes.push(caja, el('p', 'sin-datos', `${reglas} · ${situacion}`));
+
+  if (terminado) {
+    const nuevo = apuntarResultado(duelo);
+    const r = nuevo ?? leerJSON('duelos:resultados')[duelo.id];
+    partes.push(el('p', `resultado-duelo resultado-${r}`, { v: '🏆 ¡Ganaste el duelo!', d: 'Perdiste esta vez. ¡A por la revancha!', e: '🤝 Empate' }[r]));
+    if (nuevo === 'v') {
+      confeti();
+      sonar('record');
+    }
+  }
+
+  const tabla = el('div', 'juegos-duelo');
+  for (const p of m.porJuego) {
+    const j = INFO_JUEGOS[p.id];
+    const fila = el('div', p.gana ? `gana-${p.gana}` : '');
+    const suyo = verRival(duelo, uid, p.id, terminado) ? p.suyo ?? '…' : '🔒';
+    fila.append(el('span', '', `${j.icono} ${j.nombre}`), el('span', '', `${p.mio ?? '—'}${p.gana === 'yo' ? ' ✓' : ''}`), el('span', '', `${suyo}${p.gana === 'rival' ? ' ✓' : ''}`));
+    tabla.append(fila);
+  }
+  partes.push(tabla);
+  if (!terminado) partes.push(el('p', 'sin-datos', '🔒 La puntuación del rival en cada juego se ve cuando hayas jugado el tuyo.'));
+
+  const siguiente = duelo.juegos.find((id) => duelo.resultados[uid]?.[id] === undefined);
+  if (!terminado && estado !== 'caducado' && siguiente) {
+    partes.push(boton(`▶ Jugar ${INFO_JUEGOS[siguiente].nombre}`, 'grande color', () => jugarDuelo(duelo, siguiente)));
+  }
+  if (duelo.jugadores.length < 2 && estado !== 'caducado' && !duelo.invitado) {
+    partes.push(boton('📤 Compartir enlace', '', () => compartirDuelo(duelo)));
+  }
+  partes.push(el('p', 'estado-duelo', ''));
+  $('duelo-contenido').replaceChildren(...partes);
+}
+
+// Juega un juego del duelo en modo Normal con la dificultad del duelo; al terminar se anota (ver terminar()).
+function jugarDuelo(duelo, juego) {
+  actual = INFO_JUEGOS[juego];
+  eleccion = { modo: 'normal', dificultad: actual.sinDificultad ? 'normal' : duelo.dificultad };
+  enDuelo = { id: duelo.id, juego, rival: nombreRival(duelo), numero: duelo.juegos.indexOf(juego) + 1, total: duelo.juegos.length };
+  jugar();
+}
+
+// Guarda la puntuación de un juego del duelo en este celular y la sube (si falla, se reintenta al abrir el duelo).
+function anotarEnDuelo(puntos) {
+  const { id, juego } = enDuelo;
+  const jugados = leerJSON('duelos:jugados');
+  jugados[id] = { ...(jugados[id] ?? {}), [juego]: puntos };
+  guardar('duelos:jugados', JSON.stringify(jugados));
+  nube.anotarDuelo(id, usuario.uid, juego, puntos).catch(() => {});
+}
+
+function volverAlDuelo() {
+  const id = enDuelo.id;
+  enDuelo = null;
+  abrirDuelo(id);
+}
+
+$('btn-duelos').onclick = abrirDuelos;
+$('btn-nuevo-duelo').onclick = () => abrirNuevoDuelo();
+for (const b of document.querySelectorAll('.btn-volver-duelos')) b.onclick = abrirDuelos;
 
 // Funcionamiento sin conexión. Solo va en localhost o HTTPS; si falla, la app sigue igual.
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

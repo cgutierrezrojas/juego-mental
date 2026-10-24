@@ -81,3 +81,40 @@ export async function puesto(campo, valor, menorEsMejor) {
   const consulta = fs.query(fs.collection(db, 'ranking'), fs.where(campo, menorEsMejor ? '<' : '>', valor));
   return (await fs.getCountFromServer(consulta)).data().count + 1;
 }
+
+// --- Duelos (`duelos/{id}`; ver games/duelos.js y las reglas en firestore.rules) ---
+
+const conId = (d) => ({ id: d.id, ...d.data() });
+
+export async function crearDuelo(datos) {
+  const ref = await fs.addDoc(fs.collection(db, 'duelos'), datos);
+  return ref.id;
+}
+
+export async function leerDuelo(id) {
+  const d = await fs.getDoc(fs.doc(db, 'duelos', id));
+  return d.exists() ? conId(d) : null;
+}
+
+const buscar = async (...filtros) => (await fs.getDocs(fs.query(fs.collection(db, 'duelos'), ...filtros))).docs.map(conId);
+
+// ponytail: sin orden en la consulta (evita índices compuestos); se ordena al pintar. Basta para pocos duelos por persona.
+export const misDuelos = (uid) => buscar(fs.where('jugadores', 'array-contains', uid), fs.limit(60));
+export const invitaciones = (uid) => buscar(fs.where('invitado', '==', uid), fs.limit(20));
+export const duelosAlAzar = () => buscar(fs.where('azar', '==', true), fs.where('abierto', '==', true), fs.limit(20));
+
+// Entra como segundo jugador; falla si ya no está disponible (otro se adelantó, caducó…).
+export function unirseDuelo(id, uid, apodo) {
+  const ref = fs.doc(db, 'duelos', id);
+  return fs.runTransaction(db, async (t) => {
+    const d = await t.get(ref);
+    const duelo = d.data();
+    if (!d.exists() || duelo.jugadores.length !== 1 || !duelo.abierto || duelo.jugadores.includes(uid) || Date.now() > duelo.caduca) {
+      throw new Error('Este duelo ya no está disponible');
+    }
+    t.update(ref, { jugadores: [...duelo.jugadores, uid], [`nombres.${uid}`]: apodo, abierto: false });
+  });
+}
+
+export const anotarDuelo = (id, uid, juego, puntos) => fs.updateDoc(fs.doc(db, 'duelos', id), { [`resultados.${uid}.${juego}`]: puntos });
+export const borrarDuelo = (id) => fs.deleteDoc(fs.doc(db, 'duelos', id));

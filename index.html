@@ -34,6 +34,7 @@
     <section id="menu">
       <h1>Juego Mental</h1>
       <div id="entreno"></div>
+      <button id="btn-duelos" class="boton-duelos" hidden>⚔️ Duelos <span id="aviso-duelos"></span></button>
       <div id="retos-pendientes"></div>
       <div id="sugerencia-cuenta" hidden></div>
       <div id="lista-juegos"></div>
@@ -50,6 +51,27 @@
       <p id="previa-record-linea"><b>🏆 Récord <span id="previa-record"></span></b></p>
       <div id="previa-historial"></div>
       <button id="btn-jugar" class="grande color" style="--c: var(--acento)">▶ Jugar</button>
+      <button class="btn-menu">Menú</button>
+    </section>
+
+    <section id="duelos" hidden>
+      <h2>⚔️ Duelos</h2>
+      <p id="duelos-balance"></p>
+      <button id="btn-nuevo-duelo" class="grande color" style="--c: var(--acento)">➕ Nuevo duelo</button>
+      <div id="duelos-lista"></div>
+      <button class="btn-menu">Menú</button>
+    </section>
+
+    <section id="nuevo-duelo" hidden>
+      <h2>➕ Nuevo duelo</h2>
+      <div id="nuevo-duelo-contenido"></div>
+      <button class="btn-volver-duelos">Volver a Duelos</button>
+    </section>
+
+    <section id="duelo" hidden>
+      <h2>⚔️ Duelo</h2>
+      <div id="duelo-contenido"></div>
+      <button class="btn-volver-duelos">Volver a Duelos</button>
       <button class="btn-menu">Menú</button>
     </section>
 

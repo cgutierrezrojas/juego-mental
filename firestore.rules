@@ -16,6 +16,50 @@ service cloud.firestore {
       allow create, update: if request.auth != null && request.auth.uid == uid && filaValida(request.resource.data);
     }
 
+    // Duelos por turnos (games/duelos.js): lo ve cualquiera con sesión (para aceptar por enlace o al azar).
+    match /duelos/{id} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && dueloNuevoValido(request.resource.data);
+      allow update: if request.auth != null && (unirse() || anotar());
+      allow delete: if request.auth != null && resource.data.anfitrion == request.auth.uid && resource.data.jugadores.size() == 1;
+    }
+
+    function dueloNuevoValido(d) {
+      return d.keys().hasOnly(['anfitrion', 'jugadores', 'nombres', 'invitado', 'abierto', 'azar', 'juegos', 'dificultad', 'victoria', 'creado', 'caduca', 'resultados'])
+        && d.anfitrion == request.auth.uid && d.jugadores == [request.auth.uid]
+        && d.nombres is map && d.nombres.keys().hasOnly([request.auth.uid])
+        && d.juegos is list && d.juegos.size() >= 1 && d.juegos.size() <= 5
+        && d.victoria in ['juegos', 'puntos'] && d.dificultad in ['facil', 'normal', 'dificil']
+        && d.abierto is bool && d.azar is bool && d.resultados == {}
+        && d.caduca is int && d.caduca <= request.time.toMillis() + 172800000 + 600000;
+    }
+
+    // Entrar como segundo jugador: solo se añade uno mismo (y su apodo) y el duelo deja de estar abierto.
+    function unirse() {
+      let d = resource.data;
+      let n = request.resource.data;
+      return d.jugadores.size() == 1 && !(request.auth.uid in d.jugadores) && d.abierto == true
+        && (d.invitado == null || d.invitado == request.auth.uid)
+        && request.time.toMillis() < d.caduca
+        && n.diff(d).affectedKeys().hasOnly(['jugadores', 'nombres', 'abierto'])
+        && n.jugadores == d.jugadores.concat([request.auth.uid]) && n.abierto == false
+        && n.nombres.diff(d.nombres).affectedKeys().hasOnly([request.auth.uid]);
+    }
+
+    // Anotar una puntuación: solo la propia, solo un juego del duelo que aún no tenía (sin cambiar ni repetir).
+    function anotar() {
+      let d = resource.data;
+      let n = request.resource.data;
+      let antes = d.resultados.get(request.auth.uid, {});
+      let despues = n.resultados.get(request.auth.uid, {});
+      let cambio = despues.diff(antes);
+      return request.auth.uid in d.jugadores
+        && n.diff(d).affectedKeys().hasOnly(['resultados'])
+        && n.resultados.diff(d.resultados).affectedKeys().hasOnly([request.auth.uid])
+        && cambio.changedKeys().size() == 0 && cambio.removedKeys().size() == 0 && cambio.addedKeys().size() == 1
+        && cambio.addedKeys().hasOnly(d.juegos);
+    }
+
     function filaValida(f) {
       return f.keys().hasOnly(['apodo', 'estrellas', 'records', 'actualizado'])
         && f.apodo is string && f.apodo.size() >= 2 && f.apodo.size() <= 20

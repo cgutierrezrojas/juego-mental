@@ -689,6 +689,50 @@ probar('logros: progreso y nuevos', () => {
   assert(logrosNuevos({}, {}).length === 0, 'sin datos, ninguno');
 });
 
+// --- duelos.js ---
+import { PLAZO, elegirJuegos, marcador, estadoDuelo, resultadoPara, verRival } from './games/duelos.js';
+
+const INFO = { calculo: { referencia: 30 }, rayo: { referencia: 250, menorEsMejor: true }, topos: { referencia: 40 } };
+const duelo = (o) => ({ jugadores: ['a', 'b'], juegos: ['calculo', 'rayo', 'topos'], victoria: 'juegos', caduca: 1000, resultados: {}, ...o });
+
+probar('duelos: elegir juegos', () => {
+  const ids = ['a', 'b', 'c', 'd', 'e'];
+  for (let i = 0; i < 50; i++) {
+    const tres = elegirJuegos(ids);
+    assert(tres.length === 3 && new Set(tres).size === 3 && tres.every((x) => ids.includes(x)), tres.join());
+  }
+  assert(elegirJuegos(['x', 'y']).length === 2, 'si hay menos, todos');
+  assert(PLAZO === 172800000);
+});
+
+probar('duelos: marcador juego a juego y por suma', () => {
+  const d = duelo({ resultados: { a: { calculo: 20, rayo: 300, topos: 30 }, b: { calculo: 18, rayo: 250, topos: 30 } } });
+  const m = marcador(d, 'a', INFO);
+  assert(m.porJuego.map((p) => p.gana).join() === 'yo,rival,empate', m.porJuego.map((p) => p.gana).join());
+  assert(m.mio === 1 && m.suyo === 1 && resultadoPara(d, 'a', INFO) === 'e' && resultadoPara(d, 'b', INFO) === 'e');
+  const s = marcador({ ...d, victoria: 'puntos' }, 'a', INFO);
+  // a: 67 + 83 + 75 = 225 · b: 60 + 100 + 75 = 235
+  assert(s.mio === 225 && s.suyo === 235, `${s.mio} ${s.suyo}`);
+  assert(resultadoPara({ ...d, victoria: 'puntos' }, 'b', INFO) === 'v');
+  const caducado = duelo({ resultados: { a: { calculo: 5 }, b: {} } });
+  assert(marcador(caducado, 'a', INFO).mio === 0, 'sin terminar, lo no jugado no cuenta');
+  assert(marcador(caducado, 'a', INFO, true).mio === 1 && resultadoPara(caducado, 'b', INFO) === 'd', 'al terminar, gana quien jugó');
+});
+
+probar('duelos: estados', () => {
+  const lleno = { calculo: 1, rayo: 300, topos: 1 };
+  assert(estadoDuelo(duelo({ jugadores: ['a'] }), 'a', 0) === 'tu-turno');
+  assert(estadoDuelo(duelo({ jugadores: ['a'], resultados: { a: lleno } }), 'a', 0) === 'esperando');
+  assert(estadoDuelo(duelo({ jugadores: ['a'] }), 'b', 0) === 'invitacion');
+  assert(estadoDuelo(duelo({ jugadores: ['a'] }), 'a', 2000) === 'caducado');
+  assert(estadoDuelo(duelo({ resultados: { a: lleno } }), 'a', 0) === 'esperando');
+  assert(estadoDuelo(duelo({ resultados: { a: lleno } }), 'b', 0) === 'tu-turno');
+  assert(estadoDuelo(duelo({ resultados: { a: lleno, b: lleno } }), 'b', 0) === 'terminado');
+  assert(estadoDuelo(duelo(), 'a', 2000) === 'terminado', 'caducado con rival: terminado');
+  assert(estadoDuelo(duelo(), 'c', 0) === 'ajeno');
+  assert(!verRival(duelo(), 'a', 'calculo', false) && verRival(duelo({ resultados: { a: { calculo: 3 } } }), 'a', 'calculo', false) && verRival(duelo(), 'a', 'calculo', true));
+});
+
 // --- mayor.js ---
 import { generarPar } from './games/mayor.js';
 

@@ -1011,3 +1011,38 @@ button.tarjeta { position: relative; }
 .logro small { font-size: 0.65rem; line-height: 1.2; }
 .logro .progreso-logro { font-weight: 800; }
 #final-logros { margin: 0; font-weight: 900; color: var(--amarillo); white-space: pre-line; }
+
+/* D1: duelos por turnos */
+.boton-duelos { display: flex; justify-content: space-between; align-items: center; border-color: var(--morado); }
+#aviso-duelos:not(:empty) { padding: 2px 8px; border-radius: 10px; background: var(--morado); color: #fff; font-size: 0.8rem; }
+[data-tema="oscuro"] #aviso-duelos:not(:empty) { background: transparent; color: var(--morado); border: 1px solid var(--morado); }
+#duelos-balance { margin: 0; font-weight: 800; }
+#duelos-lista, #duelo-contenido, #nuevo-duelo-contenido { display: flex; flex-direction: column; gap: 8px; }
+.fila-duelo { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; font-size: 0.95rem; text-align: left; }
+.fila-duelo small { font-size: 0.75rem; opacity: 0.8; text-align: right; }
+.fila-duelo.tu-turno, .fila-duelo.invitacion { border-color: var(--acento); }
+.fila-duelo.resultado-v { border-left: 6px solid var(--ok); }
+.fila-duelo.resultado-d { border-left: 6px solid var(--mal); }
+.fila-duelo.resultado-e { border-left: 6px solid var(--amarillo); }
+.opciones-duelo { display: flex; flex-wrap: wrap; gap: 6px; }
+.opciones-duelo button { flex: 1 1 auto; padding: 8px 10px; font-size: 0.9rem; }
+.opciones-duelo button[aria-pressed="true"] { background: var(--acento); color: #fff; }
+[data-tema="oscuro"] .opciones-duelo button[aria-pressed="true"] { background: transparent; color: var(--acento); border-color: var(--acento); box-shadow: 0 0 8px var(--acento); }
+.rival-elegido, .titulo-duelo { margin: 0; font-weight: 900; font-size: 1.1rem; }
+.aviso-duelo { margin: 0; padding: 8px 10px; border: 2px dashed var(--acento); border-radius: 12px; font-weight: 700; }
+.estado-duelo { margin: 0; font-weight: 700; }
+.estado-duelo:empty { display: none; }
+.marcador-duelo { display: flex; justify-content: space-around; align-items: center; padding: 12px; border-radius: 14px; background: var(--superficie); box-shadow: var(--relieve); }
+[data-tema="oscuro"] .marcador-duelo { border: 2px solid var(--acento); }
+.marcador-duelo div { display: flex; flex-direction: column; align-items: center; font-weight: 800; }
+.marcador-duelo strong { font-size: 2.2rem; color: var(--acento); }
+.marcador-duelo .vs { opacity: 0.5; font-weight: 900; }
+.resultado-duelo { margin: 0; font-size: 1.3rem; font-weight: 900; }
+.resultado-duelo.resultado-v { color: var(--ok); }
+.resultado-duelo.resultado-d { color: var(--mal); }
+.juegos-duelo { display: flex; flex-direction: column; gap: 6px; }
+.juegos-duelo div { display: grid; grid-template-columns: 1fr 64px 64px; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 12px; background: var(--superficie); box-shadow: var(--relieve); font-weight: 700; text-align: left; }
+[data-tema="oscuro"] .juegos-duelo div { border: 1px solid rgba(255, 255, 255, 0.2); }
+.juegos-duelo span + span { text-align: center; }
+.juegos-duelo .gana-yo span:nth-child(2), .juegos-duelo .gana-rival span:nth-child(3) { color: var(--ok); font-weight: 900; }
+#ranking-lista .retar { float: right; margin-left: 8px; padding: 0 8px; font-size: 0.9rem; box-shadow: none; }
