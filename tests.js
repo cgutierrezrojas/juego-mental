@@ -495,7 +495,7 @@ import {
   mundoDe, varianteDe, VARIANTES, DESCRIPCION_VARIANTE, nivelesDelDia, diarioCompleto, rachaDiaria, podarDiarios, estrellasDiarias,
 } from './games/niveles.js';
 
-const TODOS_LOS_JUEGOS = ['calculo', 'atencion', 'memoria', 'series', 'sobra', 'puzzle', 'rayo', 'topos', 'mayor', 'distinto', 'balanza', 'parejas'];
+const TODOS_LOS_JUEGOS = ['calculo', 'atencion', 'memoria', 'series', 'sobra', 'puzzle', 'rayo', 'topos', 'mayor', 'menos', 'distinto', 'balanza', 'parejas'];
 
 probar('niveles: patrón de retos', () => {
   const esperado = { 1: 'normal', 3: 'contrarreloj', 5: 'sinfallo', 7: 'contrarreloj', 10: 'jefe', 13: 'contrarreloj', 15: 'sinfallo', 20: 'jefe', 44: 'normal', 50: 'jefe' };
@@ -733,8 +733,18 @@ probar('duelos: estados', () => {
   assert(!verRival(duelo(), 'a', 'calculo', false) && verRival(duelo({ resultados: { a: { calculo: 3 } } }), 'a', 'calculo', false) && verRival(duelo(), 'a', 'calculo', true));
 });
 
-// --- mayor.js ---
+// --- mayor.js y menos.js ---
 import { generarPar } from './games/mayor.js';
+import { generarParMenor } from './games/menos.js';
+
+probar('¿cuál da menos?: la correcta es la de menor resultado', () => {
+  for (const aciertos of [0, 10, 20]) {
+    for (let i = 0; i < 300; i++) {
+      const { a, b, menor } = generarParMenor(aciertos);
+      assert(a.resultado !== b.resultado && menor === (a.resultado < b.resultado ? a.texto : b.texto));
+    }
+  }
+});
 
 probar('mayor o menor: nunca empatan y la correcta es la de mayor resultado', () => {
   for (const aciertos of [0, 7, 12, 20]) {

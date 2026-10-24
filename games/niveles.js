@@ -8,7 +8,7 @@ export const NOMBRE_RETO = { normal: '⏱ Normal', sinfallo: '❤️ Sin fallar'
 export const ICONO_RETO = { normal: '', sinfallo: '❤️', contrarreloj: '⚡', jefe: '👑' };
 
 // Segundos de los juegos de opciones; Atención y Topos son de 30 s.
-const OPCIONES = { calculo: 30, mayor: 30, distinto: 45, series: 60, sobra: 60, balanza: 75 };
+const OPCIONES = { calculo: 30, mayor: 30, menos: 30, distinto: 45, series: 60, sobra: 60, balanza: 75 };
 const CON_TIEMPO = [...Object.keys(OPCIONES), 'atencion', 'topos'];
 const MENOR_ES_MEJOR = ['puzzle', 'rayo', 'parejas'];
 

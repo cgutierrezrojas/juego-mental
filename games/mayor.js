@@ -1,4 +1,4 @@
-// Mayor o menor: toca la operación que da más. 60 segundos, como Cálculo.
+// ¿Cuál da más?: toca la operación que da más. 60 segundos, como Cálculo.
 import { generarOperacion } from './calculo.js';
 import { jugarConOpciones } from './opciones.js';
 

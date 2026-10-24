@@ -3,7 +3,7 @@ import { esClaveDelJuego } from './copia.js';
 
 // Rango permitido de cada récord (Normal·Normal) en el ranking; lo mismo comprueban las reglas de Firestore.
 export const LIMITES = {
-  calculo: [1, 300], mayor: [1, 300], distinto: [1, 300], series: [1, 300], sobra: [1, 300], balanza: [1, 300],
+  calculo: [1, 300], mayor: [1, 300], menos: [1, 300], distinto: [1, 300], series: [1, 300], sobra: [1, 300], balanza: [1, 300],
   atencion: [1, 300], topos: [1, 300], memoria: [1, 100], puzzle: [1, 10000], rayo: [80, 5000], parejas: [6, 1000],
 };
 

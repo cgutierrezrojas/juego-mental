@@ -16,6 +16,7 @@ import * as puzzle from './games/puzzle.js';
 import * as rayo from './games/rayo.js';
 import * as topos from './games/topos.js';
 import * as mayor from './games/mayor.js';
+import * as menos from './games/menos.js';
 import * as distinto from './games/distinto.js';
 import * as balanza from './games/balanza.js';
 import * as parejas from './games/parejas.js';
@@ -46,7 +47,8 @@ const JUEGOS = [
   { id: 'puzzle', nombre: 'Puzzle', categoria: 'Lógica', icono: '🧩', color: 'amarillo', habilidad: 'Lógica', referencia: 30, unidad: 'movimientos', menorEsMejor: true, modos: ['normal', 'niveles'], duracion: 'sin tiempo', instrucciones: 'Ordena las fichas del 1 al 8 con los menos movimientos posibles.', juego: puzzle },
   { id: 'rayo', nombre: 'Rayo', categoria: 'Reacción', icono: '⚡', color: 'morado', habilidad: 'Reacción', referencia: 250, unidad: 'ms', menorEsMejor: true, sinDificultad: true, modos: ['normal', 'niveles'], duracion: '5 intentos', instrucciones: 'Cuando se ponga verde, ¡toca! 5 intentos; cuenta tu tiempo medio.', juego: rayo },
   { id: 'topos', nombre: 'Topos', categoria: 'Reacción', icono: '🔨', color: 'morado', habilidad: 'Reacción', referencia: 40, modos: ['normal', 'niveles'], duracion: '30 s', instrucciones: 'Toca cada topo antes de que se esconda. Tocar una casilla vacía resta. 30 segundos.', juego: topos },
-  { id: 'mayor', nombre: 'Mayor o menor', categoria: 'Clásicos', icono: '⚖️', color: 'rojo', habilidad: 'Cálculo', referencia: 35, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Toca la operación que da más. 60 segundos.', juego: mayor },
+  { id: 'mayor', nombre: '¿Cuál da más?', categoria: 'Clásicos', icono: '⬆️', color: 'rojo', habilidad: 'Cálculo', referencia: 35, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Toca la operación que da más. 60 segundos.', juego: mayor },
+  { id: 'menos', nombre: '¿Cuál da menos?', categoria: 'Clásicos', icono: '⬇️', color: 'rojo', habilidad: 'Cálculo', referencia: 35, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Toca la operación que da menos. 60 segundos.', juego: menos },
   { id: 'distinto', nombre: 'El distinto', categoria: 'Clásicos', icono: '🎯', color: 'azul', habilidad: 'Atención', referencia: 25, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Toca el cuadrado de color distinto. 60 segundos.', juego: distinto },
   { id: 'balanza', nombre: 'Balanza', categoria: 'Lógica', icono: '🏋️', color: 'amarillo', habilidad: 'Lógica', referencia: 15, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Deduce cuánto pesa la fruta que se pregunta. 60 segundos.', juego: balanza },
   { id: 'parejas', nombre: 'Parejas', categoria: 'Clásicos', icono: '🃏', color: 'verde', habilidad: 'Memoria', referencia: 9, unidad: 'intentos', menorEsMejor: true, modos: ['normal', 'niveles'], duracion: 'sin tiempo', instrucciones: 'Encuentra todas las parejas de cartas con los menos intentos posibles.', juego: parejas },
@@ -1601,17 +1603,20 @@ function pintarDuelo(duelo, aviso) {
 
   const rival = nombreRival(duelo);
   const m = marcador(duelo, uid, INFO_JUEGOS, terminado);
-  const caja = el('div', 'marcador-duelo');
-  const lado = (nombre, apodo, valor) => {
-    const l = el('div');
-    l.append(el('span', 'quien', nombre), el('small', 'apodo-duelo', apodo), el('strong', '', `${valor}`));
-    return l;
+  // Marcador y juegos en la misma cuadrícula: cada número queda justo debajo de su jugador.
+  const tabla = el('div', 'tabla-duelo');
+  const jugador = (nombre, apodo, valor) => {
+    const celda = el('div', 'jugador-duelo');
+    celda.append(el('span', '', nombre), el('small', 'apodo-duelo', apodo), el('strong', '', `${valor}`));
+    return celda;
   };
-  caja.append(lado('Tú', leer('nube:apodo'), m.mio), el('span', 'vs', 'vs'), lado('Rival', rival ?? 'por llegar', rival ? m.suyo : '–'));
+  const cabecera = el('div', 'cabecera-duelo');
+  cabecera.append(el('span', 'vs', '⚔️'), jugador('Tú', leer('nube:apodo'), m.mio), jugador('Rival', rival ?? 'por llegar', rival ? m.suyo : '–'));
+  tabla.append(cabecera);
   let situacion = `quedan ${horasRestantes(duelo)} h`;
   if (estado === 'caducado') situacion = 'caducado sin rival';
   if (terminado) situacion = 'terminado';
-  partes.push(caja, el('p', 'sin-datos', `${reglas} · ${situacion}`));
+  partes.push(tabla, el('p', 'sin-datos', `${reglas} · ${situacion}`));
 
   if (terminado) {
     const nuevo = apuntarResultado(duelo);
@@ -1623,15 +1628,17 @@ function pintarDuelo(duelo, aviso) {
     }
   }
 
-  const tabla = el('div', 'juegos-duelo');
   for (const p of m.porJuego) {
     const j = INFO_JUEGOS[p.id];
-    const fila = el('div', p.gana ? `gana-${p.gana}` : '');
+    const fila = el('div', 'fila-juego-duelo');
     const suyo = verRival(duelo, uid, p.id, terminado) ? p.suyo ?? '…' : '🔒';
-    fila.append(el('span', '', `${j.icono} ${j.nombre}`), el('span', '', `${p.mio ?? '—'}${p.gana === 'yo' ? ' ✓' : ''}`), el('span', '', `${suyo}${p.gana === 'rival' ? ' ✓' : ''}`));
+    fila.append(
+      el('span', '', `${j.icono} ${j.nombre}`),
+      el('span', p.gana === 'yo' ? 'gana' : '', `${p.mio ?? '—'}`),
+      el('span', p.gana === 'rival' ? 'gana' : '', `${suyo}`),
+    );
     tabla.append(fila);
   }
-  partes.push(tabla);
   if (!terminado) partes.push(el('p', 'sin-datos', '🔒 La puntuación del rival en cada juego se ve cuando hayas jugado el tuyo.'));
 
   const siguiente = duelo.juegos.find((id) => duelo.resultados[uid]?.[id] === undefined);

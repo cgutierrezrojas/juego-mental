@@ -70,8 +70,8 @@ service cloud.firestore {
 
     // Mismos límites que LIMITES en games/sincro.js.
     function recordsValidos(r) {
-      return r.keys().hasOnly(['calculo', 'mayor', 'distinto', 'series', 'sobra', 'balanza', 'atencion', 'topos', 'memoria', 'puzzle', 'rayo', 'parejas'])
-        && enRango(r, 'calculo', 1, 300) && enRango(r, 'mayor', 1, 300) && enRango(r, 'distinto', 1, 300)
+      return r.keys().hasOnly(['calculo', 'mayor', 'menos', 'distinto', 'series', 'sobra', 'balanza', 'atencion', 'topos', 'memoria', 'puzzle', 'rayo', 'parejas'])
+        && enRango(r, 'calculo', 1, 300) && enRango(r, 'mayor', 1, 300) && enRango(r, 'menos', 1, 300) && enRango(r, 'distinto', 1, 300)
         && enRango(r, 'series', 1, 300) && enRango(r, 'sobra', 1, 300) && enRango(r, 'balanza', 1, 300)
         && enRango(r, 'atencion', 1, 300) && enRango(r, 'topos', 1, 300) && enRango(r, 'memoria', 1, 100)
         && enRango(r, 'puzzle', 1, 10000) && enRango(r, 'rayo', 80, 5000) && enRango(r, 'parejas', 6, 1000);
