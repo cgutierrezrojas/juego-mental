@@ -356,6 +356,7 @@ function pintarEstadisticas() {
 function preguntar({ titulo, texto, boton, campo = null }) {
   const dialogo = $('dialogo-pregunta');
   const entrada = $('pregunta-campo');
+  if (dialogo.open) return Promise.resolve(null); // ya hay otra pregunta abierta
   $('pregunta-titulo').textContent = titulo;
   $('pregunta-texto').textContent = texto;
   $('pregunta-si').textContent = boton;
@@ -1087,7 +1088,7 @@ async function sincronizar() {
     if (decision === 'bajar') return bajar(enNube);
     guardar('nube:uid', usuario.uid);
     await subir();
-    pedirApodo(true);
+    await pedirApodo(true);
   } catch {
     avisarNube('Sin conexión con la nube: se sincronizará más tarde.');
   }
