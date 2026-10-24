@@ -77,6 +77,7 @@ let usuario = null; // usuario con sesión, o null
 let estadoNube = ''; // texto de estado del bloque Nube
 let sesionLista = false; // ya se sabe si hay sesión (Firebase respondió)
 let temporizadores = []; // sonidos y confeti pendientes del final; se cancelan al salir de él
+let textoCompartir = ''; // resultado de la última partida, para 📤 Compartir
 let jugando = null; // { nivel, fecha, diario } del nivel en curso; se fija al empezar (puede acabar pasada la medianoche)
 
 const leerRecord = (clave) => Number(leer(clave)) || 0;
@@ -757,6 +758,11 @@ function terminar(puntos) {
     celebrar ||= nuevo;
   }
 
+  // Texto para 📤 Compartir: juego, modo o nivel, resultado y la invitación con el enlace.
+  const resultado = enNiveles
+    ? `${$('final-modo').textContent}: ${[...$('final-estrellas').children].map((s) => (s.classList.contains('ganada') ? '⭐' : '☆')).join('')} (${puntos} ${unidad})`
+    : `${$('final-modo').textContent}: ${conUnidad(actual, puntos)}${titular ? ` · ${titular}` : ''}`;
+  textoCompartir = `${actual.icono} ${actual.nombre} — ${resultado}\n¿Me superas? Juega a Juego Mental: https://cgutierrezrojas.github.io/juego-mental/`;
   const logros = apuntarLogros();
   $('final-logros').textContent = logros.map((l) => `🏅 ¡Logro desbloqueado! ${l.icono} ${l.nombre}`).join('\n');
   $('final-logros').hidden = !logros.length;
@@ -865,6 +871,24 @@ $('tarjeta-nivel').onclick = (e) => {
   if (e.target === e.currentTarget) e.currentTarget.close();
 };
 $('btn-repetir').onclick = jugar;
+// 📤 Compartir: el menú de compartir del sistema o, si no lo hay, copiar el texto.
+$('btn-compartir').onclick = async () => {
+  if (navigator.share) {
+    try {
+      await navigator.share({ text: textoCompartir });
+    } catch {
+      // se canceló
+    }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(textoCompartir);
+    $('btn-compartir').textContent = '✓ Copiado';
+    setTimeout(() => ($('btn-compartir').textContent = '📤 Compartir'), 2000);
+  } catch {
+    // sin portapapeles: no se puede compartir
+  }
+};
 // Vuelve a jugar el mismo nivel o reto que acaba de terminar (el botón grande ya apunta al siguiente).
 $('btn-mejorar').onclick = () => {
   vistaHoy = jugando.diario !== null;

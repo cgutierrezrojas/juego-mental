@@ -861,7 +861,7 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 #final-barra.metas .marca > span { font-size: 0.6rem; letter-spacing: -2px; } /* metas juntas: las estrellas no se pisan */
 
 .fila-botones { display: flex; gap: 8px; }
-.fila-botones button { flex: 1; }
+.fila-botones button { flex: 1; padding: 12px 4px; font-size: 0.9rem; white-space: nowrap; }
 
 @media (prefers-reduced-motion: reduce) {
   #final-estrellas span.ganada,
