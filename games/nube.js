@@ -192,9 +192,22 @@ export async function pararEstados() {
 }
 
 // Avisa con alCambiar(estado) cada vez que cambia el estado de un amigo. Devuelve la función para dejar de escuchar.
+// Si aún no hay permiso (el amigo no ha abierto la app desde que sois amigos), se reintenta cada 20 s.
 export function verEstado(uid, alCambiar) {
   if (!rt) return () => {};
-  return rt.onValue(rt.ref(base, `estado/${uid}`), (d) => alCambiar(d.val()?.estado ?? 'desconectado'), () => alCambiar('desconectado'));
+  let parar = () => {};
+  let espera;
+  const escuchar = () => {
+    parar = rt.onValue(rt.ref(base, `estado/${uid}`), (d) => alCambiar(d.val()?.estado ?? 'desconectado'), () => {
+      alCambiar('desconectado');
+      espera = setTimeout(escuchar, 20000);
+    });
+  };
+  escuchar();
+  return () => {
+    clearTimeout(espera);
+    parar();
+  };
 }
 
 // Lista de amigos que pueden ver mi estado.

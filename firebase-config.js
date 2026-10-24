@@ -3,6 +3,7 @@
 export const CONFIG = {
   apiKey: 'AIzaSyDP0Uu2ALDsUIp2JijY82M6kQ7Vr_as8Qs',
   authDomain: 'juego-mental-89baa.firebaseapp.com',
+  databaseURL: 'https://juego-mental-89baa-default-rtdb.firebaseio.com',
   projectId: 'juego-mental-89baa',
   storageBucket: 'juego-mental-89baa.firebasestorage.app',
   messagingSenderId: '1029798752749',

@@ -1380,7 +1380,8 @@ async function pintarAvisoDuelos(forzar = false) {
     const todos = [...mios, ...invit.filter((d) => !d.jugadores.includes(usuario.uid) && !ocultos[d.id])].map(conLocal);
     const pendientes = todos.filter((d) => ['tu-turno', 'invitacion'].includes(estadoDuelo(d, usuario.uid, Date.now()))).length;
     $('aviso-duelos').textContent = pendientes ? `${pendientes} tu turno` : '';
-    const { recibidas } = amigosDe(await nube.misSolicitudes(usuario.uid), usuario.uid);
+    const { recibidas, amigos } = amigosDe(await nube.misSolicitudes(usuario.uid), usuario.uid);
+    nube.guardarAmigosEstados(usuario.uid, amigos.map((a) => a.uid)); // los amigos nuevos ya pueden ver mi estado
     $('aviso-amigos').textContent = recibidas.length ? `${recibidas.length} nueva${recibidas.length > 1 ? 's' : ''}` : '';
   } catch {
     // sin conexión: sin aviso
@@ -1495,7 +1496,7 @@ function pintarNuevoDuelo() {
     ...grupo('Cómo se gana', [['juegos', 'Juego a juego'], ['puntos', 'Suma de puntos']], n.victoria, (v) => (n.victoria = v)),
   );
   if (typeof n.rival === 'object') {
-    partes.push(el('h3', 'categoria', 'Rival'), el('p', 'rival-elegido', `🏆 ${n.rival.apodo} (del ranking)`));
+    partes.push(el('h3', 'categoria', 'Rival'), el('p', 'rival-elegido', `⚔️ ${n.rival.apodo}`));
   } else {
     partes.push(
       ...grupo('Rival', [['enlace', '🔗 Enlace'], ['azar', '🎲 Al azar']], n.rival, (v) => (n.rival = v)),
