@@ -2045,8 +2045,7 @@ function pintarSalaVivo() {
   }
   const fin = sala.fin?.[usuario.uid];
   if (fin !== undefined) return caja.replaceChildren(titulo, el('p', 'aviso-duelo', `Hiciste ${fin}. ⏳ Esperando a que ${rival} termine…`));
-  const segundos = Math.max(0, Math.ceil((sala.inicio - nube.ahoraServidor()) / 1000));
-  caja.replaceChildren(titulo, el('p', 'aviso-duelo', `¡${rival} aceptó! Empezáis a la vez en ${segundos} s…`));
+  caja.replaceChildren(titulo, el('p', 'aviso-duelo', `¡${rival} aceptó! Empezáis a la vez en unos segundos…`));
 }
 
 function pintarResultadoVivo(sala, resultado, titulo, rival, boton) {
