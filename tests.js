@@ -768,6 +768,17 @@ probar('duelos en vivo: juegos y resultado', () => {
   assert(resultadoVivo(sala({ fin: { a: 3, b: 12 }, fuera: { b: true } }), 'a') === 'd', 'irse después de terminar no cuenta');
 });
 
+// --- chat.js ---
+import { MAX_MENSAJE, idChat, mensajeValido, hayNoLeidos } from './games/chat.js';
+
+probar('mensajes: conversación, texto válido y no leídos', () => {
+  assert(idChat('zeta', 'alfa') === 'alfa_zeta' && idChat('alfa', 'zeta') === 'alfa_zeta');
+  assert(mensajeValido('  hola   que tal  ') === 'hola que tal' && mensajeValido('   ') === null && mensajeValido(null) === null);
+  assert(mensajeValido('x'.repeat(MAX_MENSAJE)) && mensajeValido('x'.repeat(MAX_MENSAJE + 1)) === null);
+  assert(hayNoLeidos({ de: 'ana', cuando: 10 }, 5, 'yo') && !hayNoLeidos({ de: 'ana', cuando: 10 }, 10, 'yo'));
+  assert(!hayNoLeidos({ de: 'yo', cuando: 10 }, 0, 'yo') && !hayNoLeidos(null, 0, 'yo'));
+});
+
 // --- mayor.js y menos.js ---
 import { generarPar } from './games/mayor.js';
 import { generarParMenor } from './games/menos.js';

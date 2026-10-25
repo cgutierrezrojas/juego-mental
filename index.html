@@ -99,6 +99,21 @@
       </div>
     </dialog>
 
+    <section id="chat" hidden>
+      <h2 id="chat-titulo">💬</h2>
+      <div id="chat-mensajes" role="log" aria-live="polite"></div>
+      <form id="chat-form">
+        <input id="chat-texto" maxlength="300" autocomplete="off" aria-label="Escribe un mensaje" placeholder="Escribe un mensaje…">
+        <button class="color" style="--c: var(--acento)">Enviar</button>
+      </form>
+      <p id="chat-estado" role="status"></p>
+      <div class="fila-botones">
+        <button id="chat-bloquear">🚫 Bloquear</button>
+        <button id="chat-denunciar">⚠️ Denunciar</button>
+      </div>
+      <button id="chat-volver">Volver a Amigos</button>
+    </section>
+
     <section id="ranking" hidden>
       <h2>🏆 Ranking</h2>
       <select id="ranking-tipo" aria-label="Qué ranking ver"></select>

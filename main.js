@@ -39,6 +39,7 @@ import { LOGROS, progreso, logrosNuevos } from './games/logros.js';
 import { PLAZO, elegirJuegos, marcador, estadoDuelo, resultadoPara, verRival } from './games/duelos.js';
 import { codigoAmigo, normalizarCodigo, amigosDe } from './games/amigos.js';
 import { JUEGOS_VIVO, rivalDe, resultadoVivo } from './games/vivo.js';
+import { idChat, mensajeValido, hayNoLeidos } from './games/chat.js';
 
 const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -424,6 +425,7 @@ function mostrar(id) {
   if (id !== 'previa') mostrarAyuda(AYUDA_DE_PANTALLA[id]);
   $('btn-ranking').hidden = id !== 'menu' || !usuario;
   if (id !== 'amigos') dejarDeEscuchar();
+  if (id !== 'chat') pararChat();
   if (id !== 'juego') revisarInvitacionPendiente();
   if (id !== 'juego' && estadoApp !== 'conectado') ponerEstado('conectado');
   if (id === 'menu' || id === 'final') subir().catch(() => {}); // sin conexión: se reintenta la próxima vez
@@ -1783,7 +1785,9 @@ async function pintarAmigos(aviso = '') {
   const caja = $('amigos-contenido');
   caja.replaceChildren(el('p', 'sin-datos', 'Cargando…'));
   try {
-    const { amigos, recibidas, enviadas } = await cargarAmigos();
+    const { amigos, recibidas: todasRecibidas, enviadas } = await cargarAmigos();
+    const bloqueos = await nube.bloqueados(usuario.uid).catch(() => ({}));
+    const recibidas = todasRecibidas.filter((r) => !bloqueos[r.uid]); // un bloqueado no puede pedirte amistad
     const boton = (texto, alPulsar, clase = '') => {
       const b = el('button', clase, texto);
       b.onclick = alPulsar;
@@ -1867,6 +1871,10 @@ async function pintarAmigos(aviso = '') {
           estado.title = NOMBRE_ESTADO[e];
         }));
       }
+      const mensajes = boton('💬', () => abrirChat(a));
+      mensajes.setAttribute('aria-label', `Mensajes con ${a.apodo}`);
+      mensajes.hidden = !nube.hayEstados();
+      if (nube.hayEstados()) marcarNoLeidos(a, mensajes);
       const vivo = boton('⚡', () => abrirRetoVivo(a));
       vivo.setAttribute('aria-label', `Retar en vivo a ${a.apodo} (tiene que estar conectado)`);
       vivo.disabled = true;
@@ -1880,7 +1888,17 @@ async function pintarAmigos(aviso = '') {
         pintarAmigos();
       });
       quitar.setAttribute('aria-label', `Quitar a ${a.apodo}`);
-      partes.push(fila(estado, el('span', 'nombre-amigo', a.apodo), vivo, retar, quitar));
+      partes.push(fila(estado, el('span', 'nombre-amigo', a.apodo), mensajes, vivo, retar, quitar));
+    }
+    const listaBloqueos = Object.entries(bloqueos);
+    if (listaBloqueos.length) {
+      partes.push(el('h3', 'categoria', '🚫 Bloqueados'));
+      for (const [uid, apodo] of listaBloqueos) {
+        partes.push(fila(el('span', 'nombre-amigo', `${apodo}`), boton('Desbloquear', async () => {
+          await nube.desbloquear(usuario.uid, uid).catch(() => {});
+          pintarAmigos(`${apodo} ya no está bloqueado (para volver a ser amigos, agrégalo de nuevo).`);
+        })));
+      }
     }
     caja.replaceChildren(...partes);
   } catch {
@@ -1910,7 +1928,9 @@ async function agregarAmigo(uid, apodo) {
     const { amigos, recibidas, enviadas } = await cargarAmigos();
     let aviso;
     const suya = recibidas.find((r) => r.uid === uid);
-    if (amigos.some((a) => a.uid === uid)) aviso = `${apodo} ya es tu amigo.`;
+    const bloqueos = await nube.bloqueados(usuario.uid).catch(() => ({}));
+    if (bloqueos[uid]) aviso = `Tienes bloqueado a ${apodo}: desbloquéalo antes en la lista de bloqueados.`;
+    else if (amigos.some((a) => a.uid === uid)) aviso = `${apodo} ya es tu amigo.`;
     else if (enviadas.some((e) => e.uid === uid)) aviso = `Ya le enviaste una solicitud a ${apodo}.`;
     else if (suya) {
       await nube.aceptarSolicitud(suya.id);
@@ -2152,6 +2172,114 @@ function verResultadoVivo() {
   $('marcador-vivo').hidden = true;
   mostrar('vivo');
   pintarSalaVivo();
+}
+
+// 💬 Mensajes entre amigos (lógica pura en games/chat.js), con bloquear y denunciar.
+let chatAbierto = null; // { id, amigo, parar, mensajes } de la conversación abierta
+
+function pararChat() {
+  chatAbierto?.parar();
+  chatAbierto = null;
+}
+
+function abrirChat(amigo) {
+  pararChat();
+  const id = idChat(usuario.uid, amigo.uid);
+  chatAbierto = { id, amigo, mensajes: [], parar: () => {} };
+  mostrar('chat');
+  $('chat-titulo').textContent = `💬 ${amigo.apodo}`;
+  $('chat-mensajes').replaceChildren();
+  $('chat-estado').textContent = '';
+  $('chat-texto').value = '';
+  chatAbierto.parar = nube.escucharChat(id, (m) => {
+    if (chatAbierto?.id !== id) return;
+    chatAbierto.mensajes.push(m);
+    const burbuja = el('p', m.de === usuario.uid ? 'burbuja mia' : 'burbuja', m.texto);
+    const hora = m.cuando ? new Date(m.cuando).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    burbuja.append(el('small', '', hora));
+    $('chat-mensajes').append(burbuja);
+    burbuja.scrollIntoView({ block: 'end' });
+    nube.marcarLeido(usuario.uid, id);
+  }, () => ($('chat-estado').textContent = 'No se pudieron cargar los mensajes (¿sin conexión?).'));
+  nube.marcarLeido(usuario.uid, id);
+  $('chat-texto').focus();
+}
+
+$('chat-form').onsubmit = async (e) => {
+  e.preventDefault();
+  if (!chatAbierto) return;
+  const texto = mensajeValido($('chat-texto').value);
+  if (!texto) return;
+  $('chat-texto').value = '';
+  try {
+    await nube.enviarMensaje(chatAbierto.id, usuario.uid, texto);
+    $('chat-estado').textContent = '';
+  } catch {
+    $('chat-texto').value = texto;
+    $('chat-estado').textContent = 'No se pudo enviar: puede que ya no seáis amigos o que no haya conexión.';
+  }
+};
+
+$('chat-bloquear').onclick = async () => {
+  const { amigo } = chatAbierto;
+  const seguro = await preguntar({
+    titulo: `🚫 Bloquear a ${amigo.apodo}`,
+    texto: 'Dejará de ser tu amigo y no podrá escribirte, retarte en vivo ni enviarte solicitudes. Puedes desbloquearlo después en Amigos.',
+    boton: 'Bloquear',
+  });
+  if (seguro) bloquearA(amigo);
+};
+
+$('chat-denunciar').onclick = async () => {
+  const { id, amigo, mensajes } = chatAbierto;
+  const motivo = await preguntar({
+    titulo: `⚠️ Denunciar a ${amigo.apodo}`,
+    texto: 'Cuéntanos qué ha pasado. Se guardará junto con los últimos mensajes de esta conversación para revisarlo.',
+    boton: 'Enviar denuncia',
+    campo: '',
+  });
+  if (motivo === null) return;
+  try {
+    await nube.denunciar({
+      de: usuario.uid,
+      contra: amigo.uid,
+      chat: id,
+      motivo: motivo.trim().slice(0, 500) || '(sin motivo)',
+      mensajes: mensajes.slice(-20).map((m) => `${m.de === usuario.uid ? 'yo' : amigo.apodo}: ${m.texto}`),
+    });
+    $('chat-estado').textContent = '✓ Denuncia enviada. Si quieres, también puedes bloquearlo.';
+  } catch {
+    $('chat-estado').textContent = 'No se pudo enviar la denuncia (¿sin conexión?).';
+  }
+};
+
+$('chat-volver').onclick = () => abrirAmigos();
+
+// Bloquear: se guarda el bloqueo, se deshace la amistad y deja de poder ver mi estado.
+async function bloquearA(amigo) {
+  try {
+    await nube.bloquear(usuario.uid, amigo.uid, amigo.apodo);
+    const { amigos, recibidas, enviadas } = amigosDe(await nube.misSolicitudes(usuario.uid), usuario.uid);
+    for (const s of [...amigos, ...recibidas, ...enviadas].filter((x) => x.uid === amigo.uid)) await nube.borrarSolicitud(s.id).catch(() => {});
+    pararChat();
+    abrirAmigos(`🚫 Has bloqueado a ${amigo.apodo}.`);
+  } catch {
+    $('chat-estado').textContent = 'No se pudo bloquear (¿sin conexión?).';
+  }
+}
+
+// Marca con • el botón 💬 de los amigos con mensajes sin leer.
+async function marcarNoLeidos(amigo, boton) {
+  try {
+    const id = idChat(usuario.uid, amigo.uid);
+    const [ultimo, leido] = await Promise.all([nube.ultimoMensaje(id), nube.leidoHasta(usuario.uid, id)]);
+    if (hayNoLeidos(ultimo, leido, usuario.uid)) {
+      boton.classList.add('con-nuevos');
+      boton.setAttribute('aria-label', `Mensajes con ${amigo.apodo} (hay mensajes nuevos)`);
+    }
+  } catch {
+    // sin permiso o sin conexión: sin marca
+  }
 }
 
 // Funcionamiento sin conexión. Solo va en localhost o HTTPS; si falla, la app sigue igual.

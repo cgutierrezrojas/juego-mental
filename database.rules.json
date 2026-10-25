@@ -48,8 +48,38 @@
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         "$sala": {
-          ".write": "auth != null && (auth.uid === $uid || (newData.exists() && newData.child('de').val() === auth.uid && root.child('amigos').child($uid).child(auth.uid).exists()) || (!newData.exists() && data.child('de').val() === auth.uid))"
+          ".write": "auth != null && (auth.uid === $uid || (newData.exists() && newData.child('de').val() === auth.uid && root.child('amigos').child($uid).child(auth.uid).exists() && !root.child('bloqueos').child($uid).child(auth.uid).exists()) || (!newData.exists() && data.child('de').val() === auth.uid))"
         }
+      }
+    },
+    "chats": {
+      "$chat": {
+        ".read": "auth != null && ($chat.beginsWith(auth.uid + '_') || $chat.endsWith('_' + auth.uid))",
+        "mensajes": {
+          "$mensaje": {
+            ".write": "auth != null && !data.exists() && ($chat.beginsWith(auth.uid + '_') || $chat.endsWith('_' + auth.uid)) && newData.child('de').val() === auth.uid && root.child('amigos').child($chat.replace(auth.uid, '').replace('_', '')).child(auth.uid).exists() && !root.child('bloqueos').child($chat.replace(auth.uid, '').replace('_', '')).child(auth.uid).exists()",
+            ".validate": "newData.hasChildren(['de', 'texto', 'cuando']) && newData.child('texto').isString() && newData.child('texto').val().length > 0 && newData.child('texto').val().length <= 300 && newData.child('cuando').val() === now"
+          }
+        }
+      }
+    },
+    "leidos": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "bloqueos": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "denuncias": {
+      ".read": false,
+      "$denuncia": {
+        ".write": "auth != null && !data.exists() && newData.child('de').val() === auth.uid",
+        ".validate": "newData.hasChildren(['de', 'contra', 'motivo', 'cuando']) && newData.child('motivo').isString() && newData.child('motivo').val().length <= 500"
       }
     }
   }

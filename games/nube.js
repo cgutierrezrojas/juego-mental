@@ -242,3 +242,33 @@ export const cancelarAbandono = (id, uid) => rt.onDisconnect(rt.ref(base, `vivo/
 export const escucharInvitaciones = (uid, alLlegar) =>
   rt.onChildAdded(rt.ref(base, `invitaciones/${uid}`), (d) => alLlegar(d.key, d.val()), () => {});
 export const borrarInvitacion = (uid, sala) => rt.remove(rt.ref(base, `invitaciones/${uid}/${sala}`)).catch(() => {});
+
+// --- Mensajes entre amigos (`chats/{idChat}/mensajes`), leídos, bloqueos y denuncias (ver database.rules.json) ---
+
+// Avisa de los últimos 50 mensajes y de cada uno nuevo. Devuelve la función para dejar de escuchar.
+export function escucharChat(id, alLlegar, alFallar) {
+  const consulta = rt.query(rt.ref(base, `chats/${id}/mensajes`), rt.limitToLast(50));
+  return rt.onChildAdded(consulta, (d) => alLlegar({ id: d.key, ...d.val() }), alFallar);
+}
+
+export const enviarMensaje = (id, de, texto) => rt.push(rt.ref(base, `chats/${id}/mensajes`), { de, texto, cuando: rt.serverTimestamp() });
+
+export async function ultimoMensaje(id) {
+  let ultimo = null;
+  (await rt.get(rt.query(rt.ref(base, `chats/${id}/mensajes`), rt.limitToLast(1)))).forEach((d) => {
+    ultimo = d.val();
+  });
+  return ultimo;
+}
+
+export const marcarLeido = (uid, id) => rt.set(rt.ref(base, `leidos/${uid}/${id}`), rt.serverTimestamp()).catch(() => {});
+export const leidoHasta = async (uid, id) => (await rt.get(rt.ref(base, `leidos/${uid}/${id}`))).val() ?? 0;
+
+// Bloqueos: `bloqueos/{uid}/{otro}` = apodo del bloqueado (para poder desbloquearlo desde la lista).
+export const bloquear = (uid, otro, apodo) => rt.set(rt.ref(base, `bloqueos/${uid}/${otro}`), apodo);
+export const desbloquear = (uid, otro) => rt.remove(rt.ref(base, `bloqueos/${uid}/${otro}`));
+export const bloqueados = async (uid) => (rt ? (await rt.get(rt.ref(base, `bloqueos/${uid}`))).val() ?? {} : {});
+
+// Denuncia: solo se puede escribir; se revisa desde la consola de Firebase.
+export const denunciar = (datos) => rt.push(rt.ref(base, 'denuncias'), { ...datos, cuando: rt.serverTimestamp() });
+
