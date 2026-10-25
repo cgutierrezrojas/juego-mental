@@ -1987,7 +1987,8 @@ function salirDeSala() {
 // Elegir juegos (1 a 5, una ronda cada uno), dificultad y cómo se gana.
 let retoVivo = null;
 function abrirRetoVivo(amigo) {
-  retoVivo = { amigo, juegos: [JUEGOS_VIVO[0]], dificultad: 'normal', victoria: 'juegos' };
+  salirDeSala(); // un reto anterior (rechazado, cancelado…) ya no debe repintar esta pantalla
+  retoVivo = { amigo, forma: 'azar', habilidad: 'Cálculo', elegidos: [], dificultad: 'normal', victoria: 'juegos' };
   mostrar('vivo');
   pintarRetoVivo();
 }
@@ -2004,7 +2005,7 @@ function pintarRetoVivo() {
       b.onclick = () => {
         alElegir(valor);
         pintarRetoVivo();
-        $('vivo-contenido').querySelector(`[aria-label^="${titulo.split(' (')[0]}"] button[aria-pressed="true"]`)?.focus();
+        $('vivo-contenido').querySelector(`[aria-label^="${titulo.split(' (')[0]}"] button[aria-pressed="true"]`)?.focus(); // el título puede llevar un contador
       };
       caja.append(b);
     }
@@ -2012,15 +2013,22 @@ function pintarRetoVivo() {
   };
   const enviar = el('button', 'grande color', `⚡ Retar a ${r.amigo.apodo}`);
   enviar.style.setProperty('--c', 'var(--acento)');
-  enviar.disabled = !r.juegos.length;
+  enviar.disabled = r.forma === 'elegir' && !r.elegidos.length;
   enviar.onclick = () => enviarRetoVivo(enviar);
+  // Como en los duelos por turnos: 3 al azar, 3 de una habilidad o de 1 a 5 a mano (solo juegos con reloj).
+  const conVivo = HABILIDADES.filter((h) => JUEGOS_VIVO.some((id) => INFO_JUEGOS[id].habilidad === h));
+  const partesJuegos = grupo('Juegos (una ronda cada uno)', [['azar', '🎲 3 al azar'], ['habilidad', '🧠 Habilidad'], ['elegir', '✋ Elegir']], r.forma, (v) => (r.forma = v));
+  if (r.forma === 'habilidad') partesJuegos.push(...grupo('Habilidad', conVivo.map((h) => [h, `${ICONO_HABILIDAD[h]} ${h}`]), r.habilidad, (v) => (r.habilidad = v)));
+  if (r.forma === 'elegir') {
+    partesJuegos.push(...grupo(`Elige de 1 a 5 (${r.elegidos.length}/5)`, JUEGOS_VIVO.map((id) => [id, `${INFO_JUEGOS[id].icono} ${INFO_JUEGOS[id].nombre}`]), r.elegidos, (id) => {
+      if (r.elegidos.includes(id)) r.elegidos = r.elegidos.filter((x) => x !== id);
+      else if (r.elegidos.length < 5) r.elegidos.push(id);
+    }));
+  }
   $('vivo-contenido').replaceChildren(
     el('p', 'titulo-duelo', `⚡ En vivo contra ${r.amigo.apodo}`),
-    el('p', 'sin-datos', 'Jugáis a la vez, una ronda por juego, y veis el marcador del otro en directo.'),
-    ...grupo(`Juegos (${r.juegos.length}/5, una ronda cada uno)`, JUEGOS_VIVO.map((id) => [id, `${INFO_JUEGOS[id].icono} ${INFO_JUEGOS[id].nombre}`]), r.juegos, (id) => {
-      if (r.juegos.includes(id)) r.juegos = r.juegos.filter((x) => x !== id);
-      else if (r.juegos.length < 5) r.juegos.push(id);
-    }),
+    el('p', 'sin-datos', 'Jugáis a la vez, una ronda por juego, y veis el marcador del otro en directo. Solo juegos con reloj.'),
+    ...partesJuegos,
     ...grupo('Dificultad', Object.entries(DIFICULTADES).map(([d, nombre]) => [d, `${CARA[d]} ${nombre}`]), r.dificultad, (v) => (r.dificultad = v)),
     ...grupo('Cómo se gana', [['juegos', 'Ronda a ronda'], ['puntos', 'Suma de puntos']], r.victoria, (v) => (r.victoria = v)),
     enviar,
@@ -2031,12 +2039,14 @@ function pintarRetoVivo() {
 async function enviarRetoVivo(boton) {
   const r = retoVivo;
   boton.disabled = true;
+  const candidatos = r.forma === 'habilidad' ? JUEGOS_VIVO.filter((id) => INFO_JUEGOS[id].habilidad === r.habilidad) : JUEGOS_VIVO;
+  const juegos = r.forma === 'elegir' ? r.elegidos : elegirJuegos(candidatos);
   try {
     const id = await nube.crearSalaVivo({
       anfitrion: usuario.uid,
       invitado: r.amigo.uid,
       nombres: { [usuario.uid]: leer('nube:apodo'), [r.amigo.uid]: r.amigo.apodo },
-      juegos: r.juegos,
+      juegos,
       dificultad: r.dificultad,
       victoria: r.victoria,
       estado: 'invitando',
@@ -2106,6 +2116,7 @@ function pintarSalaVivo() {
   if (resultado) return pintarResultadoVivo(sala, resultado, titulo, rival, boton);
   if (sala.estado === 'rechazada') {
     return caja.replaceChildren(titulo, el('p', 'aviso-duelo', `${rival} no puede jugar ahora.`), boton('Volver a Amigos', '', () => {
+      salirDeSala();
       nube.borrarSala(id);
       abrirAmigos();
     }));
