@@ -227,7 +227,7 @@ export async function crearSalaVivo(sala) {
   const ref = rt.push(rt.ref(base, 'vivo'));
   await rt.set(ref, sala);
   await rt.set(rt.ref(base, `invitaciones/${sala.invitado}/${ref.key}`), {
-    de: sala.anfitrion, nombre: sala.nombres[sala.anfitrion], juego: sala.juego, dificultad: sala.dificultad, cuando: rt.serverTimestamp(),
+    de: sala.anfitrion, nombre: sala.nombres[sala.anfitrion], juegos: sala.juegos, dificultad: sala.dificultad, cuando: rt.serverTimestamp(),
   });
   return ref.key;
 }

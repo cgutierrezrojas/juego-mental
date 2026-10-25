@@ -1119,3 +1119,7 @@ button.tarjeta { position: relative; }
 #chat-estado:empty { display: none; }
 .fila-amigo button.con-nuevos { border-color: var(--morado); box-shadow: 0 0 0 2px var(--morado); }
 .fila-amigo button.con-nuevos::after { content: ' •'; color: var(--morado); font-weight: 900; }
+
+/* Duelos en vivo por rondas */
+.ronda-vivo { margin: 0; padding: 6px 10px; border-radius: 10px; background: var(--superficie); box-shadow: var(--relieve); font-weight: 700; text-align: left; }
+[data-tema="oscuro"] .ronda-vivo { border: 1px solid rgba(255, 255, 255, 0.2); }

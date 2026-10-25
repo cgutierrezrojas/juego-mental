@@ -21,10 +21,6 @@
           ".write": "auth != null && (root.child('vivo').child($sala).child('anfitrion').val() === auth.uid || root.child('vivo').child($sala).child('invitado').val() === auth.uid)",
           ".validate": "newData.isString() && newData.val().matches(/^(invitando|aceptada|rechazada)$/)"
         },
-        "inicio": {
-          ".write": "auth != null && root.child('vivo').child($sala).child('invitado').val() === auth.uid",
-          ".validate": "newData.isNumber()"
-        },
         "puntos": {
           "$uid": {
             ".write": "auth != null && auth.uid === $uid && (root.child('vivo').child($sala).child('anfitrion').val() === auth.uid || root.child('vivo').child($sala).child('invitado').val() === auth.uid)",
@@ -32,14 +28,22 @@
           }
         },
         "fin": {
-          "$uid": {
-            ".write": "auth != null && auth.uid === $uid && !data.exists() && (root.child('vivo').child($sala).child('anfitrion').val() === auth.uid || root.child('vivo').child($sala).child('invitado').val() === auth.uid)",
-            ".validate": "newData.isNumber()"
+          "$ronda": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && !data.exists() && (root.child('vivo').child($sala).child('anfitrion').val() === auth.uid || root.child('vivo').child($sala).child('invitado').val() === auth.uid)",
+              ".validate": "newData.isNumber()"
+            }
           }
         },
         "fuera": {
           "$uid": {
             ".write": "auth != null && auth.uid === $uid && (root.child('vivo').child($sala).child('anfitrion').val() === auth.uid || root.child('vivo').child($sala).child('invitado').val() === auth.uid)"
+          }
+        },
+        "inicios": {
+          "$ronda": {
+            ".write": "auth != null && (root.child('vivo').child($sala).child('anfitrion').val() === auth.uid || root.child('vivo').child($sala).child('invitado').val() === auth.uid)",
+            ".validate": "newData.isNumber()"
           }
         }
       }

@@ -38,7 +38,7 @@ import { CONFIG } from './firebase-config.js';
 import { LOGROS, progreso, logrosNuevos } from './games/logros.js';
 import { PLAZO, elegirJuegos, marcador, estadoDuelo, resultadoPara, verRival } from './games/duelos.js';
 import { codigoAmigo, normalizarCodigo, amigosDe } from './games/amigos.js';
-import { JUEGOS_VIVO, rivalDe, resultadoVivo } from './games/vivo.js';
+import { JUEGOS_VIVO, rivalDe, rondaActual, comoDuelo, resultadoVivo } from './games/vivo.js';
 import { idChat, mensajeValido, hayNoLeidos } from './games/chat.js';
 
 const JUEGOS = [
@@ -780,9 +780,10 @@ function terminar(puntos) {
     : `${$('final-modo').textContent}: ${conUnidad(actual, puntos)}${titular ? ` · ${titular}` : ''}`;
   textoCompartir = `${actual.icono} ${actual.nombre} — ${resultado}\n¿Me superas? Juega a Juego Mental: https://cgutierrezrojas.github.io/juego-mental/`;
   if (enVivo) {
-    nube.cambiarSala(enVivo.id, { [`fin/${usuario.uid}`]: puntos }).catch(() => {});
-    $('final-modo').textContent = `⚡ En vivo vs ${enVivo.rival}`;
-    $('btn-repetir').textContent = '⚡ Ver el resultado';
+    nube.cambiarSala(enVivo.id, { [`fin/${enVivo.ronda}/${usuario.uid}`]: puntos }).catch(() => {});
+    const quedan = enVivo.ronda + 1 < enVivo.total;
+    $('final-modo').textContent = `⚡ En vivo vs ${enVivo.rival}${enVivo.total > 1 ? ` · ronda ${enVivo.ronda + 1}/${enVivo.total}` : ''}`;
+    $('btn-repetir').textContent = quedan ? '⚡ Ver el marcador' : '⚡ Ver el resultado';
     $('btn-mejorar').hidden = true;
   }
   if (enDuelo) {
@@ -1516,16 +1517,41 @@ function pintarNuevoDuelo() {
     ...grupo('Cómo se gana', [['juegos', 'Juego a juego'], ['puntos', 'Suma de puntos']], n.victoria, (v) => (n.victoria = v)),
   );
   if (typeof n.rival === 'object') {
-    partes.push(el('h3', 'categoria', 'Rival'), el('p', 'rival-elegido', `⚔️ ${n.rival.apodo}`));
+    const cambiar = el('button', '', 'Cambiar rival');
+    cambiar.onclick = () => {
+      n.rival = 'enlace';
+      pintarNuevoDuelo();
+    };
+    partes.push(el('h3', 'categoria', 'Rival'), el('p', 'rival-elegido', `⚔️ ${n.rival.apodo}`), cambiar);
   } else {
     partes.push(
-      ...grupo('Rival', [['enlace', '🔗 Enlace'], ['azar', '🎲 Al azar']], n.rival, (v) => (n.rival = v)),
-      el('p', 'sin-datos', 'Para retar a alguien del ranking, toca ⚔️ junto a su nombre en 🏆 Ranking.'),
+      ...grupo('Rival', [['enlace', '🔗 Enlace'], ['azar', '🎲 Al azar'], ['amigo', '👥 Amigo']], n.rival, (v) => (n.rival = v)),
     );
+    if (n.rival === 'amigo') {
+      const lista = el('div', 'opciones-duelo');
+      lista.setAttribute('role', 'group');
+      lista.setAttribute('aria-label', 'Elige a tu amigo');
+      lista.append(el('span', 'sin-datos', 'Cargando tus amigos…'));
+      partes.push(lista);
+      nube.misSolicitudes(usuario.uid).then((solicitudes) => {
+        const { amigos } = amigosDe(solicitudes, usuario.uid);
+        if (!amigos.length) return lista.replaceChildren(el('span', 'sin-datos', 'Aún no tienes amigos: agrégalos en 👥 Amigos.'));
+        lista.replaceChildren(...amigos.map((a) => {
+          const b = el('button', '', `👥 ${a.apodo}`);
+          b.onclick = () => {
+            n.rival = { uid: a.uid, apodo: a.apodo };
+            pintarNuevoDuelo();
+          };
+          return b;
+        }));
+      }).catch(() => lista.replaceChildren(el('span', 'sin-datos', 'No se pudieron cargar tus amigos (¿sin conexión?).')));
+    } else {
+      partes.push(el('p', 'sin-datos', 'También puedes retar desde 🏆 Ranking (⚔️ junto a cada nombre) o desde 👥 Amigos.'));
+    }
   }
   const crear = el('button', 'grande color', '⚔️ Crear y desafiar');
   crear.style.setProperty('--c', 'var(--acento)');
-  crear.disabled = n.forma === 'elegir' && !n.elegidos.length;
+  crear.disabled = (n.forma === 'elegir' && !n.elegidos.length) || n.rival === 'amigo';
   crear.onclick = () => crearDuelo(crear);
   partes.push(crear, el('p', 'estado-duelo', ''));
   $('nuevo-duelo-contenido').replaceChildren(...partes);
@@ -1947,20 +1973,21 @@ async function agregarAmigo(uid, apodo) {
 
 $('btn-amigos').onclick = () => abrirAmigos();
 
-// ⚡ Duelos en vivo con un amigo conectado (reglas puras en games/vivo.js; sala en la Realtime Database).
-let enVivo = null; // { id, rival, juego } mientras se juega una partida en vivo
-let salaVivo = null; // { id, sala, parar, programada, misPuntos } de la sala abierta
+// ⚡ Duelos en vivo por rondas con un amigo conectado (reglas puras en games/vivo.js; sala en la Realtime Database).
+let enVivo = null; // { id, rival, ronda, total } mientras se juega una ronda en vivo
+let salaVivo = null; // { id, sala, parar, programadas, misPuntos } de la sala abierta
 let invitacionPendiente = null; // reto recibido mientras se jugaba otra cosa
+const PAUSA_RONDAS = 8000; // entre una ronda y la siguiente
 
 function salirDeSala() {
   salaVivo?.parar();
   salaVivo = null;
 }
 
-// Elegir juego y dificultad para retar en vivo a un amigo.
+// Elegir juegos (1 a 5, una ronda cada uno), dificultad y cómo se gana.
 let retoVivo = null;
 function abrirRetoVivo(amigo) {
-  retoVivo = { amigo, juego: JUEGOS_VIVO[0], dificultad: 'normal' };
+  retoVivo = { amigo, juegos: [JUEGOS_VIVO[0]], dificultad: 'normal', victoria: 'juegos' };
   mostrar('vivo');
   pintarRetoVivo();
 }
@@ -1973,11 +2000,11 @@ function pintarRetoVivo() {
     caja.setAttribute('aria-label', titulo);
     for (const [valor, texto] of opciones) {
       const b = el('button', '', texto);
-      b.setAttribute('aria-pressed', valor === elegido);
+      b.setAttribute('aria-pressed', Array.isArray(elegido) ? elegido.includes(valor) : valor === elegido);
       b.onclick = () => {
         alElegir(valor);
         pintarRetoVivo();
-        $('vivo-contenido').querySelector(`[aria-label="${titulo}"] button[aria-pressed="true"]`)?.focus();
+        $('vivo-contenido').querySelector(`[aria-label^="${titulo.split(' (')[0]}"] button[aria-pressed="true"]`)?.focus();
       };
       caja.append(b);
     }
@@ -1985,12 +2012,17 @@ function pintarRetoVivo() {
   };
   const enviar = el('button', 'grande color', `⚡ Retar a ${r.amigo.apodo}`);
   enviar.style.setProperty('--c', 'var(--acento)');
+  enviar.disabled = !r.juegos.length;
   enviar.onclick = () => enviarRetoVivo(enviar);
   $('vivo-contenido').replaceChildren(
     el('p', 'titulo-duelo', `⚡ En vivo contra ${r.amigo.apodo}`),
-    el('p', 'sin-datos', 'Jugáis a la vez el mismo juego y veis el marcador del otro en directo.'),
-    ...grupo('Juego', JUEGOS_VIVO.map((id) => [id, `${INFO_JUEGOS[id].icono} ${INFO_JUEGOS[id].nombre}`]), r.juego, (v) => (r.juego = v)),
+    el('p', 'sin-datos', 'Jugáis a la vez, una ronda por juego, y veis el marcador del otro en directo.'),
+    ...grupo(`Juegos (${r.juegos.length}/5, una ronda cada uno)`, JUEGOS_VIVO.map((id) => [id, `${INFO_JUEGOS[id].icono} ${INFO_JUEGOS[id].nombre}`]), r.juegos, (id) => {
+      if (r.juegos.includes(id)) r.juegos = r.juegos.filter((x) => x !== id);
+      else if (r.juegos.length < 5) r.juegos.push(id);
+    }),
     ...grupo('Dificultad', Object.entries(DIFICULTADES).map(([d, nombre]) => [d, `${CARA[d]} ${nombre}`]), r.dificultad, (v) => (r.dificultad = v)),
+    ...grupo('Cómo se gana', [['juegos', 'Ronda a ronda'], ['puntos', 'Suma de puntos']], r.victoria, (v) => (r.victoria = v)),
     enviar,
     el('p', 'estado-duelo', ''),
   );
@@ -2004,8 +2036,9 @@ async function enviarRetoVivo(boton) {
       anfitrion: usuario.uid,
       invitado: r.amigo.uid,
       nombres: { [usuario.uid]: leer('nube:apodo'), [r.amigo.uid]: r.amigo.apodo },
-      juego: r.juego,
+      juegos: r.juegos,
       dificultad: r.dificultad,
+      victoria: r.victoria,
       estado: 'invitando',
     });
     entrarEnSala(id);
@@ -2015,23 +2048,44 @@ async function enviarRetoVivo(boton) {
   }
 }
 
-// Escucha la sala: espera, cuenta atrás sincronizada, marcador en directo y resultado.
+// Escucha la sala: espera, inicio sincronizado de cada ronda, marcador en directo y resultado.
 function entrarEnSala(id) {
   salirDeSala();
-  salaVivo = { id, sala: null, programada: false, misPuntos: 0, parar: () => {} };
+  salaVivo = { id, sala: null, programadas: new Set(), misPuntos: 0, parar: () => {} };
   salaVivo.parar = nube.verSala(id, (sala) => {
     if (!salaVivo || salaVivo.id !== id) return;
     salaVivo.sala = sala;
-    if (sala?.estado === 'aceptada' && sala.inicio && !salaVivo.programada) {
-      salaVivo.programada = true;
-      // jugar() hace su cuenta atrás de 3 s: se llama 3 s antes del inicio común.
-      setTimeout(() => salaVivo?.id === id && jugarVivo(), Math.max(0, sala.inicio - nube.ahoraServidor() - 3000));
-    }
+    if (sala?.estado === 'aceptada' && !resultadoVivo(sala, usuario.uid, INFO_JUEGOS)) programarRonda(sala);
     if (enVivo && sala) pintarMarcadorVivo(sala);
     if (!$('vivo').hidden) pintarSalaVivo();
   });
   mostrar('vivo');
   pintarSalaVivo();
+}
+
+// Cuando los dos acaban una ronda, el anfitrión fija el inicio de la siguiente; cada uno la empieza a esa hora.
+function programarRonda(sala) {
+  const r = rondaActual(sala);
+  if (r >= sala.juegos.length) return;
+  if (!sala.inicios?.[r]) {
+    if (r > 0 && sala.anfitrion === usuario.uid) nube.cambiarSala(salaVivo.id, { [`inicios/${r}`]: nube.ahoraServidor() + PAUSA_RONDAS }).catch(() => {});
+    return;
+  }
+  if (salaVivo.programadas.has(r) || sala.fin?.[r]?.[usuario.uid] !== undefined) return;
+  salaVivo.programadas.add(r);
+  const id = salaVivo.id;
+  // jugar() hace su cuenta atrás de 3 s: se llama 3 s antes del inicio común.
+  setTimeout(() => salaVivo?.id === id && jugarVivo(r), Math.max(0, sala.inicios[r] - nube.ahoraServidor() - 3000));
+}
+
+// Rondas jugadas: "Ronda 1 · ➕ Cálculo: Tú 15 · Ana 12 ✓".
+function lineasRondas(sala, rival) {
+  const { porJuego } = marcador(comoDuelo(sala), usuario.uid, INFO_JUEGOS);
+  return porJuego.filter((p) => p.mio !== undefined || p.suyo !== undefined).map((p, i) => {
+    const j = INFO_JUEGOS[p.id];
+    const gana = { yo: ' · ✓ tuya', rival: ` · ✓ de ${rival}`, empate: ' · empate' }[p.gana] ?? '';
+    return el('p', 'ronda-vivo', `Ronda ${i + 1} · ${j.icono} ${j.nombre}: Tú ${p.mio ?? '…'} · ${rival} ${p.suyo ?? '…'}${gana}`);
+  });
 }
 
 function pintarSalaVivo() {
@@ -2045,9 +2099,10 @@ function pintarSalaVivo() {
   };
   if (!sala) return caja.replaceChildren(el('p', 'sin-datos', 'Este reto ya no existe.'), boton('Volver a Amigos', '', () => abrirAmigos()));
   const rival = sala.nombres?.[rivalDe(sala, usuario.uid)] ?? 'tu rival';
-  const juego = INFO_JUEGOS[sala.juego];
-  const titulo = el('p', 'titulo-duelo', `⚡ ${juego.icono} ${juego.nombre} · ${DIFICULTADES[sala.dificultad]}`);
-  const resultado = resultadoVivo(sala, usuario.uid);
+  const total = sala.juegos.length;
+  const juegos = sala.juegos.map((j) => INFO_JUEGOS[j].icono).join(' ');
+  const titulo = el('p', 'titulo-duelo', `⚡ ${total} ronda${total > 1 ? 's' : ''} ${juegos} · ${DIFICULTADES[sala.dificultad]}`);
+  const resultado = resultadoVivo(sala, usuario.uid, INFO_JUEGOS);
   if (resultado) return pintarResultadoVivo(sala, resultado, titulo, rival, boton);
   if (sala.estado === 'rechazada') {
     return caja.replaceChildren(titulo, el('p', 'aviso-duelo', `${rival} no puede jugar ahora.`), boton('Volver a Amigos', '', () => {
@@ -2063,9 +2118,13 @@ function pintarSalaVivo() {
       abrirAmigos();
     }));
   }
-  const fin = sala.fin?.[usuario.uid];
-  if (fin !== undefined) return caja.replaceChildren(titulo, el('p', 'aviso-duelo', `Hiciste ${fin}. ⏳ Esperando a que ${rival} termine…`));
-  caja.replaceChildren(titulo, el('p', 'aviso-duelo', `¡${rival} aceptó! Empezáis a la vez en unos segundos…`));
+  const r = rondaActual(sala);
+  const siguiente = INFO_JUEGOS[sala.juegos[r]];
+  let aviso;
+  if (r === 0 && !sala.fin?.[0]) aviso = `¡${rival} aceptó! Empezáis a la vez en unos segundos…`;
+  else if (sala.fin?.[r]?.[usuario.uid] !== undefined) aviso = `⏳ Esperando a que ${rival} termine la ronda ${r + 1}…`;
+  else aviso = `Siguiente: ronda ${r + 1}/${total} · ${siguiente.icono} ${siguiente.nombre}. Empieza en unos segundos…`;
+  caja.replaceChildren(titulo, ...lineasRondas(sala, rival), el('p', 'aviso-duelo', aviso));
 }
 
 function pintarResultadoVivo(sala, resultado, titulo, rival, boton) {
@@ -2084,14 +2143,18 @@ function pintarResultadoVivo(sala, resultado, titulo, rival, boton) {
     // El anfitrión borra la sala un rato después (el rival ya ha tenido tiempo de verla).
     if (sala.anfitrion === usuario.uid) setTimeout(() => nube.borrarSala(id), 60000);
   }
-  const mio = sala.fin?.[usuario.uid];
-  const suyo = sala.fin?.[rivalDe(sala, usuario.uid)];
   const textos = { v: '🏆 ¡Ganaste el duelo en vivo!', d: 'Perdiste esta vez. ¡A por la revancha!', e: '🤝 Empate' };
-  const detalle = suyo === undefined ? `${rival} se fue antes de terminar.` : mio === undefined ? 'Te fuiste antes de terminar.' : `Tú ${mio} · ${rival} ${suyo}`;
+  const m = marcador(comoDuelo(sala), usuario.uid, INFO_JUEGOS, true);
+  const rivalSeFue = sala.fuera?.[rivalDe(sala, usuario.uid)] && rondaActual(sala) < sala.juegos.length;
+  const yoMeFui = sala.fuera?.[usuario.uid] && rondaActual(sala) < sala.juegos.length;
+  let detalle = `Tú ${m.mio} · ${rival} ${m.suyo}${sala.victoria === 'puntos' ? ' (puntos)' : ''}`;
+  if (rivalSeFue) detalle = `${rival} se fue antes de terminar.`;
+  if (yoMeFui) detalle = 'Te fuiste antes de terminar.';
   $('vivo-contenido').replaceChildren(
     titulo,
     el('p', `resultado-duelo resultado-${resultado}`, textos[resultado]),
     el('p', 'marcador-final-vivo', detalle),
+    ...lineasRondas(sala, rival),
     boton('Volver a Amigos', '', () => {
       salirDeSala();
       abrirAmigos();
@@ -2109,13 +2172,14 @@ function recibirInvitacion(id, invitacion) {
     invitacionPendiente = { id, invitacion };
     return;
   }
-  const juego = INFO_JUEGOS[invitacion.juego];
-  $('vivo-texto').textContent = `${invitacion.nombre} te reta en vivo a ${juego.icono} ${juego.nombre} (${DIFICULTADES[invitacion.dificultad]}).`;
+  const juegos = (invitacion.juegos ?? []).map((j) => `${INFO_JUEGOS[j]?.icono ?? ''} ${INFO_JUEGOS[j]?.nombre ?? j}`).join(', ');
+  const rondas = invitacion.juegos?.length ?? 1;
+  $('vivo-texto').textContent = `${invitacion.nombre} te reta en vivo: ${rondas} ronda${rondas > 1 ? 's' : ''} (${juegos}) en ${DIFICULTADES[invitacion.dificultad]}.`;
   $('vivo-aceptar').onclick = async () => {
     $('dialogo-vivo').close();
     nube.borrarInvitacion(usuario.uid, id);
     try {
-      await nube.cambiarSala(id, { estado: 'aceptada', inicio: nube.ahoraServidor() + 6000 });
+      await nube.cambiarSala(id, { estado: 'aceptada', 'inicios/0': nube.ahoraServidor() + 6000 });
       entrarEnSala(id);
     } catch {
       abrirAmigos('Ese reto ya no está disponible.');
@@ -2137,13 +2201,13 @@ function revisarInvitacionPendiente() {
   recibirInvitacion(id, invitacion);
 }
 
-// Empieza la partida en vivo: modo Normal con la dificultad del reto; cada acierto se publica al momento.
-function jugarVivo() {
+// Empieza la ronda `r`: modo Normal con la dificultad del reto; cada acierto se publica al momento.
+function jugarVivo(r) {
   const { id, sala } = salaVivo;
-  actual = INFO_JUEGOS[sala.juego];
-  eleccion = { modo: 'normal', dificultad: sala.dificultad };
+  actual = INFO_JUEGOS[sala.juegos[r]];
+  eleccion = { modo: 'normal', dificultad: actual.sinDificultad ? 'normal' : sala.dificultad };
   enDuelo = null;
-  enVivo = { id, rival: sala.nombres?.[rivalDe(sala, usuario.uid)] ?? 'Rival', juego: sala.juego };
+  enVivo = { id, rival: sala.nombres?.[rivalDe(sala, usuario.uid)] ?? 'Rival', ronda: r, total: sala.juegos.length };
   salaVivo.misPuntos = 0;
   nube.prepararAbandono(id, usuario.uid);
   nube.cambiarSala(id, { [`puntos/${usuario.uid}`]: 0 }).catch(() => {});
@@ -2156,8 +2220,10 @@ function pintarMarcadorVivo(sala) {
   marcadorVivo.hidden = !enVivo;
   if (!enVivo) return;
   const rival = rivalDe(sala, usuario.uid);
-  const suyo = sala.fuera?.[rival] && sala.fin?.[rival] === undefined ? 'se fue' : sala.fin?.[rival] ?? sala.puntos?.[rival] ?? 0;
-  marcadorVivo.textContent = `⚡ Tú ${salaVivo?.misPuntos ?? 0} · ${enVivo.rival} ${suyo}`;
+  const final = sala.fin?.[enVivo.ronda]?.[rival];
+  const suyo = sala.fuera?.[rival] && final === undefined ? 'se fue' : final ?? sala.puntos?.[rival] ?? 0;
+  const ronda = enVivo.total > 1 ? `Ronda ${enVivo.ronda + 1}/${enVivo.total} · ` : '';
+  marcadorVivo.textContent = `⚡ ${ronda}Tú ${salaVivo?.misPuntos ?? 0} · ${enVivo.rival} ${suyo}`;
 }
 
 addEventListener('respuesta', (e) => {

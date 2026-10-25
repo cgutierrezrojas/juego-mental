@@ -755,17 +755,24 @@ probar('amigos: código de amigo y solicitudes', () => {
 });
 
 // --- vivo.js ---
-import { JUEGOS_VIVO, rivalDe, resultadoVivo } from './games/vivo.js';
+import { JUEGOS_VIVO, rivalDe, rondaActual, comoDuelo, resultadoVivo } from './games/vivo.js';
 
-probar('duelos en vivo: juegos y resultado', () => {
+probar('duelos en vivo: rondas y resultado', () => {
   assert(JUEGOS_VIVO.every((id) => TODOS_LOS_JUEGOS.includes(id)) && !JUEGOS_VIVO.includes('puzzle'), 'solo juegos con reloj');
-  const sala = (o) => ({ anfitrion: 'a', invitado: 'b', ...o });
+  const INFO_VIVO = { calculo: { referencia: 30 }, mayor: { referencia: 35 }, topos: { referencia: 40 } };
+  const sala = (o) => ({ anfitrion: 'a', invitado: 'b', juegos: ['calculo', 'mayor', 'topos'], victoria: 'juegos', ...o });
   assert(rivalDe(sala(), 'a') === 'b' && rivalDe(sala(), 'b') === 'a');
-  assert(resultadoVivo(sala(), 'a') === null && resultadoVivo(sala({ fin: { a: 10 } }), 'a') === null, 'falta el rival');
-  assert(resultadoVivo(sala({ fin: { a: 10, b: 8 } }), 'a') === 'v' && resultadoVivo(sala({ fin: { a: 10, b: 8 } }), 'b') === 'd');
-  assert(resultadoVivo(sala({ fin: { a: 9, b: 9 } }), 'b') === 'e');
-  assert(resultadoVivo(sala({ fuera: { b: true } }), 'a') === 'v' && resultadoVivo(sala({ fuera: { b: true } }), 'b') === 'd', 'quien se va pierde');
-  assert(resultadoVivo(sala({ fin: { a: 3, b: 12 }, fuera: { b: true } }), 'a') === 'd', 'irse después de terminar no cuenta');
+  assert(rondaActual(sala()) === 0 && rondaActual(sala({ fin: { 0: { a: 5 } } })) === 0);
+  assert(rondaActual(sala({ fin: { 0: { a: 5, b: 3 }, 1: { a: 1, b: 2 } } })) === 2);
+  assert(resultadoVivo(sala({ fin: { 0: { a: 5, b: 3 } } }), 'a', INFO_VIVO) === null, 'faltan rondas');
+  const fin = { 0: { a: 5, b: 3 }, 1: { a: 1, b: 2 }, 2: { a: 20, b: 9 } };
+  assert(JSON.stringify(comoDuelo(sala({ fin })).resultados.b) === '{"calculo":3,"mayor":2,"topos":9}');
+  assert(resultadoVivo(sala({ fin }), 'a', INFO_VIVO) === 'v' && resultadoVivo(sala({ fin }), 'b', INFO_VIVO) === 'd');
+  assert(resultadoVivo(sala({ fin: { 0: { a: 4, b: 4 } }, juegos: ['calculo'] }), 'b', INFO_VIVO) === 'e');
+  assert(resultadoVivo(sala({ fuera: { b: true } }), 'a', INFO_VIVO) === 'v' && resultadoVivo(sala({ fuera: { b: true } }), 'b', INFO_VIVO) === 'd', 'quien se va pierde');
+  assert(resultadoVivo(sala({ fin, fuera: { b: true } }), 'a', INFO_VIVO) === 'v', 'irse después de terminar no cambia el resultado');
+  const puntos = sala({ victoria: 'puntos', juegos: ['calculo'], fin: { 0: { a: 30, b: 15 } } });
+  assert(resultadoVivo(puntos, 'b', INFO_VIVO) === 'd', 'suma de puntos');
 });
 
 // --- chat.js ---
