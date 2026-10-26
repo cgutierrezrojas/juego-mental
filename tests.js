@@ -495,7 +495,7 @@ import {
   mundoDe, varianteDe, VARIANTES, DESCRIPCION_VARIANTE, nivelesDelDia, diarioCompleto, rachaDiaria, podarDiarios, estrellasDiarias,
 } from './games/niveles.js';
 
-const TODOS_LOS_JUEGOS = ['calculo', 'atencion', 'memoria', 'series', 'sobra', 'puzzle', 'rayo', 'topos', 'mayor', 'menos', 'distinto', 'balanza', 'parejas'];
+const TODOS_LOS_JUEGOS = ['calculo', 'atencion', 'memoria', 'series', 'sobra', 'puzzle', 'rayo', 'topos', 'mayor', 'menos', 'distinto', 'balanza', 'parejas', 'verdad', 'anagrama', 'cuenta'];
 
 probar('niveles: patrón de retos', () => {
   const esperado = { 1: 'normal', 3: 'contrarreloj', 5: 'sinfallo', 7: 'contrarreloj', 10: 'jefe', 13: 'contrarreloj', 15: 'sinfallo', 20: 'jefe', 44: 'normal', 50: 'jefe' };
@@ -801,6 +801,42 @@ probar('liga: semanas ISO, días restantes y puntos', () => {
   r = anotarLiga(anotarLiga(anotarLiga(r, 'entreno'), 'victoria'), 'empate');
   assert(puntosLiga(r) === MAX_PARTIDAS_DIA + 1 + 4 + 5 + 3 + 1, `puntos ${puntosLiga(r)}`);
   assert(puntosLiga() === 0 && puntosLiga({}) === 0);
+});
+
+// --- verdad.js, anagrama.js y cuenta.js ---
+import { VERDADERO, FALSO, generarAfirmacion } from './games/verdad.js';
+import { PALABRAS, generarAnagrama } from './games/anagrama.js';
+import { generarCuenta } from './games/cuenta.js';
+
+probar('juegos nuevos: verdadero o falso, anagramas y cuenta rápida', () => {
+  let ciertas = 0;
+  for (const aciertos of [0, 8, 20]) {
+    for (let i = 0; i < 300; i++) {
+      const { texto, cierta } = generarAfirmacion(aciertos);
+      const [operacion, mostrado] = texto.split(' = ');
+      const real = Function(`return ${operacion.replace('−', '-').replace('×', '*')}`)();
+      assert(cierta === (real === Number(mostrado)) && Number(mostrado) >= 0, texto);
+      if (cierta) ciertas++;
+    }
+  }
+  assert(ciertas > 300 && ciertas < 600, `más o menos la mitad ciertas: ${ciertas}`);
+  assert(VERDADERO !== FALSO);
+  for (const [largo, lista] of Object.entries(PALABRAS)) assert(lista.split(' ').every((w) => w.length === Number(largo)), largo);
+  const ordenada = (w) => [...w].sort().join('');
+  for (const aciertos of [0, 6, 12, 20]) {
+    for (let i = 0; i < 200; i++) {
+      const r = generarAnagrama(aciertos);
+      const letras = r.letras.replaceAll(' ', '');
+      assert(letras !== r.palabra && ordenada(letras) === ordenada(r.palabra), r.letras);
+      assert(r.opciones.length === 4 && r.opciones.includes(r.palabra) && r.opciones.filter((w) => ordenada(w) === ordenada(r.palabra)).length === 1, r.opciones.join());
+    }
+  }
+  for (const aciertos of [0, 10, 30]) {
+    for (let i = 0; i < 200; i++) {
+      const { casillas, objetivo, cuantas } = generarCuenta(aciertos);
+      assert(casillas.length === Math.min(30, 8 + aciertos) && cuantas >= 1 && cuantas === casillas.filter((f) => f === objetivo).length);
+    }
+  }
 });
 
 // --- mayor.js y menos.js ---

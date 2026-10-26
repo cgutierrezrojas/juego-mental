@@ -19,6 +19,9 @@ import * as menos from '../games/menos.js';
 import * as distinto from '../games/distinto.js';
 import * as balanza from '../games/balanza.js';
 import * as parejas from '../games/parejas.js';
+import * as verdad from '../games/verdad.js';
+import * as anagrama from '../games/anagrama.js';
+import * as cuenta from '../games/cuenta.js';
 
 export const JUEGOS = [
   { id: 'calculo', nombre: 'Cálculo', categoria: 'Clásicos', icono: '➕', color: 'rojo', habilidad: 'Cálculo', referencia: 30, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Resuelve todas las operaciones que puedas en 60 segundos.', juego: calculo },
@@ -34,17 +37,21 @@ export const JUEGOS = [
   { id: 'distinto', nombre: 'El distinto', categoria: 'Clásicos', icono: '🎯', color: 'azul', habilidad: 'Atención', referencia: 25, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Toca el cuadrado de color distinto. 60 segundos.', juego: distinto },
   { id: 'balanza', nombre: 'Balanza', categoria: 'Lógica', icono: '🏋️', color: 'amarillo', habilidad: 'Lógica', referencia: 15, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Deduce cuánto pesa la fruta que se pregunta. 60 segundos.', juego: balanza },
   { id: 'parejas', nombre: 'Parejas', categoria: 'Clásicos', icono: '🃏', color: 'verde', habilidad: 'Memoria', referencia: 9, unidad: 'intentos', menorEsMejor: true, modos: ['normal', 'niveles'], duracion: 'sin tiempo', instrucciones: 'Encuentra todas las parejas de cartas con los menos intentos posibles.', juego: parejas },
+  { id: 'verdad', nombre: '¿Verdadero o falso?', categoria: 'Clásicos', icono: '✅', color: 'rojo', habilidad: 'Cálculo', referencia: 35, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: '¿Está bien la operación? Toca Verdadero o Falso. 60 segundos.', juego: verdad },
+  { id: 'anagrama', nombre: 'Anagramas', categoria: 'Lógica', icono: '🔤', color: 'amarillo', habilidad: 'Lógica', referencia: 20, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: '¿Qué palabra forman las letras desordenadas? 60 segundos.', juego: anagrama },
+  { id: 'cuenta', nombre: 'Cuenta rápida', categoria: 'Clásicos', icono: '🍎', color: 'azul', habilidad: 'Atención', referencia: 25, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Cuenta cuántas veces aparece la figura que se pregunta. 60 segundos.', juego: cuenta },
 ];
 
 export const CATEGORIAS = ['Clásicos', 'Lógica', 'Reacción'];
 // Ids de los juegos de cada categoría, en el orden de CATEGORIAS (para el entrenamiento diario).
-// Hasta el 24-10-2026 el entrenamiento elegía entre los 8 juegos originales; desde el 25, entre los 12.
+// Hasta el 24-10-2026 el entrenamiento elegía entre los 8 juegos originales; el 25, entre 13; desde el 26, entre todos.
 // Los días pasados siguen pidiendo lo mismo, así las rachas no cambian. Para añadir juegos: otro corte igual.
 export const ORIGINALES = ['calculo', 'atencion', 'memoria', 'series', 'sobra', 'puzzle', 'rayo', 'topos'];
 export const porCategoria = (juegos) => CATEGORIAS.map((c) => juegos.filter((j) => j.categoria === c).map((j) => j.id));
 export const CATEGORIAS_ANTES = porCategoria(JUEGOS.filter((j) => ORIGINALES.includes(j.id)));
+export const CATEGORIAS_25_10 = porCategoria(JUEGOS.filter((j) => !['verdad', 'anagrama', 'cuenta'].includes(j.id)));
 export const CATEGORIAS_AHORA = porCategoria(JUEGOS);
-export const idsPorCategoria = (fecha) => (fecha < '2026-10-25' ? CATEGORIAS_ANTES : CATEGORIAS_AHORA);
+export const idsPorCategoria = (fecha) => (fecha < '2026-10-25' ? CATEGORIAS_ANTES : fecha < '2026-10-26' ? CATEGORIAS_25_10 : CATEGORIAS_AHORA);
 
 export const HABILIDADES = ['Memoria', 'Cálculo', 'Atención', 'Lógica', 'Reacción'];
 

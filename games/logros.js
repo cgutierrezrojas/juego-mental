@@ -10,7 +10,7 @@ export const LOGROS = [
   { id: 'racha-3', icono: '🔥', nombre: 'En marcha', texto: 'Racha de 3 días', dato: 'mejorRacha', meta: 3 },
   { id: 'racha-7', icono: '⚡', nombre: 'Una semana', texto: 'Racha de 7 días', dato: 'mejorRacha', meta: 7 },
   { id: 'racha-30', icono: '🏅', nombre: 'Imparable', texto: 'Racha de 30 días', dato: 'mejorRacha', meta: 30 },
-  { id: 'explorador', icono: '🗺️', nombre: 'Explorador', texto: 'Juega los 13 juegos', dato: 'juegosJugados', meta: 13 },
+  { id: 'explorador', icono: '🗺️', nombre: 'Explorador', texto: 'Juega los 16 juegos', dato: 'juegosJugados', meta: 16 },
   { id: 'estrellas-50', icono: '⭐', nombre: 'Estrellado', texto: '50 estrellas', dato: 'estrellas', meta: 50 },
   { id: 'estrellas-250', icono: '🌟', nombre: 'Constelación', texto: '250 estrellas', dato: 'estrellas', meta: 250 },
   { id: 'estrellas-1000', icono: '💫', nombre: 'Galaxia', texto: '1000 estrellas', dato: 'estrellas', meta: 1000 },

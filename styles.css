@@ -1128,3 +1128,7 @@ button.tarjeta { position: relative; }
 .boton-liga { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; font-size: 0.95rem; border-color: var(--amarillo); }
 .boton-liga[hidden] { display: none; }
 .boton-liga small { font-size: 0.75rem; opacity: 0.8; }
+
+/* Juegos nuevos: anagramas (letras sueltas) y cuenta rápida (cuadrícula de figuras en el enunciado) */
+.enunciado.anagrama { letter-spacing: 4px; font-size: 2.2rem; }
+.enunciado.cuenta { white-space: pre-line; font-size: 1.5rem; line-height: 1.35; }

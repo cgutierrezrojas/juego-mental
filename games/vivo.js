@@ -4,7 +4,7 @@
 import { resultadoPara } from './duelos.js';
 
 // Solo juegos con reloj: los dos terminan cada ronda a la vez.
-export const JUEGOS_VIVO = ['calculo', 'mayor', 'menos', 'distinto', 'series', 'sobra', 'balanza', 'atencion', 'topos'];
+export const JUEGOS_VIVO = ['calculo', 'mayor', 'menos', 'verdad', 'distinto', 'cuenta', 'series', 'sobra', 'balanza', 'anagrama', 'atencion', 'topos'];
 
 export const rivalDe = (sala, uid) => (sala.anfitrion === uid ? sala.invitado : sala.anfitrion);
 

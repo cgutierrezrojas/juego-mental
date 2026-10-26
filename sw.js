@@ -6,7 +6,7 @@ const ARCHIVOS = [
   'games/comun.js', 'games/efectos.js', 'games/calculo.js', 'games/atencion.js', 'games/memoria.js',
   'games/opciones.js', 'games/series.js', 'games/sobra.js', 'games/puzzle.js', 'games/rayo.js',
   'games/topos.js', 'games/estadisticas.js', 'games/modos.js', 'games/niveles.js',
-  'games/mayor.js', 'games/menos.js', 'games/distinto.js', 'games/balanza.js', 'games/parejas.js', 'games/final.js',
+  'games/mayor.js', 'games/menos.js', 'games/verdad.js', 'games/anagrama.js', 'games/cuenta.js', 'games/distinto.js', 'games/balanza.js', 'games/parejas.js', 'games/final.js',
   'games/copia.js', 'games/amigos.js', 'games/vivo.js', 'games/chat.js', 
   'app/estado.js', 'app/juegos.js', 'app/datos.js', 'app/ui.js', 'app/menu.js', 'app/estadisticas.js', 'app/previa.js', 'app/partida.js', 'app/cuenta.js', 'app/duelos.js', 'app/amigos.js', 'app/vivo.js', 'app/chat.js', 'app/liga.js', 'games/liga.js', 'games/duelos.js', 'games/logros.js', 'games/sincro.js', 'games/nube.js', 'firebase-config.js', 'privacidad.html',
 ];
