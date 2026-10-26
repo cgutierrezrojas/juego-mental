@@ -1,4 +1,5 @@
 // Piezas de interfaz comunes: pantallas, preguntas, avisos de ayuda, confeti, tema y compartir.
+import { pintarLigaMenu } from './liga.js';
 import { leer, el, guardar } from '../games/comun.js';
 import { activo } from '../games/efectos.js';
 import { pintarEntreno, pintarProgreso, pintarSugerencia } from './menu.js';
@@ -75,6 +76,7 @@ export function mostrar(id) {
     pintarEntreno();
     pintarProgreso();
     pintarSugerencia();
+    pintarLigaMenu();
     pintarAvisoDuelos();
   }
   if (id !== 'previa') mostrarAyuda(AYUDA_DE_PANTALLA[id]);

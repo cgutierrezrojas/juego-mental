@@ -1,4 +1,5 @@
 // La partida: cuenta atrás, final con estrellas, barra y frases.
+import { ligaAnotar } from './liga.js';
 import { el, guardar, esRecord } from '../games/comun.js';
 import { sonar } from '../games/efectos.js';
 import { barraFinal, fraseEstrellas, fraseRecord } from '../games/final.js';
@@ -65,9 +66,11 @@ export function terminar(puntos) {
   const nivel = enNiveles ? E.jugando.nivel : 0;
   if (enNiveles) Object.assign(partida, { dificultad: configNivel(E.actual.id, nivel).dificultad, nivel });
   guardarPartida(E.actual.id, partida);
+  ligaAnotar('partida');
   // ¿Esta partida es la que completa el entrenamiento de hoy?
   const entrenoHoy = !entrenoAntes && entrenoCompleto(hoy, idsPorCategoria, historiales());
   let celebrar = entrenoHoy;
+  if (entrenoHoy) ligaAnotar('entreno');
   $('final-puntos').textContent = puntos;
   $('final-entreno').hidden = !entrenoHoy;
   let titular = '';
@@ -90,6 +93,7 @@ export function terminar(puntos) {
       const diarios = leerDiarios(E.actual.id);
       const dia = diarios[E.jugando.fecha];
       const antes = diarioCompleto(dia);
+      ligaAnotar('estrellas', conseguidas - (dia.estrellas[E.jugando.diario] || 0)); // solo las nuevas
       dia.estrellas[E.jugando.diario] = Math.max(dia.estrellas[E.jugando.diario] || 0, conseguidas);
       guardarDiarios(E.actual.id, diarios);
       $('final-modo').textContent = `📅 Diario ${E.jugando.diario + 1}/3 · Nivel ${nivel} · ${NOMBRE_RETO[cfg.reto]}`;
@@ -99,6 +103,7 @@ export function terminar(puntos) {
       if (siguiente) E.diarioElegido = pendiente;
       $('btn-repetir').textContent = siguiente ? '▶ Siguiente diario' : '↻ Reintentar';
     } else {
+      ligaAnotar('estrellas', conseguidas - (leerEstrellas(E.actual.id)[nivel - 1] || 0)); // solo las nuevas
       guardar('estrellas:' + E.actual.id, JSON.stringify(conEstrellas(leerEstrellas(E.actual.id), nivel, conseguidas)));
       $('final-modo').textContent = `🪜 Nivel ${nivel} · ${NOMBRE_RETO[cfg.reto]}`;
       if (siguiente) E.nivelElegido++;

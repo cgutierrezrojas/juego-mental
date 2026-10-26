@@ -27,5 +27,6 @@ export const E = {
   salaVivo: null, // { id, sala, parar, programadas, misPuntos } de la sala abierta
   invitacionPendiente: null, // reto recibido mientras se jugaba otra cosa
   retoVivo: null,
+  avisoLiga: '', // medalla de la liga recién ganada (se muestra en el menú)
   chatAbierto: null, // { id, amigo, parar, mensajes } de la conversación abierta
 };

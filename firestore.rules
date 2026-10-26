@@ -47,6 +47,17 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado']) && request.resource.data.estado == 'aceptada';
     }
 
+    // Liga semanal: la ve cualquiera con sesión; cada uno escribe solo su fila de cada semana.
+    match /liga/{semana}/jugadores/{uid} {
+      allow read: if request.auth != null;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['apodo', 'puntos', 'actualizado'])
+        && request.resource.data.apodo is string && request.resource.data.apodo.size() >= 2 && request.resource.data.apodo.size() <= 20
+        && request.resource.data.puntos is int && request.resource.data.puntos >= 0 && request.resource.data.puntos <= 5000
+        && request.resource.data.actualizado is int;
+    }
+
     function dueloNuevoValido(d) {
       return d.keys().hasOnly(['anfitrion', 'jugadores', 'nombres', 'invitado', 'abierto', 'azar', 'juegos', 'dificultad', 'victoria', 'creado', 'caduca', 'resultados'])
         && d.anfitrion == request.auth.uid && d.jugadores == [request.auth.uid]

@@ -88,6 +88,8 @@ export function resumenLogros() {
     pasadoNivel50: listas.some((l) => siguienteNivel(l) > NUM_NIVELES) ? 1 : 0,
     diasRetos: diasRetos.size,
     victorias: balanceDuelos().v,
+    podios: Object.keys(leerJSON('liga:medallas')).length,
+    oros: Object.values(leerJSON('liga:medallas')).filter((p) => p === 1).length,
   };
 }
 

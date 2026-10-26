@@ -1,4 +1,5 @@
 // ☁️ Nube: sesión, sincronización, apodo y ranking.
+import { filaLiga, semanaActual, comprobarPodio, pintarRankingLiga } from './liga.js';
 import { CONFIG } from '../firebase-config.js';
 import { el, leer, guardar } from '../games/comun.js';
 import { tieneProgreso, decidirSincro, datosRanking } from '../games/sincro.js';
@@ -85,6 +86,7 @@ export async function alCambiarUsuario(u) {
     ponerEstado(E.estadoApp);
     if (E.nube.hayEstados()) E.nube.escucharInvitaciones(u.uid, recibirInvitacion);
     await sincronizar();
+    comprobarPodio();
     actualizarPerfil();
   }
   pintarAvisoDuelos(true);
@@ -159,7 +161,10 @@ export async function subir() {
     const datos = datosDelJuego();
     await E.nube.guardarProgreso(E.usuario.uid, datos, cambio);
     const apodo = leer('nube:apodo');
-    if (apodo) await E.nube.guardarRanking(E.usuario.uid, { apodo, ...datosRanking(datos), actualizado: cambio });
+    if (apodo) {
+      await E.nube.guardarRanking(E.usuario.uid, { apodo, ...datosRanking(datos), actualizado: cambio });
+      await E.nube.guardarLiga(semanaActual(), E.usuario.uid, filaLiga(apodo, cambio));
+    }
     guardar('nube:subido', cambio);
   }
   avisarNube(`✓ Sincronizado (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`);
@@ -182,6 +187,7 @@ export async function pedirApodo(primeraVez) {
     if (apodo.length >= 2) {
       guardar('nube:apodo', apodo);
       await E.nube.guardarRanking(E.usuario.uid, { apodo, ...datosRanking(datosDelJuego()), actualizado: Date.now() });
+      await E.nube.guardarLiga(semanaActual(), E.usuario.uid, filaLiga(apodo, Date.now()));
       await actualizarPerfil();
     } else {
       guardar('nube:apodo', '');
@@ -227,17 +233,29 @@ export async function borrarNube() {
 }
 
 // 🏆 Ranking: "⭐ General" (total de estrellas) o el récord Normal·Normal de un juego; top 20 y tu puesto.
-export function abrirRanking() {
+export function abrirRanking(tipo) {
   if (!$('ranking-tipo').options.length) {
-    $('ranking-tipo').append(new Option('⭐ General (estrellas)', ''), ...JUEGOS.map((j) => new Option(`${j.icono} ${j.nombre}`, j.id)));
+    $('ranking-tipo').append(
+      new Option('⭐ General (estrellas)', ''),
+      new Option('🏅 Liga semanal', 'liga'),
+      new Option('🏅 Liga de amigos', 'liga-amigos'),
+      ...JUEGOS.map((j) => new Option(`${j.icono} ${j.nombre}`, j.id)),
+    );
     $('ranking-tipo').onchange = pintarRanking;
   }
+  if (typeof tipo === 'string') $('ranking-tipo').value = tipo;
   mostrar('ranking');
   pintarRanking();
 }
 
 export async function pintarRanking() {
-  const j = JUEGOS.find((x) => x.id === $('ranking-tipo').value);
+  const tipo = $('ranking-tipo').value;
+  if (tipo === 'liga' || tipo === 'liga-amigos') {
+    $('ranking-lista').replaceChildren(el('li', 'sin-datos', 'Cargando…'));
+    $('ranking-tu').textContent = '';
+    return pintarRankingLiga(tipo === 'liga-amigos').catch(() => $('ranking-lista').replaceChildren(el('li', 'sin-datos', 'No se pudo cargar la liga (¿sin conexión?).')));
+  }
+  const j = JUEGOS.find((x) => x.id === tipo);
   const campo = j ? `records.${j.id}` : 'estrellas';
   const menor = Boolean(j?.menorEsMejor);
   const valorDe = (fila) => (j ? fila.records?.[j.id] : fila.estrellas);

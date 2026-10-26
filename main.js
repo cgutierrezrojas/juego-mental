@@ -1,4 +1,6 @@
 // Arranque: une las piezas de app/ (eventos de los botones, menú, tema y ajustes) y registra el service worker.
+import { asegurarDuelista } from './app/duelos.js';
+import { pintarLigaMenu } from './app/liga.js';
 import { guardar, el } from './games/comun.js';
 import { alternar, puedeVibrar, callar } from './games/efectos.js';
 import { siguienteNivel } from './games/niveles.js';
@@ -56,6 +58,7 @@ for (const habilidad of HABILIDADES) {
 apuntarLogros(); // lo conseguido antes de existir los logros se apunta sin celebrarlo
 pintarEntreno();
 pintarProgreso();
+pintarLigaMenu();
 mostrarAyuda('menu');
 
 // En Niveles, el botón grande juega siempre el siguiente nivel (aunque antes se mirara otro en su tarjeta).
@@ -262,3 +265,7 @@ $('chat-volver').onclick = () => abrirAmigos();
 
 // Funcionamiento sin conexión. Solo va en localhost o HTTPS; si falla, la app sigue igual.
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+$('btn-liga').onclick = async () => {
+  if (await asegurarDuelista()) abrirRanking('liga');
+};

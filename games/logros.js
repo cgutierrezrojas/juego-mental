@@ -20,6 +20,8 @@ export const LOGROS = [
   { id: 'nivel-50', icono: '🚀', nombre: 'Más allá', texto: 'Supera el nivel 50 de un juego', dato: 'pasadoNivel50', meta: 1 },
   { id: 'retos-1', icono: '📅', nombre: 'Retador', texto: 'Completa los 3 retos de hoy de un juego', dato: 'diasRetos', meta: 1 },
   { id: 'retos-7', icono: '🗓️', nombre: 'Retador fiel', texto: '7 días con retos de hoy completos', dato: 'diasRetos', meta: 7 },
+  { id: 'liga-podio', icono: '🏅', nombre: 'Podio semanal', texto: 'Queda entre los 3 primeros de la liga', dato: 'podios', meta: 1 },
+  { id: 'liga-oro', icono: '🥇', nombre: 'Campeón de la semana', texto: 'Gana la liga semanal', dato: 'oros', meta: 1 },
   { id: 'duelo-1', icono: '⚔️', nombre: 'Duelista', texto: 'Gana tu primer duelo', dato: 'victorias', meta: 1 },
   { id: 'duelo-10', icono: '🏆', nombre: 'Campeón', texto: 'Gana 10 duelos', dato: 'victorias', meta: 10 },
 ];

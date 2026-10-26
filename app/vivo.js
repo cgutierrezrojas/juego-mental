@@ -1,4 +1,5 @@
 // ⚡ Duelos en vivo por rondas.
+import { ligaAnotar } from './liga.js';
 import { el, leer, guardar } from '../games/comun.js';
 import { JUEGOS_VIVO, resultadoVivo, rondaActual, comoDuelo, rivalDe } from '../games/vivo.js';
 import { DIFICULTADES } from '../games/modos.js';
@@ -178,6 +179,7 @@ export function pintarResultadoVivo(sala, resultado, titulo, rival, boton) {
   const resultados = leerJSON('duelos:resultados');
   if (!resultados[clave]) {
     resultados[clave] = resultado;
+    ligaAnotar({ v: 'victoria', e: 'empate' }[resultado]);
     guardar('duelos:resultados', JSON.stringify(resultados));
     apuntarLogros();
     if (resultado === 'v') {

@@ -786,6 +786,23 @@ probar('mensajes: conversación, texto válido y no leídos', () => {
   assert(!hayNoLeidos({ de: 'yo', cuando: 10 }, 0, 'yo') && !hayNoLeidos(null, 0, 'yo'));
 });
 
+// --- liga.js ---
+import { MAX_PARTIDAS_DIA, semanaDe, semanaAnterior, diasRestantes, puntosLiga, anotarLiga } from './games/liga.js';
+
+probar('liga: semanas ISO, días restantes y puntos', () => {
+  assert(semanaDe('2026-10-25') === '2026-W43' && semanaDe('2026-10-26') === '2026-W44', semanaDe('2026-10-25') + ' ' + semanaDe('2026-10-26'));
+  assert(semanaDe('2021-01-03') === '2020-W53' && semanaDe('2026-12-31') === '2026-W53' && semanaDe('2027-01-04') === '2027-W01');
+  assert(semanaAnterior('2026-10-26') === '2026-W43' && semanaAnterior('2027-01-04') === '2026-W53');
+  assert(diasRestantes('2026-10-26') === 7 && diasRestantes('2026-10-25') === 1 && diasRestantes('2026-10-29') === 4);
+  let r = {};
+  for (let i = 0; i < 12; i++) r = anotarLiga(r, 'partida', '2026-10-26');
+  r = anotarLiga(r, 'partida', '2026-10-27');
+  r = anotarLiga(r, 'estrellas', '2026-10-27', 4);
+  r = anotarLiga(anotarLiga(anotarLiga(r, 'entreno'), 'victoria'), 'empate');
+  assert(puntosLiga(r) === MAX_PARTIDAS_DIA + 1 + 4 + 5 + 3 + 1, `puntos ${puntosLiga(r)}`);
+  assert(puntosLiga() === 0 && puntosLiga({}) === 0);
+});
+
 // --- mayor.js y menos.js ---
 import { generarPar } from './games/mayor.js';
 import { generarParMenor } from './games/menos.js';

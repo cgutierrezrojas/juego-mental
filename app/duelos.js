@@ -1,4 +1,5 @@
 // ⚔️ Duelos por turnos.
+import { ligaAnotar } from './liga.js';
 import { resultadoPara, estadoDuelo, marcador, elegirJuegos, PLAZO, verRival } from '../games/duelos.js';
 import { guardar, leer, el } from '../games/comun.js';
 import { CONFIG } from '../firebase-config.js';
@@ -39,6 +40,7 @@ export function apuntarResultado(duelo) {
   if (resultados[duelo.id]) return null;
   resultados[duelo.id] = resultadoPara(duelo, E.usuario.uid, INFO_JUEGOS);
   guardar('duelos:resultados', JSON.stringify(resultados));
+  ligaAnotar({ v: 'victoria', e: 'empate' }[resultados[duelo.id]]);
   apuntarLogros();
   return resultados[duelo.id];
 }

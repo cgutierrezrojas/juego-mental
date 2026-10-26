@@ -1,4 +1,5 @@
 // Nube con Firebase: sesión con Google, progreso en `usuarios/{uid}` y ranking en `ranking/{uid}`.
+import { semanaDe } from './liga.js';
 // El SDK se carga desde gstatic solo cuando hay configuración; si falla (sin conexión), la app sigue sin nube.
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
@@ -83,6 +84,7 @@ export async function borrarTodo(uid) {
     fs.deleteDoc(documento('usuarios', uid)),
     quitarRanking(uid),
     fs.deleteDoc(documento('perfiles', uid)),
+    fs.deleteDoc(fs.doc(db, 'liga', semanaDe(new Date().toISOString().slice(0, 10)), 'jugadores', uid)),
     ...solicitudes.map((s) => borrarSolicitud(s.id)),
   ]);
 }
@@ -271,4 +273,26 @@ export const bloqueados = async (uid) => (rt ? (await rt.get(rt.ref(base, `bloqu
 
 // Denuncia: solo se puede escribir; se revisa desde la consola de Firebase.
 export const denunciar = (datos) => rt.push(rt.ref(base, 'denuncias'), { ...datos, cuando: rt.serverTimestamp() });
+
+// --- Liga semanal (`liga/{semana}/jugadores/{uid}`: { apodo, puntos, actualizado }) ---
+
+const jugadorLiga = (semana, uid) => fs.doc(db, 'liga', semana, 'jugadores', uid);
+export const guardarLiga = (semana, uid, fila) => fs.setDoc(jugadorLiga(semana, uid), fila);
+
+export async function topLiga(semana, cuantos = 20) {
+  const consulta = fs.query(fs.collection(db, 'liga', semana, 'jugadores'), fs.orderBy('puntos', 'desc'), fs.limit(cuantos));
+  return (await fs.getDocs(consulta)).docs.map((d) => ({ uid: d.id, ...d.data() }));
+}
+
+export async function puestoLiga(semana, puntos) {
+  const consulta = fs.query(fs.collection(db, 'liga', semana, 'jugadores'), fs.where('puntos', '>', puntos));
+  return (await fs.getCountFromServer(consulta)).data().count + 1;
+}
+
+// Filas de varias personas (por ejemplo, tus amigos); null para quien no ha jugado esta semana.
+export const filasLiga = (semana, uids) =>
+  Promise.all(uids.map(async (uid) => {
+    const d = await fs.getDoc(jugadorLiga(semana, uid));
+    return d.exists() ? { uid, ...d.data() } : null;
+  }));
 
