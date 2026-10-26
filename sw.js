@@ -7,7 +7,8 @@ const ARCHIVOS = [
   'games/opciones.js', 'games/series.js', 'games/sobra.js', 'games/puzzle.js', 'games/rayo.js',
   'games/topos.js', 'games/estadisticas.js', 'games/modos.js', 'games/niveles.js',
   'games/mayor.js', 'games/menos.js', 'games/distinto.js', 'games/balanza.js', 'games/parejas.js', 'games/final.js',
-  'games/copia.js', 'games/amigos.js', 'games/vivo.js', 'games/chat.js', 'games/duelos.js', 'games/logros.js', 'games/sincro.js', 'games/nube.js', 'firebase-config.js', 'privacidad.html',
+  'games/copia.js', 'games/amigos.js', 'games/vivo.js', 'games/chat.js', 
+  'app/estado.js', 'app/juegos.js', 'app/datos.js', 'app/ui.js', 'app/menu.js', 'app/estadisticas.js', 'app/previa.js', 'app/partida.js', 'app/cuenta.js', 'app/duelos.js', 'app/amigos.js', 'app/vivo.js', 'app/chat.js', 'games/duelos.js', 'games/logros.js', 'games/sincro.js', 'games/nube.js', 'firebase-config.js', 'privacidad.html',
 ];
 
 self.addEventListener('install', (e) => {
