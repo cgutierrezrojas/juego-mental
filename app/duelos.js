@@ -1,4 +1,5 @@
 // ⚔️ Duelos por turnos.
+import { mesasEnTuTurno } from './mesa.js';
 import { idChat, hayNoLeidos } from '../games/chat.js';
 import { ligaAnotar } from './liga.js';
 import { resultadoPara, estadoDuelo, marcador, elegirJuegos, PLAZO, verRival } from '../games/duelos.js';
@@ -74,7 +75,7 @@ export async function pintarAvisoDuelos(forzar = false) {
     const [mios, invit] = await Promise.all([E.nube.misDuelos(E.usuario.uid), E.nube.invitaciones(E.usuario.uid)]);
     const todos = [...mios, ...invit.filter((d) => !d.jugadores.includes(E.usuario.uid) && !ocultos[d.id])].map(conLocal);
     const pendientes = todos.filter((d) => ['tu-turno', 'invitacion'].includes(estadoDuelo(d, E.usuario.uid, Date.now()))).length;
-    $('aviso-duelos').textContent = pendientes || '';
+    $('aviso-duelos').textContent = pendientes + (await mesasEnTuTurno().catch(() => 0)) || '';
     const { recibidas, amigos } = amigosDe(await E.nube.misSolicitudes(E.usuario.uid), E.usuario.uid);
     E.nube.guardarAmigosEstados(E.usuario.uid, amigos.map((a) => a.uid)); // los amigos nuevos ya pueden ver mi estado
     // Conversaciones con mensajes sin leer (solo con la Realtime Database).

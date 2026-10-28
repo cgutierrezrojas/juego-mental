@@ -163,7 +163,7 @@ export function leerJSON(clave) {
 }
 
 export function balanceDuelos() {
-  const resultados = Object.values(leerJSON('duelos:resultados'));
+  const resultados = [...Object.values(leerJSON('duelos:resultados')), ...Object.values(leerJSON('mesa:resultados'))]; // también la mesa con amigos
   const cuenta = (r) => resultados.filter((x) => x === r).length;
   return { v: cuenta('v'), d: cuenta('d'), e: cuenta('e') };
 }

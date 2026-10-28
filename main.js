@@ -1,4 +1,5 @@
 // Arranque: une las piezas de app/ (eventos de los botones, menú, tema y ajustes) y registra el service worker.
+import { abrirMesa } from './app/mesa.js';
 import { asegurarDuelista } from './app/duelos.js';
 import { pintarLigaMenu } from './app/liga.js';
 import { guardar, el } from './games/comun.js';
@@ -274,3 +275,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 $('btn-liga').onclick = async () => {
   if (await asegurarDuelista()) abrirRanking('liga');
 };
+
+// 🎲 Mesa: volver al inicio y de elegir modo a la sección.
+for (const b of document.querySelectorAll('.btn-a-inicio')) b.onclick = () => mostrar('inicio');
+$('btn-mesa-volver').onclick = abrirMesa;

@@ -296,3 +296,22 @@ export const filasLiga = (semana, uids) =>
     return d.exists() ? { uid, ...d.data() } : null;
   }));
 
+
+// --- 🎲 Mesa con amigos (`mesas/{id}` y el índice `misMesas/{uid}/{id}`; ver app/mesa.js y database.rules.json) ---
+
+export async function crearMesa(mesa) {
+  const ref = rt.push(rt.ref(base, 'mesas'));
+  await rt.set(ref, { ...mesa, creada: rt.serverTimestamp(), actualizada: rt.serverTimestamp() });
+  const { x, o } = mesa.jugadores;
+  await rt.set(rt.ref(base, `misMesas/${x}/${ref.key}`), { juego: mesa.juego, rival: o, nombreRival: mesa.nombres[o] });
+  await rt.set(rt.ref(base, `misMesas/${o}/${ref.key}`), { juego: mesa.juego, rival: x, nombreRival: mesa.nombres[x] });
+  return ref.key;
+}
+
+export const verMesa = (id, alCambiar) => rt.onValue(rt.ref(base, `mesas/${id}`), (d) => alCambiar(d.val()), () => alCambiar(null));
+export const leerMesa = async (id) => (await rt.get(rt.ref(base, `mesas/${id}`))).val();
+export const jugarMesa = (id, estado, ganador) => rt.update(rt.ref(base, `mesas/${id}`), { estado, ...(ganador ? { ganador } : {}), actualizada: rt.serverTimestamp() });
+export const rendirseMesa = (id, uid, ganador) => rt.update(rt.ref(base, `mesas/${id}`), { [`rendido/${uid}`]: true, ganador, actualizada: rt.serverTimestamp() });
+export const misMesasDe = async (uid) => (rt ? (await rt.get(rt.ref(base, `misMesas/${uid}`))).val() ?? {} : {});
+export const quitarDeMisMesas = (uid, id) => rt.remove(rt.ref(base, `misMesas/${uid}/${id}`)).catch(() => {});
+export const borrarMesa = (id) => rt.remove(rt.ref(base, `mesas/${id}`)).catch(() => {});

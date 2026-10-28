@@ -85,6 +85,36 @@
         ".write": "auth != null && !data.exists() && newData.child('de').val() === auth.uid",
         ".validate": "newData.hasChildren(['de', 'contra', 'motivo', 'cuando']) && newData.child('motivo').isString() && newData.child('motivo').val().length <= 500"
       }
+    },
+    "mesas": {
+      "$id": {
+        ".read": "auth != null && (data.child('jugadores').child('x').val() === auth.uid || data.child('jugadores').child('o').val() === auth.uid)",
+        ".write": "auth != null && ((!data.exists() && newData.child('jugadores').child('x').val() === auth.uid && root.child('amigos').child(newData.child('jugadores').child('o').val()).child(auth.uid).exists() && !root.child('bloqueos').child(newData.child('jugadores').child('o').val()).child(auth.uid).exists()) || (data.exists() && !newData.exists() && (data.child('jugadores').child('x').val() === auth.uid || data.child('jugadores').child('o').val() === auth.uid)))",
+        "estado": {
+          ".write": "auth != null && root.child('mesas').child($id).child('jugadores').child(data.child('turno').val()).val() === auth.uid && !root.child('mesas').child($id).child('ganador').exists()",
+          ".validate": "newData.hasChildren(['celdas', 'turno']) && newData.child('celdas').isString() && newData.child('celdas').val().length <= 64 && newData.child('turno').val().matches(/^(x|o)$/)"
+        },
+        "ganador": {
+          ".write": "auth != null && !data.exists() && (root.child('mesas').child($id).child('jugadores').child('x').val() === auth.uid || root.child('mesas').child($id).child('jugadores').child('o').val() === auth.uid)",
+          ".validate": "newData.isString() && newData.val().matches(/^(x|o|empate)$/)"
+        },
+        "actualizada": {
+          ".write": "auth != null && (root.child('mesas').child($id).child('jugadores').child('x').val() === auth.uid || root.child('mesas').child($id).child('jugadores').child('o').val() === auth.uid)"
+        },
+        "rendido": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && (root.child('mesas').child($id).child('jugadores').child('x').val() === auth.uid || root.child('mesas').child($id).child('jugadores').child('o').val() === auth.uid)"
+          }
+        }
+      }
+    },
+    "misMesas": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$id": {
+          ".write": "auth != null && (auth.uid === $uid || (newData.exists() && root.child('amigos').child($uid).child(auth.uid).exists() && !root.child('bloqueos').child($uid).child(auth.uid).exists()))"
+        }
+      }
     }
   }
 }

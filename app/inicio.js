@@ -1,4 +1,5 @@
 // 🏠 Inicio de Pa'l Rato: lo de hoy (Tu día, liga, retos) y una baldosa grande por sección.
+import { JUEGOS_MESA, abrirMesa } from './mesa.js';
 import { el } from '../games/comun.js';
 import { fechaLocal, jugadosEn, entrenoDelDia } from '../games/estadisticas.js';
 import { CONFIG } from '../firebase-config.js';
@@ -14,7 +15,7 @@ function abrirMentales(selector) {
 }
 
 // Cada sección abre su página; de momento solo hay juegos en Mentales (las demás llegan en S2–S6).
-const ABRIR = { mentales: () => abrirMentales() };
+const ABRIR = { mentales: () => abrirMentales(), mesa: abrirMesa };
 
 export function pintarInicio() {
   const hoy = fechaLocal();
@@ -34,7 +35,7 @@ export function pintarInicio() {
 
   $('aviso-inicio').textContent = '';
   $('secciones').replaceChildren(...SECCIONES.map((s) => {
-    const n = JUEGOS.filter((j) => j.seccion === s.id).length;
+    const n = JUEGOS.filter((j) => j.seccion === s.id).length + (s.id === 'mesa' ? JUEGOS_MESA.length : 0);
     const b = el('button', n ? 'seccion color' : 'seccion color pronto');
     b.style.setProperty('--c', `var(--${s.color})`);
     b.append(el('span', 'icono-seccion', s.icono), el('strong', '', s.nombre), el('small', '', n ? `${n} juego${n > 1 ? 's' : ''}` : 'Próximamente'));

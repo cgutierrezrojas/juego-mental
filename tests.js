@@ -849,6 +849,55 @@ probar('secciones: cada juego en una sección válida', () => {
   assert(JUEGOS.filter((j) => j.seccion === 'mentales').length === 16);
 });
 
+// --- gato.js y conecta4.js (🎲 Mesa) ---
+import { gato } from './games/gato.js';
+import { conecta4, filaLibre } from './games/conecta4.js';
+
+probar('mesa: gato, reglas y máquina', () => {
+  const e = (celdas, turno = 'x') => ({ celdas, turno });
+  assert(gato.ganador(e('xxx......')) === 'x' && gato.ganador(e('o..o..o..')) === 'o' && gato.ganador(e('x...x...x')) === 'x');
+  assert(gato.ganador(e('xoxxoooxx')) === 'empate' && gato.ganador(gato.inicial()) === null);
+  const ini = gato.inicial();
+  const despues = gato.aplicar(ini, 4);
+  assert(despues.celdas === '....x....' && despues.turno === 'o' && ini.celdas === '.........', 'aplicar no cambia el original');
+  assert(gato.validas(despues).length === 8 && !gato.validas(despues).includes(4));
+  assert(gato.ia(e('xx.oo....', 'x'), 'normal') === 2, 'gana si puede');
+  assert(gato.ia(e('xx..o....', 'o'), 'normal') === 2, 'bloquea');
+  // La difícil nunca pierde: se prueban todas las respuestas posibles del rival (empezando el rival y empezando ella).
+  const nuncaPierde = (estado, maquina) => {
+    const g = gato.ganador(estado);
+    if (g) return g !== (maquina === 'x' ? 'o' : 'x');
+    if (estado.turno === maquina) return nuncaPierde(gato.aplicar(estado, gato.ia(estado, 'dificil')), maquina);
+    return gato.validas(estado).every((i) => nuncaPierde(gato.aplicar(estado, i), maquina));
+  };
+  assert(nuncaPierde(gato.inicial(), 'o') && nuncaPierde(gato.inicial(), 'x'), 'el gato difícil nunca pierde');
+});
+
+probar('mesa: conecta 4, reglas y máquina', () => {
+  let e = conecta4.inicial();
+  for (const c of [3, 3, 3]) e = conecta4.aplicar(e, c);
+  assert(e.celdas[5 * 7 + 3] === 'x' && e.celdas[4 * 7 + 3] === 'o' && e.celdas[3 * 7 + 3] === 'x' && filaLibre(e, 3) === 2, 'la ficha cae');
+  const fila = (cols) => cols.reduce((s, c) => conecta4.aplicar(s, c), conecta4.inicial());
+  assert(conecta4.ganador(fila([0, 0, 1, 1, 2, 2, 3])) === 'x', 'horizontal');
+  assert(conecta4.ganador(fila([0, 1, 0, 1, 0, 1, 0])) === 'x', 'vertical');
+  assert(conecta4.ganador(fila([0, 1, 1, 2, 2, 3, 2, 3, 3, 6, 3])) === 'x', 'diagonal');
+  let llena = conecta4.inicial();
+  for (let i = 0; i < 42; i++) llena = conecta4.aplicar(llena, conecta4.validas(llena)[0]);
+  assert(conecta4.validas(llena).length === 0);
+  // Normal: gana y bloquea.
+  assert(conecta4.ia(fila([0, 5, 1, 5, 2, 6]), 'normal') === 3, 'gana con la cuarta');
+  assert(conecta4.ia(fila([0, 6, 1, 6, 2]), 'normal') === 3, 'bloquea la cuarta');
+  // Difícil contra fácil: gana siempre (alternando quién empieza).
+  let victorias = 0;
+  for (let partida = 0; partida < 20; partida++) {
+    let s = conecta4.inicial();
+    const dificil = partida % 2 ? 'x' : 'o';
+    while (!conecta4.ganador(s)) s = conecta4.aplicar(s, conecta4.ia(s, s.turno === dificil ? 'dificil' : 'facil'));
+    if (conecta4.ganador(s) === dificil) victorias++;
+  }
+  assert(victorias === 20, `difícil ganó ${victorias}/20`);
+});
+
 // --- mayor.js y menos.js ---
 import { generarPar } from './games/mayor.js';
 import { generarParMenor } from './games/menos.js';
