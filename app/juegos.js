@@ -44,14 +44,14 @@ export const JUEGOS = [
 
 export const CATEGORIAS = ['Clásicos', 'Lógica', 'Reacción'];
 // Ids de los juegos de cada categoría, en el orden de CATEGORIAS (para el entrenamiento diario).
-// Hasta el 24-10-2026 el entrenamiento elegía entre los 8 juegos originales; el 25, entre 13; desde el 26, entre todos.
+// Hasta el 24-10-2026 el entrenamiento elegía entre los 8 juegos originales; del 25 al 28, entre 13; desde el 29, entre todos.
 // Los días pasados siguen pidiendo lo mismo, así las rachas no cambian. Para añadir juegos: otro corte igual.
 export const ORIGINALES = ['calculo', 'atencion', 'memoria', 'series', 'sobra', 'puzzle', 'rayo', 'topos'];
 export const porCategoria = (juegos) => CATEGORIAS.map((c) => juegos.filter((j) => j.categoria === c).map((j) => j.id));
 export const CATEGORIAS_ANTES = porCategoria(JUEGOS.filter((j) => ORIGINALES.includes(j.id)));
-export const CATEGORIAS_25_10 = porCategoria(JUEGOS.filter((j) => !['verdad', 'anagrama', 'cuenta'].includes(j.id)));
+export const CATEGORIAS_13 = porCategoria(JUEGOS.filter((j) => !['verdad', 'anagrama', 'cuenta'].includes(j.id)));
 export const CATEGORIAS_AHORA = porCategoria(JUEGOS);
-export const idsPorCategoria = (fecha) => (fecha < '2026-10-25' ? CATEGORIAS_ANTES : fecha < '2026-10-26' ? CATEGORIAS_25_10 : CATEGORIAS_AHORA);
+export const idsPorCategoria = (fecha) => (fecha < '2026-10-25' ? CATEGORIAS_ANTES : fecha < '2026-10-29' ? CATEGORIAS_13 : CATEGORIAS_AHORA);
 
 export const HABILIDADES = ['Memoria', 'Cálculo', 'Atención', 'Lógica', 'Reacción'];
 
