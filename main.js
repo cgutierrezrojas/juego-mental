@@ -59,7 +59,7 @@ apuntarLogros(); // lo conseguido antes de existir los logros se apunta sin cele
 pintarEntreno();
 pintarProgreso();
 pintarLigaMenu();
-mostrarAyuda('menu');
+mostrar('inicio');
 
 // En Niveles, el botón grande juega siempre el siguiente nivel (aunque antes se mirara otro en su tarjeta).
 $('btn-jugar').onclick = () => {
@@ -103,7 +103,10 @@ $('btn-mejorar').onclick = () => {
   else E.nivelElegido = E.jugando.nivel;
   jugar();
 };
-for (const b of document.querySelectorAll('.btn-menu')) b.onclick = () => mostrar('menu');
+// La previa y el final vuelven a la sección del juego (Mentales); el resto de pantallas, al inicio.
+for (const b of document.querySelectorAll('.btn-menu')) b.onclick = () => mostrar(b.closest('#previa, #final') ? 'menu' : 'inicio');
+$('nav-inicio').onclick = () => mostrar('inicio');
+$('btn-volver-inicio').onclick = () => mostrar('inicio');
 
 // ❓: vuelve a activar todos los avisos y muestra el de la pantalla actual.
 $('btn-ayuda').onclick = () => {
@@ -142,12 +145,12 @@ $('btn-salir').onclick = async () => {
 };
 
 $('btn-exportar').onclick = async () => {
-  const nombre = `juego-mental-${fechaLocal()}.json`;
+  const nombre = `pal-rato-${fechaLocal()}.json`;
   const archivo = new File([crearCopia(datosGuardados(), fechaLocal())], nombre, { type: 'application/json' });
   // En el móvil, el menú de compartir deja guardarla en Drive, mandarla por WhatsApp…; en el ordenador, se descarga.
   if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [archivo] })) {
     try {
-      await navigator.share({ files: [archivo], title: 'Copia de Juego Mental' });
+      await navigator.share({ files: [archivo], title: "Copia de Pa'l Rato" });
       $('copia-estado').textContent = '✓ Copia lista';
     } catch {
       // se canceló el menú de compartir
@@ -180,7 +183,9 @@ $('archivo-copia').onchange = async () => {
 // Pide al navegador que no borre los datos por su cuenta (por falta de espacio); borrarlos a mano sigue siendo posible.
 navigator.storage?.persist?.().catch(() => {});
 
-$('btn-ranking').onclick = abrirRanking;
+$('btn-ranking').onclick = async () => {
+  if (await asegurarDuelista()) abrirRanking();
+};
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) subir().catch(() => {});
   ponerEstado(document.hidden ? 'ausente' : $('juego').hidden ? 'conectado' : 'jugando');

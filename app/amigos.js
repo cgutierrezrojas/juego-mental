@@ -67,7 +67,7 @@ export async function pintarAmigos(aviso = '') {
     partes.push(
       tuyo,
       boton('📤 Compartir mi código', () => compartirTexto(
-        `👥 Agrégame en Juego Mental con mi código ${codigo}: https://cgutierrezrojas.github.io/juego-mental/`,
+        `👥 Agrégame en Pa'l Rato con mi código ${codigo}: https://cgutierrezrojas.github.io/juego-mental/`,
         () => (estadoCopia.textContent = '✓ Código copiado'),
       )),
       boton('➕ Agregar por código', agregarPorCodigo),

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Juego Mental</title>
+  <title>Pa'l Rato</title>
   <script>
     // Pone el tema antes de pintar, para que no parpadee el equivocado:
     // el guardado con el botón ☀️/🌙 o, si no hay, el del sistema.
@@ -20,8 +20,6 @@
   <main>
     <!-- Barra fija en todas las pantallas: ✕ (solo jugando) a la izquierda, ajustes a la derecha -->
     <header id="barra">
-      <button id="btn-estadisticas" aria-label="Estadísticas">📊</button>
-      <button id="btn-ranking" aria-label="Ranking" hidden>🏆</button>
       <button id="btn-salir" aria-label="Salir al menú" hidden>✕</button>
       <div id="esquina">
         <button id="btn-ayuda" aria-label="Ver la ayuda otra vez">❓</button>
@@ -31,16 +29,22 @@
       </div>
     </header>
 
-    <section id="menu">
-      <h1>Juego Mental</h1>
+    <section id="inicio">
+      <h1>Pa'l Rato</h1>
+      <div id="hoy" class="fila-hoy"></div>
+      <div id="sugerencia-cuenta" hidden></div>
+      <div id="secciones" class="secciones"></div>
+      <p id="aviso-inicio" role="status"></p>
+    </section>
+
+    <section id="menu" hidden>
+      <header class="cabecera-seccion">
+        <button id="btn-volver-inicio" aria-label="Volver al inicio">←</button>
+        <h2>🧠 Mentales</h2>
+      </header>
       <div id="entreno"></div>
-      <div class="fila-social">
-        <button id="btn-duelos" class="boton-duelos" hidden>⚔️ Duelos <span id="aviso-duelos"></span></button>
-        <button id="btn-amigos" class="boton-duelos" hidden>👥 Amigos <span id="aviso-amigos"></span></button>
-      </div>
       <button id="btn-liga" class="boton-liga" hidden></button>
       <div id="retos-pendientes"></div>
-      <div id="sugerencia-cuenta" hidden></div>
       <div id="lista-juegos"></div>
     </section>
 
@@ -63,7 +67,7 @@
       <p id="duelos-balance"></p>
       <button id="btn-nuevo-duelo" class="grande color" style="--c: var(--acento)">➕ Nuevo duelo</button>
       <div id="duelos-lista"></div>
-      <button class="btn-menu">Menú</button>
+      <button class="btn-menu">🏠 Inicio</button>
     </section>
 
     <section id="nuevo-duelo" hidden>
@@ -76,19 +80,19 @@
       <h2>⚔️ Duelo</h2>
       <div id="duelo-contenido"></div>
       <button class="btn-volver-duelos">Volver a Duelos</button>
-      <button class="btn-menu">Menú</button>
+      <button class="btn-menu">🏠 Inicio</button>
     </section>
 
     <section id="amigos" hidden>
       <h2>👥 Amigos</h2>
       <div id="amigos-contenido"></div>
-      <button class="btn-menu">Menú</button>
+      <button class="btn-menu">🏠 Inicio</button>
     </section>
 
     <section id="vivo" hidden>
       <h2>⚡ Duelo en vivo</h2>
       <div id="vivo-contenido"></div>
-      <button class="btn-menu">Menú</button>
+      <button class="btn-menu">🏠 Inicio</button>
     </section>
 
     <dialog id="dialogo-vivo" aria-labelledby="vivo-titulo">
@@ -120,7 +124,7 @@
       <select id="ranking-tipo" aria-label="Qué ranking ver"></select>
       <ol id="ranking-lista"></ol>
       <p id="ranking-tu"></p>
-      <button class="btn-menu">Menú</button>
+      <button class="btn-menu">🏠 Inicio</button>
     </section>
 
     <dialog id="dialogo-pregunta" aria-labelledby="pregunta-titulo">
@@ -175,7 +179,7 @@
     </section>
 
     <section id="estadisticas" hidden>
-      <h2>Estadísticas</h2>
+      <h2>👤 Tú</h2>
       <div id="estadisticas-contenido"></div>
       <div id="nube" hidden></div>
       <div id="copia">
@@ -186,9 +190,18 @@
         <input id="archivo-copia" type="file" accept=".json,application/json" hidden>
         <p id="copia-estado" role="status"></p>
       </div>
-      <button class="btn-menu">Menú</button>
+      <button class="btn-menu">🏠 Inicio</button>
     </section>
   </main>
+
+  <!-- Barra inferior fija (oculta durante la partida) -->
+  <nav id="navegacion" aria-label="Navegación principal">
+    <button id="nav-inicio" aria-label="Inicio"><span aria-hidden="true">🏠</span><small>Inicio</small></button>
+    <button id="btn-duelos" aria-label="Duelos"><span aria-hidden="true">⚔️</span><small>Duelos</small><b id="aviso-duelos" class="insignia"></b></button>
+    <button id="btn-amigos" aria-label="Amigos"><span aria-hidden="true">👥</span><small>Amigos</small><b id="aviso-amigos" class="insignia"></b></button>
+    <button id="btn-ranking" aria-label="Ranking"><span aria-hidden="true">🏆</span><small>Ranking</small></button>
+    <button id="btn-estadisticas" aria-label="Tú: estadísticas, logros y cuenta"><span aria-hidden="true">👤</span><small>Tú</small></button>
+  </nav>
   <script type="module" src="main.js"></script>
 </body>
 </html>

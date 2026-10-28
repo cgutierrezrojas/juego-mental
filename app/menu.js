@@ -71,7 +71,7 @@ export function pintarEntreno() {
 // Menú: sugerencia de entrar con Google (sin sesión o como invitado). Al cerrarla, vuelve a los 7 días.
 export function pintarSugerencia() {
   const caja = $('sugerencia-cuenta');
-  const toca = CONFIG && E.sesionLista && (!E.usuario || E.usuario.isAnonymous) && leer('ayuda:menu') && Date.now() > (Number(leer('nube:sugerencia')) || 0);
+  const toca = CONFIG && E.sesionLista && (!E.usuario || E.usuario.isAnonymous) && leer('ayuda:inicio') && Date.now() > (Number(leer('nube:sugerencia')) || 0);
   caja.hidden = !toca;
   if (!toca) return;
   const ir = el('button', '', 'Ir a ☁️ Nube');

@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Juego Mental",
-  "short_name": "Juego Mental",
-  "description": "Minijuegos para entrenar memoria, cálculo, atención, lógica y reflejos.",
+  "name": "Pa'l Rato",
+  "short_name": "Pa'l Rato",
+  "description": "Juegos para pasar el rato, solo o con amigos: mentales, mesa, trivia, cartas, arcade y palabras.",
   "lang": "es",
   "start_url": "./",
   "scope": "./",

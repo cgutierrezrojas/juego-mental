@@ -79,7 +79,6 @@ export async function alCambiarUsuario(u) {
   E.sesionLista = true;
   E.estadoNube = '';
   pintarSugerencia();
-  $('btn-ranking').hidden = !u || $('menu').hidden;
   pintarNube();
   if (u) {
     E.nube.iniciarEstados(u.uid);

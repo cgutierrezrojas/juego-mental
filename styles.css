@@ -1132,3 +1132,62 @@ button.tarjeta { position: relative; }
 /* Juegos nuevos: anagramas (letras sueltas) y cuenta rápida (cuadrícula de figuras en el enunciado) */
 .enunciado.anagrama { letter-spacing: 4px; font-size: 2.2rem; }
 .enunciado.cuenta { white-space: pre-line; font-size: 1.5rem; line-height: 1.35; }
+
+/* S1: sala de juegos — inicio con secciones y barra inferior */
+main { padding-bottom: 96px; } /* que la barra inferior no tape el final de la pantalla */
+.fila-hoy { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-hoy { flex: 1 1 auto; padding: 8px 12px; font-size: 0.9rem; }
+.secciones { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+button.seccion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 18px 8px;
+  border-radius: 18px;
+}
+.seccion .icono-seccion { font-size: 2.4rem; }
+.seccion strong { font-size: 1.15rem; }
+.seccion small { font-size: 0.8rem; opacity: 0.9; }
+.seccion.pronto { opacity: 0.45; }
+#aviso-inicio { margin: 0; font-weight: 700; }
+#aviso-inicio:empty { display: none; }
+.cabecera-seccion { display: flex; align-items: center; gap: 10px; }
+.cabecera-seccion h2 { margin: 0; }
+.cabecera-seccion button { padding: 6px 12px; }
+
+#navegacion {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  background: var(--fondo);
+  border-top: 1px solid rgba(128, 128, 128, 0.3);
+}
+#navegacion[hidden] { display: none; }
+#navegacion button {
+  position: relative;
+  flex: 1;
+  max-width: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  font-size: 1.3rem;
+  border: none;
+  background: none;
+  box-shadow: none;
+  color: var(--texto);
+}
+#navegacion button[hidden] { display: none; }
+#navegacion small { font-size: 0.7rem; font-weight: 700; opacity: 0.75; }
+#navegacion button[aria-current="page"] { color: var(--acento); }
+#navegacion button[aria-current="page"] small { opacity: 1; }
+.insignia { position: absolute; top: 0; right: 18%; min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--morado); color: #fff; font-size: 0.7rem; line-height: 18px; }
+.insignia:empty { display: none; }

@@ -839,6 +839,16 @@ probar('juegos nuevos: verdadero o falso, anagramas y cuenta rápida', () => {
   }
 });
 
+// --- app/juegos.js: secciones ---
+import { SECCIONES, JUEGOS } from './app/juegos.js';
+
+probar('secciones: cada juego en una sección válida', () => {
+  const ids = SECCIONES.map((s) => s.id);
+  assert(new Set(ids).size === ids.length && SECCIONES.every((s) => s.nombre && s.icono && s.color && s.descripcion));
+  assert(JUEGOS.every((j) => ids.includes(j.seccion)), JUEGOS.filter((j) => !ids.includes(j.seccion)).map((j) => j.id).join());
+  assert(JUEGOS.filter((j) => j.seccion === 'mentales').length === 16);
+});
+
 // --- mayor.js y menos.js ---
 import { generarPar } from './games/mayor.js';
 import { generarParMenor } from './games/menos.js';

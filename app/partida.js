@@ -152,7 +152,7 @@ export function terminar(puntos) {
   const resultado = enNiveles
     ? `${$('final-modo').textContent}: ${[...$('final-estrellas').children].map((s) => (s.classList.contains('ganada') ? '⭐' : '☆')).join('')} (${puntos} ${unidad})`
     : `${$('final-modo').textContent}: ${conUnidad(E.actual, puntos)}${titular ? ` · ${titular}` : ''}`;
-  E.textoCompartir = `${E.actual.icono} ${E.actual.nombre} — ${resultado}\n¿Me superas? Juega a Juego Mental: https://cgutierrezrojas.github.io/juego-mental/`;
+  E.textoCompartir = `${E.actual.icono} ${E.actual.nombre} — ${resultado}\n¿Me superas? Juega a Pa'l Rato: https://cgutierrezrojas.github.io/juego-mental/`;
   if (E.enVivo) {
     E.nube.cambiarSala(E.enVivo.id, { [`fin/${E.enVivo.ronda}/${E.usuario.uid}`]: puntos }).catch(() => {});
     const quedan = E.enVivo.ronda + 1 < E.enVivo.total;

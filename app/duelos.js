@@ -1,4 +1,5 @@
 // ⚔️ Duelos por turnos.
+import { idChat, hayNoLeidos } from '../games/chat.js';
 import { ligaAnotar } from './liga.js';
 import { resultadoPara, estadoDuelo, marcador, elegirJuegos, PLAZO, verRival } from '../games/duelos.js';
 import { guardar, leer, el } from '../games/comun.js';
@@ -61,8 +62,7 @@ export async function asegurarDuelista() {
 
 // Menú: botón ⚔️ con cuántos duelos esperan tu turno (o te invitan).
 export async function pintarAvisoDuelos(forzar = false) {
-  $('btn-duelos').hidden = !CONFIG;
-  $('btn-amigos').hidden = !CONFIG;
+  for (const id of ['btn-duelos', 'btn-amigos', 'btn-ranking']) $(id).hidden = !CONFIG; // sin nube no hay nada social
   if (!E.usuario || !E.nube) {
     $('aviso-amigos').textContent = '';
     return ($('aviso-duelos').textContent = '');
@@ -74,10 +74,18 @@ export async function pintarAvisoDuelos(forzar = false) {
     const [mios, invit] = await Promise.all([E.nube.misDuelos(E.usuario.uid), E.nube.invitaciones(E.usuario.uid)]);
     const todos = [...mios, ...invit.filter((d) => !d.jugadores.includes(E.usuario.uid) && !ocultos[d.id])].map(conLocal);
     const pendientes = todos.filter((d) => ['tu-turno', 'invitacion'].includes(estadoDuelo(d, E.usuario.uid, Date.now()))).length;
-    $('aviso-duelos').textContent = pendientes ? `${pendientes} tu turno` : '';
+    $('aviso-duelos').textContent = pendientes || '';
     const { recibidas, amigos } = amigosDe(await E.nube.misSolicitudes(E.usuario.uid), E.usuario.uid);
     E.nube.guardarAmigosEstados(E.usuario.uid, amigos.map((a) => a.uid)); // los amigos nuevos ya pueden ver mi estado
-    $('aviso-amigos').textContent = recibidas.length ? `${recibidas.length} nueva${recibidas.length > 1 ? 's' : ''}` : '';
+    // Conversaciones con mensajes sin leer (solo con la Realtime Database).
+    const sinLeer = E.nube.hayEstados()
+      ? (await Promise.all(amigos.map(async (a) => {
+          const id = idChat(E.usuario.uid, a.uid);
+          const [ultimo, leido] = await Promise.all([E.nube.ultimoMensaje(id), E.nube.leidoHasta(E.usuario.uid, id)]);
+          return hayNoLeidos(ultimo, leido, E.usuario.uid);
+        }).map((p) => p.catch(() => false)))).filter(Boolean).length
+      : 0;
+    $('aviso-amigos').textContent = recibidas.length + sinLeer || '';
   } catch {
     // sin conexión: sin aviso
   }
@@ -112,7 +120,7 @@ export async function pintarDuelos() {
       partes.push(el('h3', 'categoria', titulos[grupo]), ...filas.slice(0, grupo === 'terminado' ? 10 : 50).map(filaDuelo));
     }
     $('duelos-lista').replaceChildren(...(partes.length ? partes : [el('p', 'sin-datos', 'Aún no tienes duelos. ¡Crea el primero!')]));
-    $('aviso-duelos').textContent = grupos['tu-turno'].length + grupos.invitacion.length ? `${grupos['tu-turno'].length + grupos.invitacion.length} tu turno` : '';
+    $('aviso-duelos').textContent = grupos['tu-turno'].length + grupos.invitacion.length || '';
   } catch {
     $('duelos-lista').replaceChildren(el('p', 'sin-datos', 'No se pudieron cargar los duelos (¿sin conexión?).'));
   }
@@ -278,7 +286,7 @@ export async function crearDuelo(boton) {
 
 export async function compartirDuelo(duelo) {
   const enlace = `https://cgutierrezrojas.github.io/juego-mental/?duelo=${duelo.id}`;
-  const texto = `⚔️ ${leer('nube:apodo')} te desafía a un duelo en Juego Mental (${iconosJuegos(duelo)}). ¡Acepta aquí! ${enlace}`;
+  const texto = `⚔️ ${leer('nube:apodo')} te desafía a un duelo en Pa'l Rato (${iconosJuegos(duelo)}). ¡Acepta aquí! ${enlace}`;
   if (navigator.share) {
     try {
       await navigator.share({ text: texto });

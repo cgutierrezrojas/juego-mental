@@ -17,10 +17,10 @@ export function leerCopia(texto) {
   try {
     copia = JSON.parse(texto);
   } catch {
-    throw new Error('El archivo no es una copia de Juego Mental');
+    throw new Error("El archivo no es una copia de Pa'l Rato");
   }
   if (copia?.app !== 'juego-mental' || !copia.datos || typeof copia.datos !== 'object') {
-    throw new Error('El archivo no es una copia de Juego Mental');
+    throw new Error("El archivo no es una copia de Pa'l Rato");
   }
   return Object.fromEntries(Object.entries(copia.datos).filter(([clave, valor]) => esClaveDelJuego(clave) && typeof valor === 'string'));
 }

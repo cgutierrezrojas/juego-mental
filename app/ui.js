@@ -1,4 +1,5 @@
 // Piezas de interfaz comunes: pantallas, preguntas, avisos de ayuda, confeti, tema y compartir.
+import { pintarInicio } from './inicio.js';
 import { pintarLigaMenu } from './liga.js';
 import { leer, el, guardar } from '../games/comun.js';
 import { activo } from '../games/efectos.js';
@@ -36,12 +37,13 @@ export function preguntar({ titulo, texto, boton, campo = null }) {
 
 // Ayuda de la primera vez: un aviso encima de lo que explica (resaltado), hasta que se cierra con ✕.
 export const AYUDAS = {
+  inicio: { objetivo: '#secciones', texto: "👋 ¡Bienvenido a Pa'l Rato! Elige una sección para jugar. Abajo tienes tus duelos, amigos, el ranking y tu perfil." },
   menu: { objetivo: '#entreno', texto: '👋 ¡Bienvenido! Empieza por ☀️ Tu día: 3 juegos para entrenar cada día y mantener tu racha 🔥. Toca cualquier juego para ver sus modos.' },
   modos: { objetivo: '#previa-modos', texto: 'Elige un modo y una dificultad. 🪜 Niveles es un camino sin fin con estrellas y 3 retos nuevos cada día.' },
   niveles: { objetivo: '.camino', texto: '🧑 marca tu nivel. Toca un nivel para ver su objetivo, o juega el siguiente con el botón grande.' },
   final: { objetivo: '#final-barra', texto: 'La barra muestra cuánto te faltó: las ⭐ en Niveles, y tu media 📊 y tu récord 🏆 en los demás modos.' },
 };
-export const AYUDA_DE_PANTALLA = { menu: 'menu', final: 'final' }; // la previa elige la suya al pintarse
+export const AYUDA_DE_PANTALLA = { inicio: 'inicio', menu: 'menu', final: 'final' }; // la previa elige la suya al pintarse
 
 // Quita el aviso que hubiera y, si `sitio` no se ha visto aún y lo que explica está a la vista, lo muestra.
 export function mostrarAyuda(sitio) {
@@ -67,25 +69,33 @@ export function mostrar(id) {
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== id;
   $('btn-salir').hidden = id !== 'juego';
   $('btn-ayuda').hidden = id === 'juego';
-  $('btn-estadisticas').hidden = id !== 'menu';
   if (id !== 'final') {
     E.temporizadores.forEach(clearTimeout);
     E.temporizadores = [];
   }
+  // Barra inferior: oculta en la partida; resalta el botón de la pantalla actual.
+  $('navegacion').hidden = id === 'juego';
+  const pestana = {
+    inicio: 'nav-inicio', menu: 'nav-inicio', duelos: 'btn-duelos', 'nuevo-duelo': 'btn-duelos', duelo: 'btn-duelos', vivo: 'btn-duelos',
+    amigos: 'btn-amigos', chat: 'btn-amigos', ranking: 'btn-ranking', estadisticas: 'btn-estadisticas',
+  }[id];
+  for (const b of document.querySelectorAll('#navegacion button')) b.setAttribute('aria-current', b.id === pestana ? 'page' : 'false');
+  if (id === 'inicio') {
+    pintarInicio();
+    pintarSugerencia();
+    pintarAvisoDuelos();
+  }
   if (id === 'menu') {
     pintarEntreno();
     pintarProgreso();
-    pintarSugerencia();
     pintarLigaMenu();
-    pintarAvisoDuelos();
   }
   if (id !== 'previa') mostrarAyuda(AYUDA_DE_PANTALLA[id]);
-  $('btn-ranking').hidden = id !== 'menu' || !E.usuario;
   if (id !== 'amigos') dejarDeEscuchar();
   if (id !== 'chat') pararChat();
   if (id !== 'juego') revisarInvitacionPendiente();
   if (id !== 'juego' && E.estadoApp !== 'conectado') ponerEstado('conectado');
-  if (id === 'menu' || id === 'final') subir().catch(() => {}); // sin conexión: se reintenta la próxima vez
+  if (id === 'inicio' || id === 'menu' || id === 'final') subir().catch(() => {}); // sin conexión: se reintenta la próxima vez
 }
 
 // Lluvia de confeti con los colores del tema. Cada pieza se borra al acabar de caer.
