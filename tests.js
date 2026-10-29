@@ -1000,6 +1000,25 @@ probar('ruleta: barra, corona, vidas, ganar y perder', () => {
   assert(ruleta.resultado(e) === null);
   assert(ruleta.resultado(ruleta.responder(e, false)) === 'pierde');
   assert(ruleta.resultado({ ...e, coronas: ['a', 'b', 'c', 'd', 'e', 'f'] }) === 'gana');
-  const fiesta = ruleta.responder(ruleta.inicial(null), false);
+  const fiesta = ruleta.responder(ruleta.inicial(undefined, null), false);
   assert(fiesta.vidas === null && ruleta.resultado(fiesta) === null);
+});
+
+probar('ruleta: ajustes, corona de varias preguntas y comodines', () => {
+  assert(ruleta.esClasica(ruleta.ajustesDe(null)) && ruleta.esClasica({}));
+  const raro = ruleta.ajustesDe({ barra: 9, corona: 2, vidas: null, comodines: { mitad: 2, cambiar: 7 } });
+  assert(raro.barra === 3 && raro.corona === 2 && raro.vidas === null && raro.comodines.mitad === 2 && raro.comodines.cambiar === 0);
+  assert(!ruleta.esClasica(raro));
+  const a = { ...ruleta.ajustesDe({ barra: 1, corona: 2, coronas: 3, vidas: null, comodines: { segunda: 1 } }) };
+  let e = ruleta.responder(ruleta.inicial(a), true, a);
+  assert(ruleta.tocaCorona(e, a) && e.vidas === null && e.comodines.segunda === 1);
+  e = ruleta.responderCorona(e, 'geo', true, a);
+  assert(e.progreso === 1 && e.coronas.length === 0 && e.barra === 1);
+  e = ruleta.responderCorona(e, 'geo', false, a);
+  assert(e.progreso === 0 && e.barra === 0 && e.vidas === null && e.fallos === 1);
+  e = ruleta.responderCorona({ ...e, progreso: 1 }, 'geo', true, a);
+  assert(e.coronas.join() === 'geo' && e.progreso === 0 && e.barra === 0);
+  assert(ruleta.resultado({ ...e, coronas: ['a', 'b', 'c'] }, a) === 'gana' && ruleta.resultado(e, a) === null);
+  e = ruleta.usar(ruleta.usar(e, 'segunda'), 'segunda');
+  assert(e.comodines.segunda === 0);
 });
