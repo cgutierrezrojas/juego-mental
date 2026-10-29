@@ -258,7 +258,7 @@ function pintarPregunta(cat, corona) {
   cabecera.append(el('span', '', `${titulo}${c.icono} ${c.nombre}`), reloj);
   const opciones = q.opciones.map((o) => boton(o, 'grande opcion-trivia', (ev) => responder(o, ev.currentTarget)));
 
-  // Comodines: botones con lo que queda; la segunda oportunidad es automática y solo se avisa.
+  // Comodines: botones con lo que queda.
   const ayudas = el('div', 'comodines');
   const texto = (tipo) => `${COMODIN[tipo][0]} ${COMODIN[tipo][1]} ×${j.e.comodines[tipo]}`;
   const comodin = (tipo, accion) => {
@@ -279,11 +279,14 @@ function pintarPregunta(cat, corona) {
     }
   });
   comodin('cambiar', () => pintarPregunta(cat, corona));
+  // Segunda oportunidad: se activa antes de responder (una por pregunta); si fallas, eliges otra vez.
+  let segunda = false;
+  comodin('segunda', (b) => {
+    b.remove();
+    segunda = true;
+    ayudas.append(el('span', 'sin-datos', '🔁 Segunda oportunidad activa'));
+  });
   if (a.segundos) comodin('tiempo', () => partida.reloj.restar(-MAS_TIEMPO));
-  const segunda = el('span', 'sin-datos');
-  const avisarSegunda = () => (segunda.textContent = j.e.comodines.segunda ? texto('segunda') : '');
-  avisarSegunda();
-  ayudas.append(segunda);
 
   $('trivia-contenido').replaceChildren(cabecera, el('p', 'pregunta-trivia', q.p), ...opciones, ayudas);
   $('trivia-botones').replaceChildren();
@@ -291,11 +294,11 @@ function pintarPregunta(cat, corona) {
 
   function responder(o, b) {
     const ok = o === q.correcta;
-    if (!ok && o !== null && j.e.comodines.segunda) {
-      j.e = R.usar(j.e, 'segunda');
+    if (!ok && o !== null && segunda) {
+      segunda = false;
       b.disabled = true;
       b.classList.add('incorrecta');
-      avisarSegunda();
+      ayudas.lastChild.textContent = '🔁 ¡Elige otra vez!';
       sonar('fallo');
       return;
     }

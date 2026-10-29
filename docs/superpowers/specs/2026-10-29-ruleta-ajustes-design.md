@@ -37,7 +37,7 @@ Botones bajo las opciones con lo que queda (`✂️ 50:50 ×2`); se ocultan los 
 - **✂️ 50:50**: deshabilita dos opciones incorrectas al azar. Uno por pregunta.
 - **🔄 Cambiar**: otra pregunta de la misma categoría (dificultad 3 si es corona); el progreso de la corona se mantiene y el reloj vuelve a empezar.
 - **⏱️ Más tiempo**: +15 s al reloj. No aparece sin reloj.
-- **🔁 Segunda oportunidad**: automática. Al fallar con una disponible, la opción elegida queda en rojo y deshabilitada y se vuelve a elegir; el reloj sigue. No se usa si se acaba el tiempo.
+- **🔁 Segunda oportunidad**: el jugador la activa antes de responder (una por pregunta; se gasta al activarla). Si falla con ella activa, la opción elegida queda en rojo y deshabilitada y se vuelve a elegir; el reloj sigue. No salva si se acaba el tiempo.
 
 La cabecera de una corona de varias preguntas muestra `👑 2/3`.
 
