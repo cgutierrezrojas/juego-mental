@@ -1214,7 +1214,7 @@ button.seccion {
 @media (prefers-reduced-motion: reduce) { .hueco.cae { animation: none; } }
 
 /* S3: ❓ Trivia */
-#trivia-partida { display: flex; flex-direction: column; gap: 12px; }
+#trivia-partida:not([hidden]) { display: flex; flex-direction: column; gap: 12px; }
 #trivia-contenido { display: flex; flex-direction: column; gap: 10px; }
 .marcador-trivia { display: flex; justify-content: space-between; align-items: center; font-size: 1.2rem; }
 .barra-trivia { letter-spacing: 4px; font-weight: 900; color: var(--acento); }
