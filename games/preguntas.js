@@ -11,6 +11,26 @@ export const CATEGORIAS_TRIVIA = [
   { id: 'animales', nombre: 'Animales y naturaleza', icono: '🐾', color: '#2b9348' },
 ];
 
+// Problema de una pregunta propuesta ('' si sirve). `banco`: las que ya hay (no se puede repetir el texto).
+export function problemaPregunta(q, banco = PREGUNTAS) {
+  const texto = (x) => (typeof x === 'string' ? x.trim().toLowerCase() : '');
+  if (!CATEGORIAS_TRIVIA.some((c) => c.id === q.c)) return 'Elige una categoría.';
+  if (![1, 2, 3].includes(q.d)) return 'Elige la dificultad.';
+  if (typeof q.p !== 'string' || q.p.trim().length < 10 || q.p.length > 110) return 'La pregunta debe tener entre 10 y 110 letras.';
+  if (!Array.isArray(q.o) || q.o.length !== 4 || q.o.some((o) => !texto(o) || o.length > 26)) return 'Escribe las 4 respuestas (hasta 26 letras cada una).';
+  if (new Set(q.o.map(texto)).size !== 4) return 'Las 4 respuestas deben ser distintas.';
+  if (banco.some((x) => texto(x.p) === texto(q.p))) return 'Esa pregunta ya está en el banco.';
+  return '';
+}
+
+// Suma al banco las preguntas aprobadas de los jugadores (las válidas que no estén ya).
+export function agregarPreguntas(lista, banco = PREGUNTAS) {
+  for (const q of Array.isArray(lista) ? lista : []) {
+    const { c, d, p, o } = q ?? {};
+    if (!problemaPregunta({ c, d, p, o }, banco)) banco.push({ c, d, p, o });
+  }
+}
+
 const RECIENTES = 100; // preguntas que se recuerdan para no repetirlas pronto
 
 // Una pregunta al azar que cumpla `filtro`, evitando las recientes si quedan otras.
@@ -332,3 +352,10 @@ export const PREGUNTAS = [
   { c: 'animales', d: 3, p: '¿Cómo se llama la ciencia que estudia los insectos?', o: ['Entomología', 'Ornitología', 'Ictiología', 'Micología'] },
   { c: 'animales', d: 3, p: '¿En qué región de Chile está el Parque Nacional Torres del Paine?', o: ['Magallanes', 'Aysén', 'Los Lagos', 'Atacama'] },
 ];
+
+// Las aprobadas que ya se descargaron (ver app/trivia.js): `trivia-extra` no lleva el prefijo `trivia:`, así no se sincroniza.
+try {
+  agregarPreguntas(JSON.parse(leer('trivia-extra')));
+} catch {
+  // sin preguntas extra
+}

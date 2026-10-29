@@ -58,6 +58,45 @@ service cloud.firestore {
         && request.resource.data.actualizado is int;
     }
 
+    // ✍️ Preguntas de los jugadores: cada uno propone y ve las suyas; solo un admin las revisa.
+    // Un admin es quien tiene un documento en `admins` (se crea a mano en la consola; desde la app no se puede escribir).
+    match /propuestas/{id} {
+      allow read, delete: if request.auth != null && (resource.data.de == request.auth.uid || esAdmin());
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['de', 'apodo', 'c', 'd', 'p', 'o', 'estado', 'creada'])
+        && request.resource.data.de == request.auth.uid && request.resource.data.estado == 'pendiente'
+        && request.resource.data.apodo is string && request.resource.data.apodo.size() <= 20
+        && request.resource.data.creada is int && preguntaValida(request.resource.data);
+      allow update: if esAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado'])
+        && request.resource.data.estado in ['aprobada', 'rechazada'];
+    }
+
+    // Preguntas aprobadas: las lee cualquiera (se suman al banco); solo un admin las escribe.
+    match /preguntas/{id} {
+      allow read: if true;
+      allow delete: if esAdmin();
+      allow create, update: if esAdmin() && request.resource.data.keys().hasOnly(['c', 'd', 'p', 'o']) && preguntaValida(request.resource.data);
+    }
+
+    match /admins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+    }
+
+    function esAdmin() {
+      return request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function opcionValida(o) {
+      return o is string && o.size() >= 1 && o.size() <= 26;
+    }
+
+    function preguntaValida(q) {
+      return q.c in ['geo', 'historia', 'ciencia', 'ocio', 'comida', 'animales'] && q.d in [1, 2, 3]
+        && q.p is string && q.p.size() >= 10 && q.p.size() <= 110
+        && q.o is list && q.o.size() == 4
+        && opcionValida(q.o[0]) && opcionValida(q.o[1]) && opcionValida(q.o[2]) && opcionValida(q.o[3]);
+    }
+
     function dueloNuevoValido(d) {
       return d.keys().hasOnly(['anfitrion', 'jugadores', 'nombres', 'invitado', 'abierto', 'azar', 'juegos', 'dificultad', 'victoria', 'creado', 'caduca', 'resultados'])
         && d.anfitrion == request.auth.uid && d.jugadores == [request.auth.uid]

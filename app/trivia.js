@@ -4,7 +4,7 @@
 // La ⚡ Trivia rápida es un juego más de JUEGOS (games/trivia.js) y se abre con la previa de siempre.
 import { el, leer, guardar, barajar, temporizador, pintarReloj } from '../games/comun.js';
 import { sonar } from '../games/efectos.js';
-import { CATEGORIAS_TRIVIA, PREGUNTAS, pregunta } from '../games/preguntas.js';
+import { CATEGORIAS_TRIVIA, PREGUNTAS, pregunta, problemaPregunta, agregarPreguntas } from '../games/preguntas.js';
 import * as R from '../games/ruleta.js';
 import { amigosDe } from '../games/amigos.js';
 import { E } from './estado.js';
@@ -64,23 +64,30 @@ function resumen(a, solo) {
   ].join(' · ');
 }
 
+// Una fila de botones para elegir un valor (el elegido queda con `aria-pressed`).
+function filaOpciones(titulo, valores, actual, texto, cambiar) {
+  const opciones = el('div', 'opciones-ajuste');
+  opciones.setAttribute('role', 'group');
+  opciones.setAttribute('aria-label', titulo);
+  for (const v of valores) {
+    const b = boton(texto(v), '', () => {
+      cambiar(v);
+      for (const x of opciones.children) x.setAttribute('aria-pressed', String(x === b));
+    });
+    b.setAttribute('aria-pressed', String(v === actual));
+    opciones.append(b);
+  }
+  const caja = el('div', 'fila-ajuste');
+  caja.append(el('p', '', titulo), opciones);
+  return caja;
+}
+
 function pintarAjustes(solo, volver) {
   const a = leerAjustes();
-  const fila = (titulo, valores, actual, texto, cambiar) => {
-    const opciones = el('div', 'opciones-ajuste');
-    for (const v of valores) {
-      const b = boton(texto(v), '', () => {
-        cambiar(v);
-        guardarAjustes(a);
-        for (const x of opciones.children) x.setAttribute('aria-pressed', String(x === b));
-      });
-      b.setAttribute('aria-pressed', String(v === actual));
-      opciones.append(b);
-    }
-    const caja = el('div', 'fila-ajuste');
-    caja.append(el('p', '', titulo), opciones);
-    return caja;
-  };
+  const fila = (titulo, valores, actual, texto, cambiar) => filaOpciones(titulo, valores, actual, texto, (v) => {
+    cambiar(v);
+    guardarAjustes(a);
+  });
   const filas = [
     fila('Aciertos para ir por la corona', R.OPCIONES.barra, a.barra, String, (v) => (a.barra = v)),
     fila('Preguntas de la corona (todas seguidas)', R.OPCIONES.corona, a.corona, String, (v) => (a.corona = v)),
@@ -118,8 +125,152 @@ export function abrirTrivia() {
     tarjeta('🎉', 'Fiesta', pintarFiesta),
     tarjeta('👥', 'Contra un amigo', pintarAmigos),
     tarjeta(INFO_JUEGOS.trivia.icono, INFO_JUEGOS.trivia.nombre, () => abrirPrevia(INFO_JUEGOS.trivia)),
+    tarjeta('✍️', 'Proponer pregunta', () => pintarProponer()),
   );
   pintarPartidas();
+  pintarAdmin();
+  bajarPreguntas();
+}
+
+// --- ✍️ Preguntas de los jugadores ---
+
+const DIFICULTAD = { 1: '🙂 Fácil', 2: '😐 Normal', 3: '😈 Difícil' };
+const borradorVacio = () => ({ c: '', d: 2, p: '', o: ['', '', '', ''] });
+let borrador = borradorVacio();
+
+// Las aprobadas se guardan en `trivia-extra` y se suman al banco (también sin conexión: ver games/preguntas.js).
+// ponytail: se bajan todas cada vez; con cientos de aprobadas, bajar solo las nuevas.
+async function bajarPreguntas() {
+  if (!E.nube) return;
+  try {
+    const lista = await E.nube.preguntasAprobadas();
+    guardar('trivia-extra', JSON.stringify(lista));
+    agregarPreguntas(lista);
+  } catch {
+    // sin conexión: quedan las ya guardadas
+  }
+}
+
+async function pintarProponer(enviada = false) {
+  pararTrivia();
+  partida = null;
+  mostrar('trivia-partida');
+  $('trivia-marcador').replaceChildren();
+  const campo = (tag, etiqueta, valor, max, alCambiar) => {
+    const c = el(tag);
+    c.value = valor;
+    c.maxLength = max;
+    c.placeholder = etiqueta;
+    c.setAttribute('aria-label', etiqueta);
+    c.oninput = () => alCambiar(c.value);
+    return c;
+  };
+  const campos = el('div', 'nombres-fiesta');
+  campos.append(
+    campo('textarea', 'Tu pregunta', borrador.p, 110, (v) => (borrador.p = v)),
+    ...borrador.o.map((o, i) => campo('input', i ? `❌ Respuesta incorrecta ${i}` : '✅ Respuesta correcta', o, 26, (v) => (borrador.o[i] = v))),
+  );
+  const tituloCategoria = () => `Categoría${borrador.c ? `: ${categoria(borrador.c).nombre}` : ''}`;
+  const categorias = filaOpciones('Categoría', IDS, borrador.c, (id) => categoria(id).icono, (id) => {
+    borrador.c = id;
+    categorias.firstChild.textContent = tituloCategoria();
+  });
+  categorias.firstChild.textContent = tituloCategoria();
+  categorias.querySelectorAll('button').forEach((b, i) => {
+    b.setAttribute('aria-label', CATEGORIAS_TRIVIA[i].nombre); // el botón solo lleva el icono
+    b.title = CATEGORIAS_TRIVIA[i].nombre;
+  });
+  const aviso = el('p', 'sin-datos', enviada ? '✅ ¡Enviada! Aquí abajo verás cuándo se revise.' : '');
+  aviso.setAttribute('aria-live', 'polite');
+  const mias = el('div', 'opciones-duelo');
+  $('trivia-contenido').replaceChildren(
+    el('h2', '', '✍️ Proponer pregunta'),
+    el('p', 'sin-datos', 'Si se aprueba, la jugarán todos. Escribe primero la respuesta correcta (en el juego se barajan).'),
+    categorias,
+    filaOpciones('Dificultad', [1, 2, 3], borrador.d, (d) => DIFICULTAD[d], (d) => (borrador.d = d)),
+    campos,
+    aviso,
+    mias,
+  );
+  const enviar = boton('📨 Enviar', 'color', async () => {
+    const q = { c: borrador.c, d: borrador.d, p: borrador.p.trim(), o: borrador.o.map((o) => o.trim()) };
+    const problema = problemaPregunta(q);
+    if (problema) return (aviso.textContent = problema);
+    if (!(await asegurarDuelista())) return;
+    enviar.disabled = true;
+    try {
+      await E.nube.proponer({ de: E.usuario.uid, apodo: leer('nube:apodo'), ...q });
+      borrador = borradorVacio();
+      pintarProponer(true);
+    } catch {
+      aviso.textContent = 'No se pudo enviar (¿sin conexión?).';
+      enviar.disabled = false;
+    }
+  });
+  $('trivia-botones').replaceChildren(enviar, boton('Volver', '', abrirTrivia));
+  if (!E.usuario || !E.nube) return;
+  try {
+    const lista = (await E.nube.misPropuestas(E.usuario.uid)).sort((a, b) => b.creada - a.creada);
+    if (!lista.length) return;
+    const estado = { pendiente: '⏳ Pendiente', aprobada: '✅ Aprobada', rechazada: '❌ Rechazada' };
+    mias.replaceChildren(el('h3', 'categoria', 'Tus propuestas'), ...lista.map((p) => {
+      const fila = el('div', `fila-duelo ${{ aprobada: 'resultado-v', rechazada: 'resultado-d' }[p.estado] ?? ''}`);
+      fila.append(el('span', '', `${categoria(p.c)?.icono ?? ''} ${p.p}`), el('small', '', estado[p.estado]));
+      return fila;
+    }));
+  } catch {
+    mias.replaceChildren(el('p', 'sin-datos', 'No se pudieron cargar tus propuestas (¿sin conexión?).'));
+  }
+}
+
+// 🛡️ Solo para quien tiene un documento en `admins` (ver firestore.rules).
+async function pintarAdmin() {
+  const caja = $('trivia-admin');
+  caja.replaceChildren();
+  if (!E.usuario || !E.nube) return;
+  try {
+    if (!(await E.nube.esAdmin(E.usuario.uid))) return;
+    const pendientes = await E.nube.propuestasPendientes();
+    caja.replaceChildren(boton(`🛡️ Revisar propuestas (${pendientes.length})`, pendientes.length ? 'color' : '', pintarRevision));
+  } catch {
+    // sin conexión o sin permiso: no se muestra
+  }
+}
+
+async function pintarRevision() {
+  pararTrivia();
+  partida = null;
+  mostrar('trivia-partida');
+  $('trivia-marcador').replaceChildren();
+  const cargando = el('p', 'sin-datos', 'Cargando…');
+  $('trivia-contenido').replaceChildren(el('h2', '', '🛡️ Revisar propuestas'), cargando);
+  $('trivia-botones').replaceChildren(boton('Volver a Trivia', '', abrirTrivia));
+  let lista;
+  try {
+    lista = (await E.nube.propuestasPendientes()).sort((a, b) => a.creada - b.creada);
+  } catch {
+    return (cargando.textContent = 'No se pudieron cargar (¿sin conexión?).');
+  }
+  if (!lista.length) return (cargando.textContent = 'No hay propuestas pendientes. 🎉');
+  cargando.replaceWith(...lista.map((p) => {
+    const c = categoria(p.c);
+    const tarjeta = el('div', 'propuesta');
+    const respuestas = el('ul');
+    respuestas.append(...p.o.map((o, i) => el('li', '', `${i ? '❌' : '✅'} ${o}`)));
+    const decidir = (aprobar) => async () => {
+      try {
+        await E.nube.revisarPropuesta(p, aprobar);
+        if (aprobar) agregarPreguntas([p]);
+        tarjeta.replaceChildren(el('p', 'sin-datos', `${aprobar ? '✅ Aprobada' : '❌ Rechazada'}: ${p.p}`));
+      } catch {
+        tarjeta.append(el('p', 'aviso-duelo', 'No se pudo guardar (¿sin conexión?).'));
+      }
+    };
+    const botones = el('div', 'fila-botones');
+    botones.append(boton('✅ Aprobar', 'color', decidir(true)), boton('❌ Rechazar', '', decidir(false)));
+    tarjeta.append(el('p', 'sin-datos', `${c?.icono ?? ''} ${c?.nombre ?? p.c} · ${DIFICULTAD[p.d]} · de ${p.apodo}`), el('strong', '', p.p), respuestas, botones);
+    return tarjeta;
+  }));
 }
 
 // Tus ruletas con amigos (como «Tus partidas con amigos» de la Mesa).

@@ -77,7 +77,7 @@ export async function leerProgreso(uid) {
 export const guardarProgreso = (uid, datos, actualizado) => fs.setDoc(documento('usuarios', uid), { datos, actualizado });
 export const guardarRanking = (uid, fila) => fs.setDoc(documento('ranking', uid), fila);
 export const quitarRanking = (uid) => fs.deleteDoc(documento('ranking', uid));
-// Borra todo lo de esta persona en la nube: progreso, ranking, perfil y solicitudes de amistad.
+// Borra todo lo de esta persona en la nube: progreso, ranking, perfil, solicitudes de amistad y propuestas de preguntas.
 export async function borrarTodo(uid) {
   const solicitudes = await misSolicitudes(uid).catch(() => []);
   await Promise.all([
@@ -86,6 +86,7 @@ export async function borrarTodo(uid) {
     fs.deleteDoc(documento('perfiles', uid)),
     fs.deleteDoc(fs.doc(db, 'liga', semanaDe(new Date().toISOString().slice(0, 10)), 'jugadores', uid)),
     ...solicitudes.map((s) => borrarSolicitud(s.id)),
+    ...(await misPropuestas(uid).catch(() => [])).map((p) => fs.deleteDoc(fs.doc(db, 'propuestas', p.id))),
   ]);
 }
 
@@ -99,6 +100,22 @@ export async function top(campo, menorEsMejor, cuantos = 20) {
 export async function puesto(campo, valor, menorEsMejor) {
   const consulta = fs.query(fs.collection(db, 'ranking'), fs.where(campo, menorEsMejor ? '<' : '>', valor));
   return (await fs.getCountFromServer(consulta)).data().count + 1;
+}
+
+// --- ✍️ Preguntas de los jugadores (`propuestas`, `preguntas` y `admins`; ver app/trivia.js y firestore.rules) ---
+
+export const proponer = (datos) => fs.addDoc(fs.collection(db, 'propuestas'), { ...datos, estado: 'pendiente', creada: Date.now() });
+export const misPropuestas = (uid) => buscarEn('propuestas', fs.where('de', '==', uid), fs.limit(50));
+export const propuestasPendientes = () => buscarEn('propuestas', fs.where('estado', '==', 'pendiente'), fs.limit(50));
+export const esAdmin = async (uid) => (await fs.getDoc(documento('admins', uid))).exists();
+export const preguntasAprobadas = async () => (await fs.getDocs(fs.collection(db, 'preguntas'))).docs.map((d) => d.data());
+
+// Aprobar copia la pregunta a `preguntas` (con el mismo id) y marca la propuesta; rechazar solo la marca.
+export async function revisarPropuesta(p, aprobar) {
+  const lote = fs.writeBatch(db);
+  if (aprobar) lote.set(fs.doc(db, 'preguntas', p.id), { c: p.c, d: p.d, p: p.p, o: p.o });
+  lote.update(fs.doc(db, 'propuestas', p.id), { estado: aprobar ? 'aprobada' : 'rechazada' });
+  await lote.commit();
 }
 
 // --- Duelos (`duelos/{id}`; ver games/duelos.js y las reglas en firestore.rules) ---

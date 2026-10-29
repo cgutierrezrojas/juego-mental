@@ -970,7 +970,7 @@ probar('parejas: cada símbolo aparece exactamente dos veces', () => {
 });
 
 // --- preguntas.js y ruleta.js (❓ Trivia) ---
-import { PREGUNTAS, CATEGORIAS_TRIVIA, pregunta } from './games/preguntas.js';
+import { PREGUNTAS, CATEGORIAS_TRIVIA, pregunta, problemaPregunta, agregarPreguntas } from './games/preguntas.js';
 import * as ruleta from './games/ruleta.js';
 
 probar('trivia: 50 preguntas por categoría, 4 opciones distintas, dificultad 1–3 y sin repetidas', () => {
@@ -1031,4 +1031,21 @@ probar('ruleta: estado en la nube ida y vuelta', () => {
   const otra = { ...e, coronas: ['geo', 'ocio'], barra: 2, aciertos: 5 };
   assert(JSON.stringify(ruleta.deNube(ruleta.aNube(otra), a)) === JSON.stringify(otra));
   assert(ruleta.deNube(undefined, a).comodines.mitad === 2);
+});
+
+probar('trivia: preguntas propuestas (validar y sumar al banco)', () => {
+  const ok = { c: 'geo', d: 2, p: '¿Pregunta de prueba que no está en el banco?', o: ['Sí', 'No', 'Quizás', 'Nunca'] };
+  assert(problemaPregunta(ok) === '');
+  assert(problemaPregunta({ ...ok, c: 'nada' }).includes('categoría'));
+  assert(problemaPregunta({ ...ok, d: 4 }).includes('dificultad'));
+  assert(problemaPregunta({ ...ok, p: '¿Qué?' }).includes('entre 10'));
+  assert(problemaPregunta({ ...ok, o: ['a', 'b', 'c'] }).includes('4 respuestas'));
+  assert(problemaPregunta({ ...ok, o: ['a', 'b', 'c', 'x'.repeat(27)] }).includes('4 respuestas'));
+  assert(problemaPregunta({ ...ok, o: ['Lima', 'lima ', 'Quito', 'Bogotá'] }).includes('distintas'));
+  assert(problemaPregunta({ ...ok, p: PREGUNTAS[0].p.toUpperCase() }).includes('ya está'));
+  const banco = [...PREGUNTAS];
+  agregarPreguntas([ok, ok, { ...ok, p: 'x' }, null && ok], banco);
+  assert(banco.length === PREGUNTAS.length + 1 && banco.at(-1).p === ok.p);
+  agregarPreguntas('nada', banco);
+  assert(banco.length === PREGUNTAS.length + 1);
 });
