@@ -50,7 +50,7 @@ async function pintarMesa() {
   if (!E.usuario || !E.nube?.hayEstados()) return caja.replaceChildren();
   caja.replaceChildren(el('p', 'sin-datos', 'Cargando tus partidas con amigos…'));
   try {
-    const filas = await misPartidas();
+    const filas = (await misPartidas()).filter(({ mesa }) => juegoDe(mesa.juego)); // la ruleta se lista en Trivia
     if (!filas.length) return caja.replaceChildren();
     caja.replaceChildren(el('h3', 'categoria', '👥 Tus partidas con amigos'), ...filas.slice(0, 12).map(({ id, mesa, info }) => {
       const j = juegoDe(mesa.juego);
@@ -68,8 +68,8 @@ async function pintarMesa() {
   }
 }
 
-// Partidas con amigos (las caducadas se quitan), de la más reciente a la más antigua.
-async function misPartidas() {
+// Partidas con amigos (las caducadas se quitan), de la más reciente a la más antigua. También las de 🎡 Ruleta.
+export async function misPartidas() {
   const uid = E.usuario.uid;
   const indice = await E.nube.misMesasDe(uid);
   const filas = await Promise.all(Object.entries(indice).map(async ([id, info]) => {
@@ -92,7 +92,7 @@ export async function mesasEnTuTurno() {
 }
 
 // 'v' / 'd' / 'e' para la ficha `mia`, o null si la partida sigue.
-function resultadoMesa(mesa, mia) {
+export function resultadoMesa(mesa, mia) {
   if (!mesa.ganador) return null;
   if (mesa.ganador === 'empate') return 'e';
   return mesa.ganador === mia ? 'v' : 'd';
@@ -251,11 +251,22 @@ function jugar(jugada) {
   }
 }
 
+// Resultado de una partida con un amigo (Mesa o Ruleta): se apunta una sola vez por partida.
+export function apuntarResultadoAmigo(id, r) {
+  const resultados = leerJSON('mesa:resultados');
+  if (resultados[id]) return;
+  resultados[id] = r;
+  guardar('mesa:resultados', JSON.stringify(resultados));
+  ligaAnotar('partida');
+  ligaAnotar({ v: 'victoria', e: 'empate' }[r]);
+  apuntarLogros();
+}
+
 // Al terminar: estadísticas (una sola vez), liga y celebración.
 function apuntarFinal(g) {
   if (partida.apuntada) return;
   partida.apuntada = true;
-  ligaAnotar('partida');
+  if (partida.modo !== 'amigo') ligaAnotar('partida');
   const r = g === 'empate' ? 'e' : g === partida.yo ? 'v' : 'd';
   if (partida.modo === 'maquina') {
     const stats = leerJSON('mesa:maquina');
@@ -264,15 +275,7 @@ function apuntarFinal(g) {
     stats[partida.juego] = { ...delJuego, [partida.nivel]: { ...actual, [r]: actual[r] + 1 } };
     guardar('mesa:maquina', JSON.stringify(stats));
   }
-  if (partida.modo === 'amigo') {
-    const resultados = leerJSON('mesa:resultados');
-    if (!resultados[partida.id]) {
-      resultados[partida.id] = r;
-      guardar('mesa:resultados', JSON.stringify(resultados));
-      ligaAnotar({ v: 'victoria', e: 'empate' }[r]);
-      apuntarLogros();
-    }
-  }
+  if (partida.modo === 'amigo') apuntarResultadoAmigo(partida.id, r);
   if (r === 'v' || partida.modo === 'local') {
     confeti();
     sonar('record');

@@ -41,3 +41,10 @@ export const usar = (e, tipo) => ({ ...e, comodines: { ...e.comodines, [tipo]: M
 
 // 'gana', 'pierde' o null si la partida sigue.
 export const resultado = (e, a = CLASICA) => (e.coronas.length >= a.coronas ? 'gana' : e.vidas === 0 ? 'pierde' : null);
+
+// Estado en la Realtime Database (no guarda listas vacías ni `null`): las coronas van como texto.
+export const aNube = (e) => ({ ...e, coronas: e.coronas.join(',') });
+export const deNube = (n, a = CLASICA) => {
+  const e = inicial(a, null);
+  return { ...e, ...n, vidas: null, coronas: n?.coronas ? n.coronas.split(',') : [], comodines: { ...e.comodines, ...n?.comodines } };
+};

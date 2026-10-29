@@ -1022,3 +1022,13 @@ probar('ruleta: ajustes, corona de varias preguntas y comodines', () => {
   e = ruleta.usar(ruleta.usar(e, 'segunda'), 'segunda');
   assert(e.comodines.segunda === 0);
 });
+
+probar('ruleta: estado en la nube ida y vuelta', () => {
+  const a = ruleta.ajustesDe({ comodines: { mitad: 2 } });
+  const e = ruleta.inicial(a, null);
+  const nube = JSON.parse(JSON.stringify(ruleta.aNube(e))); // JSON quita el null de vidas, como la Realtime Database
+  assert(JSON.stringify(ruleta.deNube(nube, a)) === JSON.stringify(e));
+  const otra = { ...e, coronas: ['geo', 'ocio'], barra: 2, aciertos: 5 };
+  assert(JSON.stringify(ruleta.deNube(ruleta.aNube(otra), a)) === JSON.stringify(otra));
+  assert(ruleta.deNube(undefined, a).comodines.mitad === 2);
+});
