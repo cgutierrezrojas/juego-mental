@@ -1,4 +1,5 @@
 // Arranque: une las piezas de app/ (eventos de los botones, menú, tema y ajustes) y registra el service worker.
+import { abrirTrivia } from './app/trivia.js';
 import { abrirMesa } from './app/mesa.js';
 import { asegurarDuelista } from './app/duelos.js';
 import { pintarLigaMenu } from './app/liga.js';
@@ -105,7 +106,7 @@ $('btn-mejorar').onclick = () => {
   jugar();
 };
 // La previa y el final vuelven a la sección del juego (Mentales); el resto de pantallas, al inicio.
-for (const b of document.querySelectorAll('.btn-menu')) b.onclick = () => mostrar(b.closest('#previa, #final') ? 'menu' : 'inicio');
+for (const b of document.querySelectorAll('.btn-menu')) b.onclick = () => (!b.closest('#previa, #final') ? mostrar('inicio') : E.actual?.seccion === 'trivia' ? abrirTrivia() : mostrar('menu'));
 $('nav-inicio').onclick = () => mostrar('inicio');
 $('btn-volver-inicio').onclick = () => mostrar('inicio');
 

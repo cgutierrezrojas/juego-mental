@@ -10,7 +10,7 @@ Primera de las tres partes de la Trivia, aprobada por el usuario. Le siguen S3b 
   - 🌍 Geografía (`geo`), 📜 Historia (`historia`), 🔬 Ciencia y tecnología (`ciencia`);
   - 🎬 Entretenimiento (`ocio`), 🍔 Comida y vida diaria (`comida`), 🐾 Animales y naturaleza (`animales`).
 - Cada pregunta: `{ c, p, o, d }` = categoría, texto, 4 opciones (la primera es la correcta y se barajan al mostrarlas) y dificultad 1 🙂, 2 😐 o 3 😈 (unas 100 de cada una).
-- `trivia:recientes` guarda las últimas 100 preguntas que salieron (su texto) para no repetirlas pronto.
+- `trivia-recientes` guarda las últimas 100 preguntas que salieron (su texto) para no repetirlas pronto. No usa el prefijo `trivia:` para no entrar en la copia ni subir a la nube con cada pregunta.
 - S3c sumará las preguntas aprobadas de los jugadores a este banco.
 
 ## Página ❓ Trivia

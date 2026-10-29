@@ -22,6 +22,7 @@ import * as parejas from '../games/parejas.js';
 import * as verdad from '../games/verdad.js';
 import * as anagrama from '../games/anagrama.js';
 import * as cuenta from '../games/cuenta.js';
+import * as trivia from '../games/trivia.js';
 
 // Secciones de la sala de juegos. Cada juego dice la suya (`seccion`); una sección sin juegos sale como "Próximamente".
 export const SECCIONES = [
@@ -50,7 +51,9 @@ export const JUEGOS = [
   { id: 'verdad', nombre: '¿Verdadero o falso?', categoria: 'Clásicos', icono: '✅', color: 'rojo', habilidad: 'Cálculo', referencia: 35, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: '¿Está bien la operación? Toca Verdadero o Falso. 60 segundos.', juego: verdad },
   { id: 'anagrama', nombre: 'Anagramas', categoria: 'Lógica', icono: '🔤', color: 'amarillo', habilidad: 'Lógica', referencia: 20, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: '¿Qué palabra forman las letras desordenadas? 60 segundos.', juego: anagrama },
   { id: 'cuenta', nombre: 'Cuenta rápida', categoria: 'Clásicos', icono: '🍎', color: 'azul', habilidad: 'Atención', referencia: 25, modos: ['normal', 'rapido', 'sinfallo', 'niveles'], instrucciones: 'Cuenta cuántas veces aparece la figura que se pregunta. 60 segundos.', juego: cuenta },
-].map((j) => ({ seccion: 'mentales', ...j })); // los de ahora son todos de Mentales
+  // ❓ Trivia: sin habilidad (no cuenta en el perfil) ni categoría (no entra en el entrenamiento).
+  { id: 'trivia', nombre: 'Trivia rápida', seccion: 'trivia', icono: '❓', color: 'azul', referencia: 20, modos: ['normal', 'rapido', 'sinfallo'], instrucciones: 'Responde todas las preguntas que puedas en 60 segundos. Fallar resta 3 segundos.', juego: trivia },
+].map((j) => ({ seccion: 'mentales', ...j })); // si no dicen otra, son de Mentales
 
 export const CATEGORIAS = ['Clásicos', 'Lógica', 'Reacción'];
 // Ids de los juegos de cada categoría, en el orden de CATEGORIAS (para el entrenamiento diario).

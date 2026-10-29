@@ -758,7 +758,7 @@ probar('amigos: código de amigo y solicitudes', () => {
 import { JUEGOS_VIVO, rivalDe, rondaActual, comoDuelo, resultadoVivo } from './games/vivo.js';
 
 probar('duelos en vivo: rondas y resultado', () => {
-  assert(JUEGOS_VIVO.every((id) => TODOS_LOS_JUEGOS.includes(id)) && !JUEGOS_VIVO.includes('puzzle'), 'solo juegos con reloj');
+  assert(JUEGOS_VIVO.every((id) => [...TODOS_LOS_JUEGOS, 'trivia'].includes(id)) && !JUEGOS_VIVO.includes('puzzle'), 'solo juegos con reloj');
   const INFO_VIVO = { calculo: { referencia: 30 }, mayor: { referencia: 35 }, topos: { referencia: 40 } };
   const sala = (o) => ({ anfitrion: 'a', invitado: 'b', juegos: ['calculo', 'mayor', 'topos'], victoria: 'juegos', ...o });
   assert(rivalDe(sala(), 'a') === 'b' && rivalDe(sala(), 'b') === 'a');
@@ -967,4 +967,39 @@ probar('parejas: cada símbolo aparece exactamente dos veces', () => {
       assert(cartas.every((s) => SIMBOLOS.includes(s)));
     }
   }
+});
+
+// --- preguntas.js y ruleta.js (❓ Trivia) ---
+import { PREGUNTAS, CATEGORIAS_TRIVIA, pregunta } from './games/preguntas.js';
+import * as ruleta from './games/ruleta.js';
+
+probar('trivia: 50 preguntas por categoría, 4 opciones distintas, dificultad 1–3 y sin repetidas', () => {
+  for (const c of CATEGORIAS_TRIVIA) assert(PREGUNTAS.filter((q) => q.c === c.id).length === 50, c.id);
+  assert(PREGUNTAS.every((q) => CATEGORIAS_TRIVIA.some((c) => c.id === q.c)));
+  for (const q of PREGUNTAS) {
+    assert(q.o.length === 4 && new Set(q.o).size === 4, q.p);
+    assert([1, 2, 3].includes(q.d), q.p);
+    assert(q.p.length <= 110 && q.o.every((o) => o.length <= 26), q.p);
+  }
+  assert(new Set(PREGUNTAS.map((q) => q.p)).size === PREGUNTAS.length, 'textos repetidos');
+  const q = pregunta((x) => x.c === 'geo' && x.d === 3);
+  assert(q.c === 'geo' && q.d === 3 && q.opciones.includes(q.correcta) && q.correcta === q.o[0]);
+});
+
+probar('ruleta: barra, corona, vidas, ganar y perder', () => {
+  let e = ruleta.inicial();
+  for (let i = 0; i < 3; i++) e = ruleta.responder(e, true);
+  assert(ruleta.tocaCorona(e) && e.barra === 3);
+  e = ruleta.responderCorona(e, 'geo', true);
+  assert(e.coronas.join() === 'geo' && e.barra === 0 && e.vidas === 3);
+  assert(ruleta.sinCorona(e, ['geo', 'ocio']).join() === 'ocio');
+  e = ruleta.responder(ruleta.responder(e, true), false);
+  assert(e.barra === 0 && e.vidas === 2 && e.fallos === 1);
+  e = ruleta.responderCorona({ ...e, barra: 3 }, 'ocio', false);
+  assert(e.vidas === 1 && e.coronas.length === 1 && e.barra === 0);
+  assert(ruleta.resultado(e) === null);
+  assert(ruleta.resultado(ruleta.responder(e, false)) === 'pierde');
+  assert(ruleta.resultado({ ...e, coronas: ['a', 'b', 'c', 'd', 'e', 'f'] }) === 'gana');
+  const fiesta = ruleta.responder(ruleta.inicial(null), false);
+  assert(fiesta.vidas === null && ruleta.resultado(fiesta) === null);
 });

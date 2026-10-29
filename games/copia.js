@@ -1,7 +1,7 @@
 // Copia de seguridad del progreso: qué claves son del juego y cómo se escribe y se lee el archivo. Todo puro.
 
 // El dominio (cgutierrezrojas.github.io) lo comparten otras webs: solo se copian las claves con estos prefijos.
-const PREFIJOS = ['record:', 'historial:', 'estrellas:', 'niveles:', 'diarios:', 'eleccion:', 'ajuste:', 'contador:', 'ayuda:', 'logros:', 'duelos:', 'liga:', 'mesa:'];
+const PREFIJOS = ['record:', 'historial:', 'estrellas:', 'niveles:', 'diarios:', 'eleccion:', 'ajuste:', 'contador:', 'ayuda:', 'logros:', 'duelos:', 'liga:', 'mesa:', 'trivia:'];
 
 export const esClaveDelJuego = (clave) => PREFIJOS.some((p) => clave.startsWith(p));
 
