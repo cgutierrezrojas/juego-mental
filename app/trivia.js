@@ -279,13 +279,15 @@ function pintarPregunta(cat, corona) {
     }
   });
   comodin('cambiar', () => pintarPregunta(cat, corona));
-  // Segunda oportunidad: se activa antes de responder (una por pregunta); si fallas, eliges otra vez.
+  // Segunda oportunidad: se activa antes de responder (una por pregunta) y solo se gasta si fallas y te salva.
   let segunda = false;
-  comodin('segunda', (b) => {
-    b.remove();
-    segunda = true;
-    ayudas.append(el('span', 'sin-datos', '🔁 Segunda oportunidad activa'));
-  });
+  if (j.e.comodines.segunda) {
+    const b = boton(texto('segunda'), '', () => {
+      segunda = true;
+      b.replaceWith(el('span', 'sin-datos', '🔁 Segunda oportunidad activa'));
+    });
+    ayudas.append(b);
+  }
   if (a.segundos) comodin('tiempo', () => partida.reloj.restar(-MAS_TIEMPO));
 
   $('trivia-contenido').replaceChildren(cabecera, el('p', 'pregunta-trivia', q.p), ...opciones, ayudas);
@@ -296,9 +298,10 @@ function pintarPregunta(cat, corona) {
     const ok = o === q.correcta;
     if (!ok && o !== null && segunda) {
       segunda = false;
+      j.e = R.usar(j.e, 'segunda');
       b.disabled = true;
       b.classList.add('incorrecta');
-      ayudas.lastChild.textContent = '🔁 ¡Elige otra vez!';
+      ayudas.querySelector('span').textContent = '🔁 ¡Elige otra vez!';
       sonar('fallo');
       return;
     }
