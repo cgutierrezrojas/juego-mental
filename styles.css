@@ -1246,3 +1246,64 @@ button.seccion {
 .fila-ajuste p { margin: 6px 0 4px; font-weight: 800; }
 .opciones-ajuste { display: flex; gap: 6px; }
 .opciones-ajuste button { flex: 1; padding: 8px 2px; border-width: 3px; }
+
+/* S4: 🃏 Cartas. `.naipe` (no `.carta`, que es de Parejas): blanca, valor y palo; `.dorso` boca abajo. */
+#cartas-juego:not([hidden]) { display: flex; flex-direction: column; gap: 10px; }
+#cartas-aviso { margin: 0; min-height: 1.3em; font-weight: 800; }
+.naipe {
+  position: relative; width: 100%; aspect-ratio: 5 / 7; padding: 0; border: 1px solid #9aa0a6; border-radius: 6px;
+  background: #fff; color: #1d1d1f; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); line-height: 1; font-size: 1rem;
+}
+.naipe.roja { color: #d1242f; }
+.naipe .esquina { position: absolute; top: 3px; left: 3px; font-size: 0.8rem; font-weight: 900; letter-spacing: -1px; }
+.naipe .centro { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding-top: 20%; font-size: 1.5rem; }
+.naipe.dorso {
+  border-color: #fff; cursor: default;
+  background: repeating-linear-gradient(45deg, var(--rojo) 0 4px, color-mix(in srgb, var(--rojo) 70%, #000) 4px 8px);
+}
+[data-tema="oscuro"] .naipe { border-color: rgba(232, 236, 255, 0.5); box-shadow: none; }
+[data-tema="oscuro"] .naipe.dorso { border-color: var(--rojo); background: repeating-linear-gradient(45deg, rgba(255, 79, 109, 0.5) 0 4px, transparent 4px 8px); }
+.hueco-carta {
+  display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 5 / 7; padding: 0;
+  border: 2px dashed color-mix(in srgb, var(--texto) 35%, transparent); border-radius: 6px; background: none; box-shadow: none;
+  color: color-mix(in srgb, var(--texto) 40%, transparent); font-size: 1.3rem;
+}
+.naipe.tiembla { animation: temblar 0.3s; }
+.naipe.pista, .hueco-carta.pista { outline: 3px solid var(--amarillo); outline-offset: 1px; z-index: 2; }
+.naipe.arrastrando { z-index: 50; opacity: 0.9; pointer-events: none; }
+.naipe.jugable { touch-action: none; }
+@media (prefers-reduced-motion: reduce) { .naipe.tiembla { animation: none; } }
+
+/* Solitario: 7 lugares por fila; las cartas de una columna se apilan con `top`. */
+.tapete-solitario { --alto-naipe: calc((min(100vw, 480px) - 32px - 18px) / 7 * 1.4); display: flex; flex-direction: column; gap: 10px; }
+.fila-solitario, .columnas-solitario { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; align-items: start; }
+.descarte, .pila, .columna { position: relative; }
+.descarte { aspect-ratio: 5 / 7; grid-column: span 1; }
+.descarte .naipe { position: absolute; top: 0; }
+.pila .naipe { position: absolute; inset: 0; }
+.columna { min-height: var(--alto-naipe); }
+.columna .hueco-carta { position: absolute; top: 0; }
+.columna .naipe { position: absolute; left: 0; }
+.columnas-solitario { min-height: calc(var(--alto-naipe) * 3); }
+
+/* 21 */
+.tapete-21 { display: flex; flex-direction: column; gap: 12px; }
+.mano-21 p { margin: 0 0 6px; font-weight: 800; text-align: left; }
+.mano-21.actual { padding: 6px; border-radius: 12px; outline: 3px solid var(--amarillo); }
+.cartas-21 { display: flex; flex-wrap: wrap; gap: 6px; }
+.cartas-21 .naipe { width: 58px; }
+.cartas-21 .naipe .esquina { font-size: 1rem; }
+.cartas-21 .naipe .centro { font-size: 1.9rem; }
+.apuesta-21 { font-size: 1.6rem; font-weight: 900; margin: 0; }
+.fichas-21 { display: flex; justify-content: center; gap: 10px; }
+.ficha { width: 62px; aspect-ratio: 1; padding: 0; border-radius: 50%; border: 5px dashed #fff; color: #fff; font-weight: 900; }
+.ficha.f5 { background: var(--azul); }
+.ficha.f10 { background: var(--verde); }
+.ficha.f25 { background: var(--rojo); }
+.ficha.f50 { background: var(--morado); }
+[data-tema="oscuro"] .ficha { background: transparent; border-style: dashed; }
+[data-tema="oscuro"] .ficha.f5 { color: var(--azul); border-color: var(--azul); }
+[data-tema="oscuro"] .ficha.f10 { color: var(--verde); border-color: var(--verde); }
+[data-tema="oscuro"] .ficha.f25 { color: var(--rojo); border-color: var(--rojo); }
+[data-tema="oscuro"] .ficha.f50 { color: var(--morado); border-color: var(--morado); }
+.ficha:disabled { opacity: 0.35; }

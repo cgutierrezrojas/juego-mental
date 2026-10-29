@@ -31,7 +31,8 @@ Primera parte de la sección Cartas. S4b (Ocho locos + Escoba) y S4c (Carioca) r
 ## Liga y datos
 
 - Liga: solitario ganado = +1 partida; en el 21, cada 5 manos = +1.
-- `localStorage` con prefijo `cartas:` (se sincroniza con la copia en la nube): `cartas:solitario` (partida en curso), `cartas:record-solitario`, `cartas:21`.
+- `localStorage` con prefijo `cartas:` (se copia a la nube): `cartas:solitario` (récords por modo) y `cartas:21` (fichas, récords y la mano en curso). La partida de solitario a medias va en `solitario-partida`, solo en este celular (con su historial para deshacer).
+- Cada pila del solitario es de un palo (♠ ♥ ♦ ♣), como dibuja su hueco.
 
 ## Código
 

@@ -1049,3 +1049,95 @@ probar('trivia: preguntas propuestas (validar y sumar al banco)', () => {
   agregarPreguntas('nada', banco);
   assert(banco.length === PREGUNTAS.length + 1);
 });
+
+// --- cartas.js, solitario.js, veintiuno.js ---
+import { baraja, nombreCarta } from './games/cartas.js';
+import * as sol from './games/solitario.js';
+import * as bj from './games/veintiuno.js';
+
+const carta = (texto) => ({ v: ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'].indexOf(texto.slice(0, -1)) + 1, p: texto.slice(-1) });
+const cartas = (texto) => texto.split(' ').map(carta);
+
+probar('cartas: baraja de 52 distintas', () => {
+  const b = baraja();
+  assert(b.length === 52 && new Set(b.map(nombreCarta)).size === 52);
+});
+
+probar('solitario: repartir, robar y mover', () => {
+  const e = sol.repartir(3);
+  assert(e.columnas.map((c) => c.length).join() === '1,2,3,4,5,6,7' && e.mazo.length === 24);
+  assert(e.columnas.every((c) => c.at(-1).a && c.slice(0, -1).every((x) => !x.a)));
+  let r = sol.robar(e);
+  assert(r.descarte.length === 3 && r.mazo.length === 21 && nombreCarta(r.descarte.at(-1)) === nombreCarta(e.mazo.at(-3)), 'de a 3 queda arriba la tercera');
+  for (let i = 0; i < 7; i++) r = sol.robar(r);
+  assert(!r.mazo.length && r.descarte.length === 24);
+  r = sol.robar(r);
+  assert(JSON.stringify(r.mazo) === JSON.stringify(e.mazo), 'el mazo vuelve en el mismo orden');
+  assert(sol.robar({ ...e, mazo: [], descarte: [] }) === null);
+  // 6♥ sobre 7♠ sí; sobre 7♦ no; a una columna vacía solo un Rey; a la pila solo el As primero.
+  const t = { robo: 1, mazo: [], descarte: [carta('6♥')], pilas: [[], [], [], []], movimientos: 0,
+    columnas: [[{ ...carta('9♣'), a: false }, { ...carta('7♠'), a: true }], [{ ...carta('7♦'), a: true }], [], [{ ...carta('A♥'), a: true }], [], [], []] };
+  assert(sol.puede(t, { de: 'descarte' }, { a: 'col', i: 0 }) && !sol.puede(t, { de: 'descarte' }, { a: 'col', i: 1 }));
+  assert(!sol.puede(t, { de: 'descarte' }, { a: 'col', i: 2 }) && !sol.puede(t, { de: 'descarte' }, { a: 'pila', i: 0 }));
+  assert(sol.destinoMejor(t, { de: 'col', i: 3, k: 0 }).a === 'pila', 'el As va a la pila');
+  assert(sol.mover(t, { de: 'col', i: 0, k: 1 }, { a: 'col', i: 2 }) === null, '7♠ no va a una columna vacía');
+  assert(!sol.cartasDe(t, { de: 'col', i: 0, k: 0 }), 'boca abajo no se toma');
+  const m = sol.mover(t, { de: 'descarte' }, { a: 'col', i: 0 });
+  assert(m.columnas[0].length === 3 && !m.descarte.length && m.movimientos === 1);
+  assert(t.descarte.length === 1, 'no cambia el estado original');
+  assert(sol.mover(m, { de: 'col', i: 3, k: 0 }, { a: 'pila', i: 0 }) === null, 'el A♥ no va a la pila de ♠');
+  const p = sol.mover(m, { de: 'col', i: 3, k: 0 }, { a: 'pila', i: 1 });
+  assert(p.pilas[1].length === 1 && sol.mover(p, { de: 'pila', i: 1 }, { a: 'col', i: 3 }) === null, 'el As no baja a una columna vacía');
+});
+
+probar('solitario: destapar, pista y terminar solo', () => {
+  const t = { robo: 1, mazo: [], descarte: [], pilas: [[], [], [], []], movimientos: 0,
+    columnas: [[{ ...carta('9♣'), a: false }, { ...carta('6♥'), a: true }], [{ ...carta('7♠'), a: true }], [], [], [], [], []] };
+  const p = sol.pista(t);
+  assert(p.o.i === 0 && p.d.i === 1, 'la pista destapa el 9♣');
+  const m = sol.mover(t, p.o, p.d);
+  assert(m.columnas[0][0].a && m.columnas[1].length === 2);
+  assert(sol.pista({ ...t, columnas: [[], [], [], [], [], [], []], mazo: [carta('2♠')] }).robar);
+  const fin = { robo: 1, mazo: [], descarte: [], pilas: [[], [], [], []], movimientos: 0, columnas: [[], [], [], [], [], [], []] };
+  ['♠', '♥', '♦', '♣'].forEach((p, i) => { fin.columnas[i] = Array.from({ length: 13 }, (_, k) => ({ v: 13 - k, p, a: true })); });
+  assert(sol.puedeTerminar(fin) && !sol.puedeTerminar(sol.repartir()));
+  const g = sol.terminar(fin);
+  assert(sol.ganado(g) && g.movimientos === 52 && !sol.ganado(fin));
+});
+
+probar('21: puntos, blackjack, doblar, separar y pagos', () => {
+  assert(bj.puntos(cartas('A♠ K♥')).total === 21 && bj.puntos(cartas('A♠ A♥ 9♦')).total === 21);
+  assert(bj.puntos(cartas('A♠ 6♥')).blanda && !bj.puntos(cartas('A♠ 6♥ 9♦')).blanda && bj.puntos(cartas('A♠ 6♥ 9♦')).total === 16);
+  // El zapato se reparte desde el final: yo, yo, banca, banca y luego lo que se pida (relleno de 2♣).
+  const z = (texto) => [...Array(20).fill(carta('2♣')), ...cartas(texto).reverse()];
+  let m = bj.repartir(z('A♠ K♥ 9♦ 8♣'), 10);
+  assert(m.fin && bj.resultado(m, m.manos[0]) === 'blackjack' && bj.cobro(m) === 25);
+  m = bj.repartir(z('10♠ 6♥ 9♦ 8♣ 5♥'), 10); // 16 contra 17
+  assert(!m.fin && bj.puedeDoblar(m, 10) && !bj.puedeDoblar(m, 5));
+  const d = bj.doblar(m);
+  assert(d.fin && d.manos[0].apuesta === 20 && bj.resultado(d, d.manos[0]) === 'gana' && bj.cobro(d) === 40);
+  const plantado = bj.plantarse(m);
+  assert(plantado.fin && bj.resultado(plantado, plantado.manos[0]) === 'pierde' && bj.cobro(plantado) === 0);
+  const pasado = bj.pedir(bj.repartir(z('10♠ 6♥ 9♦ 8♣ K♥'), 10));
+  assert(pasado.fin && bj.cobro(pasado) === 0 && bj.puntos(pasado.banca).total === 17, 'te pasas y la banca no pide');
+  const sigue = bj.pedir(bj.repartir(z('10♠ 3♥ 9♦ 8♣ 2♥'), 10));
+  assert(!sigue.fin && !bj.puedeDoblar(sigue, 100), 'con 3 cartas ya no se dobla');
+  // La banca pide hasta 17: 9+5=14 → pide un 3 → 17 y se planta.
+  const b = bj.plantarse(bj.repartir(z('10♠ 8♥ 9♦ 5♣ 3♥'), 10));
+  assert(bj.puntos(b.banca).total === 17 && bj.resultado(b, b.manos[0]) === 'gana');
+  assert(bj.cobro(bj.plantarse(bj.repartir(z('10♠ 8♥ 10♦ 8♣'), 10))) === 10, 'empate devuelve la apuesta');
+  // Separar 8-8: dos manos; con ases, una carta cada uno y se acaba; su 21 no es blackjack.
+  m = bj.repartir(z('8♠ 8♥ 10♦ 7♣ 3♥ 10♣'), 10);
+  assert(bj.puedeSeparar(m, 10) && !bj.puedeSeparar(m, 5));
+  const s = bj.separar(m);
+  assert(s.manos.length === 2 && !s.fin && !bj.puedeSeparar(s, 100));
+  const s2 = bj.plantarse(bj.plantarse(s));
+  assert(s2.fin && bj.cobro(s2) === 20, '11 y 18 contra 17: gana una, pierde otra');
+  const sa = bj.separar(bj.repartir(z('A♠ A♥ 10♦ 7♣ K♥ 5♣'), 10));
+  assert(sa.fin && bj.resultado(sa, sa.manos[0]) === 'gana' && bj.cobro(sa) === 20, 'As+K separado paga 1 a 1');
+  assert(bj.puedeSeparar(bj.repartir(z('K♠ Q♥ 10♦ 7♣'), 10), 10), 'K y Q valen igual');
+  // La banca con blackjack gana al repartir; el zapato corto se baraja de nuevo.
+  m = bj.repartir(z('10♠ 9♥ A♦ K♣'), 10);
+  assert(m.fin && bj.cobro(m) === 0);
+  assert(bj.repartir(cartas('2♠ 3♠'), 10).zapato.length === 48);
+});
