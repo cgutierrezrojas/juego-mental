@@ -43,3 +43,12 @@ Primera parte de la sección Cartas. S4b (Ocho locos + Escoba) y S4c (Carioca) r
 ## Pruebas
 
 `tests.js`: baraja (52 distintas), solitario (repartir, movimientos válidos e inválidos, robar de a 1 y 3, deshacer, terminar solo, ganar), 21 (puntos con ases, blackjack, doblar, separar, banca, pagos). Chrome: jugar ambos con toque y arrastre, claro/oscuro, 390 px.
+
+## 🎴 Bacará (añadido el 2026-10-30)
+
+- Fichas compartidas con el 21: `cartas:fichas` = { fichas, max } (al estrenarlo se toman las de `cartas:21`). Préstamo y máximo comunes.
+- Antes de cada mano: a quién apuestas (Jugador, Banca o Empate) y cuánto (fichas de 5, 10, 25, 50).
+- Reparto automático con la tabla oficial de la tercera carta; se explica por qué pidió cada uno. Puntos: As 1, 2–9 su valor, 10 y figuras 0, solo la última cifra. Natural (8 o 9 con dos cartas): nadie pide.
+- Pagos: Jugador 1 a 1; Banca 1 a 1 menos 5 % (redondeado abajo); Empate 8 a 1; si hay empate, al Jugador o a la Banca se les devuelve la apuesta.
+- Récord `cartas:bacara`: manos y ganadas. Liga: cada 5 manos, +1.
+- Reglas en `games/bacara.js` (puras, con pruebas); pantalla en `app/cartas.js`. El inicio muestra «3 juegos».
