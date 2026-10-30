@@ -1,15 +1,16 @@
-// 🃏 Cartas: la página de la sección, el 🂡 Solitario y el 🃏 21. Las reglas están en games/solitario.js y games/veintiuno.js.
-// Récords en `cartas:` (se copian a la nube); la partida de solitario a medias, solo en este celular (`solitario-partida`).
+// 🃏 Cartas: la página de la sección, el 🂡 Solitario, el 🃏 21 y el 🎴 Bacará (reglas en games/solitario.js, veintiuno.js y bacara.js).
+// El 21 y el Bacará comparten las fichas (`cartas:fichas`). Récords en `cartas:` (se copian a la nube); la partida de solitario a medias, solo en este celular (`solitario-partida`).
 import { el, leer, guardar } from '../games/comun.js';
 import { sonar } from '../games/efectos.js';
 import { esRoja, VALORES, PALOS } from '../games/cartas.js';
 import * as S from '../games/solitario.js';
 import * as V from '../games/veintiuno.js';
+import * as B from '../games/bacara.js';
 import { leerJSON } from './datos.js';
 import { $, mostrar, confeti, preguntar } from './ui.js';
 import { ligaAnotar } from './liga.js';
 
-export const JUEGOS_CARTAS = 2; // para la cuenta del inicio
+export const JUEGOS_CARTAS = 3; // para la cuenta del inicio
 const NOMBRE_PALO = { '♠': 'picas', '♥': 'corazones', '♦': 'diamantes', '♣': 'tréboles' };
 const NOMBRE_VALOR = { 1: 'As', 11: 'J', 12: 'Q', 13: 'K' };
 const reloj = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -58,15 +59,16 @@ export function abrirCartas() {
     b.append(el('span', 'icono', icono), el('span', '', nombre));
     return b;
   };
-  $('cartas-juegos').replaceChildren(tarjeta('🂡', 'Solitario', abrirSolitario), tarjeta('🃏', '21', abrir21));
+  $('cartas-juegos').replaceChildren(tarjeta('🂡', 'Solitario', abrirSolitario), tarjeta('🃏', '21', abrir21), tarjeta('🎴', 'Bacará', abrirBacara));
   const filas = [];
   const r = leerJSON('cartas:solitario');
   for (const robo of ['1', '3']) {
     const x = r[robo];
     if (x?.partidas) filas.push(`🂡 De a ${robo}: ${x.ganadas} de ${x.partidas} ganadas${x.ganadas ? ` · mejor ${reloj(x.tiempo)} · ${x.movimientos} movimientos` : ''}`);
   }
-  const b = leerJSON('cartas:21');
-  if (b.manos) filas.push(`🃏 21: máximo ${b.max} 🪙 · ${b.ganadas} de ${b.manos} manos ganadas`);
+  const casino = { '🃏 21': leerJSON('cartas:21'), '🎴 Bacará': leerJSON('cartas:bacara') };
+  for (const [nombre, x] of Object.entries(casino)) if (x.manos) filas.push(`${nombre}: ${x.ganadas} de ${x.manos} manos ganadas`);
+  if (casino['🃏 21'].manos || casino['🎴 Bacará'].manos) filas.push(`🪙 Fichas: ${leerFichas().fichas} · récord ${leerFichas().max}`);
   $('cartas-records').replaceChildren(...(filas.length ? [el('h3', 'categoria', 'Tus récords'), ...filas.map((t) => el('p', 'sin-datos', t))] : []));
 }
 
@@ -300,18 +302,80 @@ function carta(n, o) {
   return n;
 }
 
-// --- 🃏 21 ---
+// --- Fichas de casino (21 y Bacará) ---
 
-// Guardado: { fichas, max, manos, ganadas, apuesta (la última), mano (en curso o null), zapato }
-const leer21 = () => ({ fichas: 100, max: 100, manos: 0, ganadas: 0, apuesta: 10, mano: null, zapato: [], ...leerJSON('cartas:21') });
-let b21 = null;
-const guardar21 = () => guardar('cartas:21', JSON.stringify(b21));
-
-function abrir21() {
-  pararCartas();
-  b21 = leer21();
-  pintar21();
+// `cartas:fichas` = { fichas, max }; la primera vez salen de las que había en el 21.
+function leerFichas() {
+  const v = leerJSON('cartas:21');
+  return { fichas: v.fichas ?? 100, max: v.max ?? 100, ...leerJSON('cartas:fichas') };
 }
+// Guarda las fichas en su clave y el resto del juego en la suya.
+function guardarCasino(clave, j) {
+  const { fichas, max, ...resto } = j;
+  guardar(clave, JSON.stringify(resto));
+  guardar('cartas:fichas', JSON.stringify({ fichas, max }));
+}
+
+const marcadorFichas = (j) => [el('span', '', `🪙 ${j.fichas} fichas`), el('span', '', `Récord ${j.max}`)];
+
+// Apostar. `j` lleva { fichas, apuesta }; `cabeza`: lo que va antes de las fichas; `repartir()` juega la mano
+// (con la apuesta ya descontada); `guardarJ` guarda y `repintar` vuelve a dibujar.
+function pintarApuesta(j, cabeza, repartir, guardarJ, repintar) {
+  const apuesta = Math.min(j.apuesta, j.fichas - (j.fichas % 5)) || 0;
+  j.apuesta = apuesta;
+  if (j.fichas < 5) {
+    return pantalla(marcadorFichas(j), [cabeza[0], el('p', '', 'Te quedaste sin fichas.')], [
+      boton('🏦 La casa te presta 100', 'color', () => {
+        j.fichas += 100;
+        j.apuesta = 10;
+        guardarJ();
+        repintar();
+      }),
+      boton('Salir', '', abrirCartas),
+    ]);
+  }
+  const fichas = el('div', 'fichas-21');
+  for (const f of [5, 10, 25, 50]) {
+    const b = boton(String(f), `ficha f${f}`, () => {
+      j.apuesta += f;
+      repintar();
+    });
+    b.disabled = apuesta + f > j.fichas;
+    b.setAttribute('aria-label', `Apostar ${f} más`);
+    fichas.append(b);
+  }
+  const jugar = boton('🃏 Repartir', 'color', () => {
+    j.fichas -= apuesta;
+    repartir();
+    sonar('tic');
+    guardarJ();
+    repintar();
+  });
+  jugar.disabled = !apuesta;
+  pantalla(marcadorFichas(j), [...cabeza, el('p', 'apuesta-21', `Apuesta: ${apuesta}`), fichas], [
+    jugar,
+    boton('Borrar', '', () => {
+      j.apuesta = 0;
+      repintar();
+    }),
+    boton('Salir', '', abrirCartas),
+  ]);
+  $('cartas-tapete').className = 'tapete-21';
+}
+
+// Al acabar una mano: cobrar, récords y liga (cada 5 manos, +1 partida). `j`: { fichas, max, manos, ganadas }.
+function cerrarMano(j, cobro, apostado) {
+  j.fichas += cobro;
+  j.max = Math.max(j.max, j.fichas);
+  j.manos++;
+  if (cobro > apostado) {
+    j.ganadas++;
+    sonar('acierto');
+  }
+  if (j.manos % 5 === 0) ligaAnotar('partida');
+}
+
+const textoCobro = (cobro, apostado) => (cobro > apostado ? `Ganas ${cobro - apostado} fichas` : cobro === apostado ? 'Recuperas tu apuesta' : `Pierdes ${apostado - cobro} fichas`);
 
 function filaCartas(titulo, cartas, ocultas = 0, clase = '') {
   const caja = el('div', `mano-21 ${clase}`);
@@ -325,6 +389,20 @@ function filaCartas(titulo, cartas, ocultas = 0, clase = '') {
   return caja;
 }
 
+// --- 🃏 21 ---
+
+// Guardado (`cartas:21`): { manos, ganadas, apuesta (la última), mano (en curso o null), zapato }
+let b21 = null;
+const guardar21 = () => guardarCasino('cartas:21', b21);
+const apostado21 = (m) => m.manos.reduce((s, x) => s + x.apuesta, 0);
+const cerrar21 = () => b21.mano.fin && cerrarMano(b21, V.cobro(b21.mano), apostado21(b21.mano));
+
+function abrir21() {
+  pararCartas();
+  b21 = { manos: 0, ganadas: 0, apuesta: 10, mano: null, zapato: [], ...leerJSON('cartas:21'), ...leerFichas() };
+  pintar21();
+}
+
 const textoPuntos = (cartas) => {
   const p = V.puntos(cartas);
   return p.total > 21 ? `${p.total} 💥` : p.blanda && p.total < 21 ? `${p.total - 10} / ${p.total}` : String(p.total);
@@ -332,8 +410,14 @@ const textoPuntos = (cartas) => {
 
 function pintar21() {
   const { fichas, mano: m } = b21;
-  const marcador = [el('span', '', `🪙 ${fichas} fichas`), el('span', '', `Récord ${b21.max}`)];
-  if (!m) return pintarApuesta(marcador);
+  if (!m) {
+    const cabeza = [el('h2', '', '🃏 21'), el('p', '', 'Acércate a 21 sin pasarte y gánale a la banca. La banca pide hasta 17.')];
+    return pintarApuesta(b21, cabeza, () => {
+      b21.mano = V.repartir(b21.zapato, b21.apuesta);
+      b21.zapato = [];
+      cerrar21();
+    }, guardar21, pintar21);
+  }
   const tapete = [filaCartas(m.fin ? `Banca: ${textoPuntos(m.banca)}` : 'Banca', m.banca, m.fin ? 0 : 1, 'banca')];
   m.manos.forEach((mano, i) => {
     const res = m.fin ? ` · ${{ blackjack: '🎉 ¡21!', gana: '✅ Ganas', empate: '🤝 Empate', pierde: '❌ Pierdes' }[V.resultado(m, mano)]}` : '';
@@ -341,14 +425,11 @@ function pintar21() {
     tapete.push(filaCartas(`${nombre}: ${textoPuntos(mano.cartas)} · apuesta ${mano.apuesta}${res}`, mano.cartas, 0, !m.fin && i === m.actual ? 'actual' : ''));
   });
   if (m.fin) {
-    const cobro = V.cobro(m);
-    const apostado = m.manos.reduce((s, x) => s + x.apuesta, 0);
-    const botones = [boton('🃏 Otra mano', 'color', otraMano), boton('Salir', '', abrirCartas)];
-    pantalla(marcador, tapete, botones, cobro > apostado ? `Ganas ${cobro - apostado} fichas` : cobro === apostado ? 'Recuperas tu apuesta' : `Pierdes ${apostado - cobro} fichas`);
+    pantalla(marcadorFichas(b21), tapete, [boton('🃏 Otra mano', 'color', otraMano), boton('Salir', '', abrirCartas)], textoCobro(V.cobro(m), apostado21(m)));
   } else {
     const jugar = (f) => () => {
       b21.mano = f(b21.mano);
-      if (b21.mano.fin) cerrarMano();
+      cerrar21();
       sonar('tic');
       guardar21();
       pintar21();
@@ -361,67 +442,9 @@ function pintar21() {
     const separar = boton('Separar', '', pagar(V.separar));
     doblar.disabled = !V.puedeDoblar(m, fichas);
     separar.disabled = !V.puedeSeparar(m, fichas);
-    pantalla(marcador, tapete, [boton('Pedir', 'color', jugar(V.pedir)), boton('Plantarse', 'color', jugar(V.plantarse)), doblar, separar]);
+    pantalla(marcadorFichas(b21), tapete, [boton('Pedir', 'color', jugar(V.pedir)), boton('Plantarse', 'color', jugar(V.plantarse)), doblar, separar]);
   }
   $('cartas-tapete').className = 'tapete-21';
-}
-
-function pintarApuesta(marcador) {
-  const apuesta = Math.min(b21.apuesta, b21.fichas - (b21.fichas % 5)) || 0;
-  b21.apuesta = apuesta;
-  if (b21.fichas < 5) {
-    return pantalla(marcador, [el('h2', '', '🃏 21'), el('p', '', 'Te quedaste sin fichas.')], [
-      boton('🏦 La casa te presta 100', 'color', () => {
-        b21.fichas += 100;
-        guardar21();
-        pintar21();
-      }),
-      boton('Salir', '', abrirCartas),
-    ]);
-  }
-  const texto = el('p', 'apuesta-21', `Apuesta: ${apuesta}`);
-  const fichas = el('div', 'fichas-21');
-  for (const f of [5, 10, 25, 50]) {
-    const b = boton(String(f), `ficha f${f}`, () => {
-      b21.apuesta += f;
-      pintar21();
-    });
-    b.disabled = apuesta + f > b21.fichas;
-    b.setAttribute('aria-label', `Apostar ${f} más`);
-    fichas.append(b);
-  }
-  const repartir = boton('🃏 Repartir', 'color', () => {
-    b21.fichas -= apuesta;
-    b21.mano = V.repartir(b21.zapato, apuesta);
-    b21.zapato = [];
-    if (b21.mano.fin) cerrarMano();
-    sonar('tic');
-    guardar21();
-    pintar21();
-  });
-  repartir.disabled = !apuesta;
-  pantalla(marcador, [el('h2', '', '🃏 21'), el('p', '', 'Acércate a 21 sin pasarte y gánale a la banca. La banca pide hasta 17.'), texto, fichas], [
-    repartir,
-    boton('Borrar', '', () => {
-      b21.apuesta = 0;
-      pintar21();
-    }),
-    boton('Salir', '', abrirCartas),
-  ]);
-}
-
-// La mano terminó: cobrar, récords y liga (cada 5 manos, +1 partida).
-function cerrarMano() {
-  const m = b21.mano;
-  const cobro = V.cobro(m);
-  b21.fichas += cobro;
-  b21.max = Math.max(b21.max, b21.fichas);
-  b21.manos++;
-  if (cobro > m.manos.reduce((s, x) => s + x.apuesta, 0)) {
-    b21.ganadas++;
-    sonar('acierto');
-  }
-  if (b21.manos % 5 === 0) ligaAnotar('partida');
 }
 
 function otraMano() {
@@ -429,4 +452,63 @@ function otraMano() {
   b21.mano = null;
   guardar21();
   pintar21();
+}
+
+// --- 🎴 Bacará ---
+
+// Guardado (`cartas:bacara`): { manos, ganadas, apuesta, a (a quién se apuesta), zapato }
+let bac = null;
+let ultimaBac = null; // la mano recién ultimaBac, para mostrarla
+const QUIEN = { jugador: '🙋 Jugador', banca: '🏦 Banca', empate: '🤝 Empate' };
+const guardarBac = () => guardarCasino('cartas:bacara', bac);
+
+function abrirBacara() {
+  pararCartas();
+  bac = { manos: 0, ganadas: 0, apuesta: 10, a: 'jugador', zapato: [], ...leerJSON('cartas:bacara'), ...leerFichas() };
+  ultimaBac = null;
+  pintarBacara();
+}
+
+function pintarBacara() {
+  if (ultimaBac) {
+    const { mano, a, apuesta } = ultimaBac;
+    const clase = (quien) => (mano.ganador === quien ? 'gana' : '');
+    pantalla(marcadorFichas(bac), [
+      filaCartas(`${QUIEN.jugador}: ${B.punto(mano.jugador)}`, mano.jugador, 0, clase('jugador')),
+      filaCartas(`${QUIEN.banca}: ${B.punto(mano.banca)}`, mano.banca, 0, clase('banca')),
+      ...mano.motivos.map((t) => el('p', 'motivo', t)),
+      el('p', 'apuesta-21', mano.ganador === 'empate' ? '🤝 Empate' : `Gana ${mano.ganador === 'jugador' ? 'el Jugador' : 'la Banca'}`),
+    ], [
+      boton('🎴 Otra mano', 'color', () => {
+        ultimaBac = null;
+        pintarBacara();
+      }),
+      boton('Salir', '', abrirCartas),
+    ], `Apostaste ${apuesta} a ${QUIEN[a]}. ${textoCobro(B.cobro(apuesta, a, mano.ganador), apuesta)}`);
+    $('cartas-tapete').className = 'tapete-21';
+    return;
+  }
+  const quien = el('div', 'opciones-ajuste');
+  quien.setAttribute('role', 'group');
+  quien.setAttribute('aria-label', '¿A quién apuestas?');
+  for (const k of Object.keys(QUIEN)) {
+    const b = boton(QUIEN[k], '', () => {
+      bac.a = k;
+      guardarBac();
+      pintarBacara();
+    });
+    b.setAttribute('aria-pressed', String(bac.a === k));
+    quien.append(b);
+  }
+  const cabeza = [
+    el('h2', '', '🎴 Bacará'),
+    el('p', '', 'Gana la mano que más se acerque a 9. Paga: Jugador 1 a 1 · Banca 1 a 1 menos 5 % · Empate 8 a 1.'),
+    quien,
+  ];
+  pintarApuesta(bac, cabeza, () => {
+    const mano = B.jugar(bac.zapato);
+    bac.zapato = mano.zapato;
+    ultimaBac = { mano: { ...mano, zapato: null }, a: bac.a, apuesta: bac.apuesta };
+    cerrarMano(bac, B.cobro(bac.apuesta, bac.a, mano.ganador), bac.apuesta);
+  }, guardarBac, pintarBacara);
 }

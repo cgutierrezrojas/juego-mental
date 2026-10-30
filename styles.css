@@ -1307,3 +1307,5 @@ button.seccion {
 [data-tema="oscuro"] .ficha.f25 { color: var(--rojo); border-color: var(--rojo); }
 [data-tema="oscuro"] .ficha.f50 { color: var(--morado); border-color: var(--morado); }
 .ficha:disabled { opacity: 0.35; }
+.mano-21.gana { padding: 6px; border-radius: 12px; outline: 3px solid var(--ok); }
+.motivo { margin: 0; text-align: left; font-size: 0.95rem; }

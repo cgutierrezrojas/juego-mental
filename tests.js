@@ -1141,3 +1141,25 @@ probar('21: puntos, blackjack, doblar, separar y pagos', () => {
   assert(m.fin && bj.cobro(m) === 0);
   assert(bj.repartir(cartas('2♠ 3♠'), 10).zapato.length === 48);
 });
+
+import * as bac from './games/bacara.js';
+
+probar('bacará: puntos, tercera carta y pagos', () => {
+  assert(bac.punto(cartas('7♠ 8♥')) === 5 && bac.punto(cartas('K♠ Q♥')) === 0 && bac.punto(cartas('A♠ 8♥')) === 9);
+  // Reparto: jugador, jugador, banca, banca y luego terceras (relleno de 2♣).
+  const z = (texto) => [...Array(20).fill(carta('2♣')), ...cartas(texto).reverse()];
+  let m = bac.jugar(z('9♠ K♥ 3♦ 4♣'));
+  assert(m.jugador.length === 2 && m.banca.length === 2 && m.ganador === 'jugador' && m.motivos[0].includes('Natural'));
+  m = bac.jugar(z('6♠ K♥ 3♦ 2♣')); // jugador 6 se planta; banca 5 pide (2♣) → 7
+  assert(m.jugador.length === 2 && m.banca.length === 3 && m.ganador === 'banca');
+  m = bac.jugar(z('2♠ K♥ 3♦ 3♣ 8♥')); // jugador 2 pide un 8 → 0; banca 6 con tercera 8 se planta
+  assert(m.jugador.length === 3 && m.banca.length === 2 && m.ganador === 'banca');
+  m = bac.jugar(z('2♠ K♥ 3♦ K♣ 8♥')); // banca 3 con tercera 8 no pide
+  assert(m.banca.length === 2);
+  m = bac.jugar(z('2♠ K♥ 4♦ K♣ 7♥ 3♠')); // banca 4 con tercera 7 pide → 7; jugador 9 gana
+  assert(m.banca.length === 3 && m.ganador === 'jugador');
+  m = bac.jugar(z('7♠ K♥ 7♦ K♣'));
+  assert(m.ganador === 'empate' && m.jugador.length === 2 && m.banca.length === 2);
+  assert(bac.cobro(10, 'jugador', 'jugador') === 20 && bac.cobro(10, 'banca', 'banca') === 19 && bac.cobro(10, 'empate', 'empate') === 90);
+  assert(bac.cobro(10, 'banca', 'empate') === 10 && bac.cobro(10, 'empate', 'banca') === 0 && bac.cobro(10, 'jugador', 'banca') === 0);
+});
