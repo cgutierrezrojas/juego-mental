@@ -1163,3 +1163,61 @@ probar('bacará: puntos, tercera carta y pagos', () => {
   assert(bac.cobro(10, 'jugador', 'jugador') === 20 && bac.cobro(10, 'banca', 'banca') === 19 && bac.cobro(10, 'empate', 'empate') === 90);
   assert(bac.cobro(10, 'banca', 'empate') === 10 && bac.cobro(10, 'empate', 'banca') === 0 && bac.cobro(10, 'jugador', 'banca') === 0);
 });
+
+import * as ocho from './games/ocho.js';
+
+probar('ocho locos: jugar, especiales, robar, pasar y rondas', () => {
+  const e = ocho.nueva(3);
+  assert(e.manos.every((m) => m.length === 5) && e.mazo.length === 52 - 16 && e.turno === 1);
+  // Estado a mano: arriba 5♥; turno del 0.
+  const base = (manos, extra = {}) => ({ n: 3, manos: manos.map(cartas), mazo: cartas('3♣ 4♣ 9♣ 10♣ 6♠'), pila: cartas('5♥'), palo: '♥', sentido: 1, turno: 0, robar: 0, robadas: 0, puntos: [0, 0, 0], ronda: 1, ganador: null, resumen: null, aviso: null, ...extra });
+  let s = base(['5♠ 9♥ 8♣ K♦', 'A♠ 2♣', '7♦ 7♣']);
+  assert(ocho.jugables(s).join() === '0,1,2', 'mismo número, mismo palo o un 8');
+  assert(ocho.jugar(s, 3) === null && ocho.jugar(s, 2) === null, 'K♦ no vale; el 8 necesita palo');
+  let t = ocho.jugar(s, 2, '♠');
+  assert(t.palo === '♠' && t.turno === 1 && ocho.jugables(t).join() === '0');
+  // 2: el siguiente roba 2 o responde con otro 2.
+  s = base(['2♥ 9♥', '2♣ A♠', '7♦ 7♣']);
+  t = ocho.jugar(s, 0);
+  assert(t.robar === 2 && ocho.jugables(t).join() === '0', 'solo puede responder con un 2');
+  t = ocho.jugar(t, 0);
+  assert(t.robar === 4 && t.turno === 2 && !ocho.jugables(t).length && ocho.puedeRobar(t));
+  t = ocho.robar(t);
+  assert(t.manos[2].length === 6 && t.robar === 0 && t.turno === 0, 'roba 4 y pierde el turno');
+  // J salta; Q invierte (a dos, vuelve a jugar).
+  s = base(['J♥ 9♥', 'A♠', '7♦']);
+  assert(ocho.jugar(s, 0).turno === 2);
+  s = base(['Q♥ 9♥', 'A♠', '7♦']);
+  t = ocho.jugar(s, 0);
+  assert(t.turno === 2 && t.sentido === -1 && ocho.jugar(t, 0) === null);
+  assert(ocho.jugar({ ...base(['Q♥ 9♥', 'A♠']), n: 2, puntos: [0, 0] }, 0).turno === 0, 'a dos la Q repite');
+  // Sin jugada: roba hasta 3 y pasa.
+  s = base(['K♣', 'A♠', '7♦'], { mazo: cartas('J♠ 10♠ 9♠ 6♠') });
+  assert(!ocho.puedePasar(s) && ocho.puedeRobar(s));
+  t = ocho.robar(ocho.robar(ocho.robar(s)));
+  assert(t.manos[0].length === 4 && t.robadas === 3 && !ocho.puedeRobar(t) && ocho.puedePasar(t));
+  t = ocho.pasar(t);
+  assert(t.turno === 1 && t.robadas === 0);
+  assert(ocho.robar(s).manos[0].length === 2 && ocho.jugables(ocho.robar(ocho.robar(base(['K♣', 'A♠', '7♦'], { mazo: cartas('5♣ 6♠') })))).length === 1, 'la carta robada que sirve se puede jugar');
+  // Mazo vacío: se baraja la pila menos la de arriba.
+  s = base(['K♣', 'A♠', '7♦'], { mazo: [], pila: cartas('3♣ 4♣ 5♥') });
+  t = ocho.robar(s);
+  assert(t.pila.length === 1 && t.manos[0].length === 2 && t.mazo.length === 1);
+  // Cerrar ronda: suma lo de los demás (8 = 50, 2 = 20, K = 10, A = 1).
+  s = base(['9♥', '8♠ 2♣', 'K♦ A♠'], { puntos: [120, 0, 0] });
+  t = ocho.jugar(s, 0);
+  assert(t.puntos[0] === 201 && t.ganador === 0 && t.resumen.suma === 81);
+  s = base(['9♥', 'A♠', '3♦'], { puntos: [0, 0, 0] });
+  t = ocho.jugar(s, 0);
+  assert(t.ganador === null && t.ronda === 2 && t.puntos[0] === 4 && t.manos[0].length === 5 && t.resumen.j === 0);
+  // La máquina guarda el 8, tira lo que más vale y elige su palo.
+  s = base(['8♣ 3♥ K♥', 'A♠', '7♦']);
+  assert(ocho.maquina(s).jugar === 2);
+  s = base(['8♣ 3♠ 4♠ 6♦', 'A♠', '7♦']);
+  assert(JSON.stringify(ocho.maquina(s)) === JSON.stringify({ jugar: 0, palo: '♠' }));
+  assert(ocho.maquina(base(['K♣', 'A♠', '7♦'])).robar);
+  // Una partida entera entre máquinas termina.
+  let p = ocho.nueva(4);
+  for (let i = 0; i < 20000 && p.ganador === null; i++) p = ocho.accion(p, ocho.maquina(p));
+  assert(p.ganador !== null && p.puntos[p.ganador] >= 300, 'la partida termina');
+});

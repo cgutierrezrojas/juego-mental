@@ -14,7 +14,7 @@
 - Jugar una carta del mismo palo o valor que la de arriba.
 - 8: sobre cualquier carta, eliges el palo. 2: el siguiente roba 2 salvo que tire otro 2 (se acumula). J: salta al siguiente. Q: invierte el sentido (a dos: vuelves a jugar).
 - Sin jugada: robas hasta 3; si una sirve la juegas, si no pasas. Mazo vacío: se baraja la pila menos la de arriba.
-- Quien se queda sin cartas suma lo que tienen los demás: 8 = 50, 2 = 20, J/Q/K = 10, As = 1, el resto su número. Gana quien llega a 100.
+- Quien se queda sin cartas suma lo que tienen los demás: 8 = 50, 2 = 20, J/Q/K = 10, As = 1, el resto su número. Gana quien llega a 100 (200 si son tres, 300 si son cuatro, para que haya varias rondas).
 - Máquina: guarda los 8, responde a un 2 con otro, elige el palo del que más tiene.
 
 ## 🧹 Escoba de 15 (baraja española)

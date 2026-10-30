@@ -9,19 +9,21 @@ import * as B from '../games/bacara.js';
 import { leerJSON } from './datos.js';
 import { $, mostrar, confeti, preguntar } from './ui.js';
 import { ligaAnotar } from './liga.js';
+import { abrirJuegoMesa, pintarPartidasCartas } from './cartas-mesa.js';
 
-export const JUEGOS_CARTAS = 3; // para la cuenta del inicio
+export const JUEGOS_CARTAS = 4; // para la cuenta del inicio
 const NOMBRE_PALO = { '♠': 'picas', '♥': 'corazones', '♦': 'diamantes', '♣': 'tréboles' };
 const NOMBRE_VALOR = { 1: 'As', 11: 'J', 12: 'Q', 13: 'K' };
 const reloj = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-let parar = null; // lo que hay que apagar al salir de la partida (el reloj del solitario)
+let parar = null; // lo que hay que apagar al salir de la partida (el reloj del solitario, la máquina o la mesa con un amigo)
 export function pararCartas() {
   parar?.();
   parar = null;
 }
+export const alSalir = (fn) => (parar = fn);
 
-const boton = (texto, clase, alPulsar) => {
+export const boton = (texto, clase, alPulsar) => {
   const b = el('button', clase, texto);
   if (clase.includes('color')) b.style.setProperty('--c', 'var(--rojo)');
   b.onclick = alPulsar;
@@ -29,7 +31,7 @@ const boton = (texto, clase, alPulsar) => {
 };
 
 // Una carta: boca arriba (valor y palo en las esquinas y al centro) o boca abajo (dorso).
-function naipe(c, arriba = true) {
+export function naipe(c, arriba = true) {
   const n = el('button', 'naipe');
   if (!arriba) {
     n.classList.add('dorso');
@@ -54,25 +56,28 @@ const hueco = (texto = '') => {
 
 export function abrirCartas() {
   mostrar('cartas');
+  pintarPartidasCartas();
   const tarjeta = (icono, nombre, alPulsar) => {
     const b = boton('', 'tarjeta color', alPulsar);
     b.append(el('span', 'icono', icono), el('span', '', nombre));
     return b;
   };
-  $('cartas-juegos').replaceChildren(tarjeta('🂡', 'Solitario', abrirSolitario), tarjeta('🃏', '21', abrir21), tarjeta('🎴', 'Bacará', abrirBacara));
+  $('cartas-juegos').replaceChildren(tarjeta('🂡', 'Solitario', abrirSolitario), tarjeta('🃏', '21', abrir21), tarjeta('🎴', 'Bacará', abrirBacara), tarjeta('🎱', 'Ocho locos', () => abrirJuegoMesa('ocho')));
   const filas = [];
   const r = leerJSON('cartas:solitario');
   for (const robo of ['1', '3']) {
     const x = r[robo];
     if (x?.partidas) filas.push(`🂡 De a ${robo}: ${x.ganadas} de ${x.partidas} ganadas${x.ganadas ? ` · mejor ${reloj(x.tiempo)} · ${x.movimientos} movimientos` : ''}`);
   }
+  const ocho = leerJSON('cartas:ocho');
+  if (ocho.partidas) filas.push(`🎱 Ocho locos: ${ocho.ganadas} de ${ocho.partidas} ganadas contra la máquina`);
   const casino = { '🃏 21': leerJSON('cartas:21'), '🎴 Bacará': leerJSON('cartas:bacara') };
   for (const [nombre, x] of Object.entries(casino)) if (x.manos) filas.push(`${nombre}: ${x.ganadas} de ${x.manos} manos ganadas`);
   if (casino['🃏 21'].manos || casino['🎴 Bacará'].manos) filas.push(`🪙 Fichas: ${leerFichas().fichas} · récord ${leerFichas().max}`);
   $('cartas-records').replaceChildren(...(filas.length ? [el('h3', 'categoria', 'Tus récords'), ...filas.map((t) => el('p', 'sin-datos', t))] : []));
 }
 
-const pantalla = (marcador, tapete, botones, aviso = '') => {
+export const pantalla = (marcador, tapete, botones, aviso = '') => {
   mostrar('cartas-juego');
   $('cartas-marcador').replaceChildren(...marcador);
   $('cartas-tapete').replaceChildren(...tapete);
@@ -162,7 +167,7 @@ function ganarSolitario() {
   confeti();
 }
 
-const temblar = (n) => {
+export const temblar = (n) => {
   n.classList.remove('tiembla');
   void n.offsetWidth; // vuelve a empezar la animación
   n.classList.add('tiembla');

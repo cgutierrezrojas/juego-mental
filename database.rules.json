@@ -92,7 +92,7 @@
         ".write": "auth != null && ((!data.exists() && newData.child('jugadores').child('x').val() === auth.uid && root.child('amigos').child(newData.child('jugadores').child('o').val()).child(auth.uid).exists() && !root.child('bloqueos').child(newData.child('jugadores').child('o').val()).child(auth.uid).exists()) || (data.exists() && !newData.exists() && (data.child('jugadores').child('x').val() === auth.uid || data.child('jugadores').child('o').val() === auth.uid)))",
         "estado": {
           ".write": "auth != null && root.child('mesas').child($id).child('jugadores').child(data.child('turno').val()).val() === auth.uid && !root.child('mesas').child($id).child('ganador').exists()",
-          ".validate": "newData.child('turno').isString() && newData.child('turno').val().matches(/^(x|o)$/) && (newData.parent().child('juego').val() === 'ruleta' ? newData.hasChildren(['x', 'o']) : newData.child('celdas').isString() && newData.child('celdas').val().length <= 64)"
+          ".validate": "newData.child('turno').isString() && newData.child('turno').val().matches(/^(x|o)$/) && (newData.parent().child('juego').val() === 'ruleta' ? newData.hasChildren(['x', 'o']) : newData.parent().child('juego').val() === 'ocho' || newData.parent().child('juego').val() === 'escoba' ? newData.child('datos').isString() && newData.child('datos').val().length <= 8000 : newData.child('celdas').isString() && newData.child('celdas').val().length <= 64)"
         },
         "ganador": {
           ".write": "auth != null && !data.exists() && (root.child('mesas').child($id).child('jugadores').child('x').val() === auth.uid || root.child('mesas').child($id).child('jugadores').child('o').val() === auth.uid)",

@@ -1309,3 +1309,24 @@ button.seccion {
 .ficha:disabled { opacity: 0.35; }
 .mano-21.gana { padding: 6px; border-radius: 12px; outline: 3px solid var(--ok); }
 .motivo { margin: 0; text-align: left; font-size: 0.95rem; }
+
+/* S4b: juegos de cartas por turnos */
+.tapete-mesa, .tapete-modos { display: flex; flex-direction: column; gap: 10px; }
+.tapete-modos h2 { margin: 0; }
+.rivales-cartas { display: flex; flex-wrap: wrap; gap: 6px; }
+.rival-cartas { flex: 1 1 30%; display: flex; flex-direction: column; padding: 6px; border: 2px solid color-mix(in srgb, var(--texto) 25%, transparent); border-radius: 10px; font-size: 0.9rem; }
+.rival-cartas.turno { border-color: var(--amarillo); }
+.centro-ocho { display: flex; justify-content: center; align-items: center; gap: 12px; }
+.centro-ocho .naipe { width: 64px; }
+.centro-ocho .naipe .esquina { font-size: 1rem; }
+.centro-ocho .naipe .centro { font-size: 2rem; }
+.info-ocho { display: flex; flex-direction: column; gap: 4px; min-width: 64px; font-weight: 900; font-size: 1.2rem; }
+.palo-pedido.roja, .palo-boton.roja { color: #d1242f; }
+.robar-ocho { color: var(--mal); font-size: 1.6rem; }
+.ultimo-cartas { margin: 0; min-height: 2.6em; font-weight: 700; }
+.mano-cartas { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.mano-cartas .naipe { width: 52px; }
+.mano-cartas .naipe .centro { font-size: 1.6rem; }
+.naipe.sirve { outline: 3px solid var(--ok); outline-offset: 1px; translate: 0 -4px; }
+.palo-boton { font-size: 1.6rem; }
+.puntos-cartas { margin: 0; padding: 0; list-style: none; font-size: 1.2rem; font-weight: 700; }
