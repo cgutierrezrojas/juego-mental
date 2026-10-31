@@ -268,18 +268,10 @@ function carta(n, o) {
       sonar('fallo');
     }
   };
-  n.onpointerdown = (ev) => {
-    if (ev.button) return;
-    const grupo = o.de === 'col' ? [...n.parentNode.children].slice(o.k + 1) : [n];
-    arrastre = { x: ev.clientX, y: ev.clientY, grupo, movido: false };
-    try {
-      n.setPointerCapture(ev.pointerId);
-    } catch {
-      // sin captura el arrastre igual funciona mientras el dedo siga encima
-    }
-  };
-  n.onpointermove = (ev) => {
-    if (!arrastre) return;
+  // El movimiento y el soltar se escuchan en la ventana: la carta arrastrada no recibe eventos
+  // (pointer-events: none) y, si el navegador no la deja capturar el puntero, se quedaba flotando.
+  const mover = (ev) => {
+    if (ev.pointerId !== arrastre.id) return;
     const dx = ev.clientX - arrastre.x;
     const dy = ev.clientY - arrastre.y;
     if (!arrastre.movido && Math.hypot(dx, dy) < 8) return;
@@ -289,20 +281,26 @@ function carta(n, o) {
       g.style.translate = `${dx}px ${dy}px`;
     }
   };
-  n.onpointerup = (ev) => {
-    if (!arrastre?.movido) return;
-    for (const g of arrastre.grupo) g.style.visibility = 'hidden';
-    const sitio = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-destino]');
-    for (const g of arrastre.grupo) g.style.visibility = '';
+  const soltar = (ev) => {
+    if (ev.pointerId !== arrastre.id) return;
+    removeEventListener('pointermove', mover);
+    removeEventListener('pointerup', soltar);
+    removeEventListener('pointercancel', soltar);
+    if (!arrastre.movido) return;
+    const sitio = ev.type === 'pointerup' && document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-destino]');
     const [a, i] = sitio?.dataset.destino.split(':') ?? [];
     if (!a || !jugada(S.mover(sol.e, o, { a, i: Number(i) }))) {
       pintarSolitario();
       if (a) sonar('fallo');
     }
   };
-  n.onpointercancel = () => {
-    arrastre = null;
-    pintarSolitario();
+  n.onpointerdown = (ev) => {
+    if (ev.button) return;
+    const grupo = o.de === 'col' ? [...n.parentNode.children].slice(o.k + 1) : [n];
+    arrastre = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, grupo, movido: false };
+    addEventListener('pointermove', mover);
+    addEventListener('pointerup', soltar);
+    addEventListener('pointercancel', soltar);
   };
   return n;
 }
