@@ -1,0 +1,6 @@
+baraja-espanola.webp
+  Basada en «Baraja española completa» de Basquetteur
+  https://commons.wikimedia.org/wiki/File:Baraja_espa%C3%B1ola_completa.png
+  Licencia CC BY-SA 3.0: https://creativecommons.org/licenses/by-sa/3.0/
+  Cambios: solo las 4 filas de palos, reducida a la mitad y convertida a WebP.
+  Esta versión se comparte con la misma licencia (CC BY-SA 3.0).

@@ -47,7 +47,8 @@ const OCHO = {
 
 const ESCOBA = {
   id: 'escoba', nombre: 'Escoba', icono: '🧹', maxMaquinas: 1, meta: () => ES.META,
-  reglas: 'Baraja española (sota 8, caballo 9, rey 10). Tira una carta: si con cartas de la mesa suma 15, te las llevas; dejar la mesa vacía es escoba. Cada ronda da 1 punto por escoba y 1 a quien tenga más cartas, más oros, más sietes y el 7 de oros. Gana el primero en llegar a 15.',
+  credito: 'Cartas: <a href="https://commons.wikimedia.org/wiki/File:Baraja_espa%C3%B1ola_completa.png" target="_blank" rel="noopener">Baraja española completa</a> de <a href="https://commons.wikimedia.org/wiki/User:Basquetteur" target="_blank" rel="noopener">Basquetteur</a>, <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.es" target="_blank" rel="noopener">CC BY-SA 3.0</a> (reducida).',
+  reglas: 'Baraja española: la sota (10) vale 8, el caballo (11) vale 9 y el rey (12) vale 10. Tira una carta: si con cartas de la mesa suma 15, te las llevas; dejar la mesa vacía es escoba. Cada ronda da 1 punto por escoba y 1 a quien tenga más cartas, más oros, más sietes y el 7 de oros. Gana el primero en llegar a 15.',
   nueva: () => ES.nueva(),
   maquina: (e) => ES.accion(e, ES.maquina(e)),
   pintar: pintarEscoba,
@@ -113,30 +114,12 @@ function pintarOcho(e, quien, miTurno, actuar) {
   };
 }
 
-// Carta española dibujada: del 1 al 7, tantas pintas como su número (repartidas como en la baraja);
-// la sota, el caballo y el rey con su figura y su pinta. El color del marco y del número sale del palo.
-const PINTAS = {
-  oros: '<circle cx="12" cy="12" r="10" fill="#f2b705" stroke="#8a5a00" stroke-width="1.6"/><circle cx="12" cy="12" r="5.6" fill="none" stroke="#8a5a00" stroke-width="1.4"/><circle cx="12" cy="12" r="1.6" fill="#8a5a00"/>',
-  copas: '<path d="M5 2h14c0 7-3 10-6 11v5h4v4H7v-4h4v-5C8 12 5 9 5 2z" fill="#d1242f" stroke="#7a1218" stroke-width="1.2"/><path d="M7.5 4.5h9" stroke="#f2b705" stroke-width="1.4"/>',
-  espadas: '<path d="M11 1h2l.9 14h-3.8z" fill="#b9cbe4" stroke="#1f5fbf" stroke-width="1.1"/><rect x="5" y="14.6" width="14" height="2.6" rx="1.2" fill="#1f5fbf"/><rect x="10.8" y="17.2" width="2.4" height="4.2" fill="#8a5a00"/><circle cx="12" cy="22.4" r="1.5" fill="#1f5fbf"/>',
-  bastos: '<path d="M10 23 8.2 8C7.3 2.5 16.7 2.5 15.8 8L14 23z" fill="#b5762f" stroke="#2e7d32" stroke-width="1.3"/><circle cx="10.6" cy="7.5" r="1.2" fill="#2e7d32"/><circle cx="13.6" cy="11.5" r="1.1" fill="#2e7d32"/><circle cx="11.2" cy="16" r="1" fill="#2e7d32"/>',
-};
-// Dónde va cada pinta (x %, y %) según el número.
-const SITIOS = {
-  1: [[50, 56]], 2: [[50, 30], [50, 80]], 3: [[50, 27], [50, 55], [50, 83]],
-  4: [[34, 32], [66, 32], [34, 80], [66, 80]], 5: [[34, 32], [66, 32], [50, 56], [34, 80], [66, 80]],
-  6: [[34, 30], [66, 30], [34, 56], [66, 56], [34, 82], [66, 82]], 7: [[34, 24], [66, 24], [50, 40], [34, 57], [66, 57], [34, 84], [66, 84]],
-};
-const FIGURA = { 8: '💂', 9: '🏇', 10: '🤴' };
-const svgPinta = (p, x, y, ancho) => `<svg viewBox="0 0 24 24" style="left:${x}%;top:${y}%;width:${ancho}%">${PINTAS[p]}</svg>`;
-
+// Carta española: un recorte de img/baraja-espanola.webp («Baraja española completa» de Basquetteur, CC BY-SA 3.0,
+// reducida). Filas: oros, copas, espadas, bastos; columnas: 1 a 12 (la sota es el 10, el caballo el 11 y el rey el 12).
 function naipeEs(c) {
-  const n = el('button', `naipe espanola ${c.p}`);
-  const dibujo = el('span', 'pintas');
-  dibujo.setAttribute('aria-hidden', 'true');
-  if (c.v <= 7) dibujo.innerHTML = SITIOS[c.v].map(([x, y]) => svgPinta(c.p, x, y, (c.v === 1 ? 62 : c.v <= 3 ? 36 : c.v === 7 ? 25 : 30) * (c.p === 'bastos' ? 1.35 : c.p === 'espadas' ? 1.2 : 1))).join('');
-  else dibujo.innerHTML = `<span class="figura">${FIGURA[c.v]}</span>${svgPinta(c.p, 72, 78, 34)}`;
-  n.append(el('span', 'esquina', ES.VALOR_ES[c.v - 1]), dibujo);
+  const n = el('button', 'naipe espanola');
+  n.style.setProperty('--col', c.v <= 7 ? c.v - 1 : c.v + 1);
+  n.style.setProperty('--fila', ES.PALOS_ES.indexOf(c.p));
   n.setAttribute('aria-label', ES.nombreLargo(c));
   return n;
 }
@@ -189,6 +172,11 @@ export function abrirJuegoMesa(id) {
   const J = juegoDe(id);
   const r = leerJSON(`cartas:${J.id}`);
   const partes = [el('h2', '', `${J.icono} ${J.nombre}`), el('p', 'sin-datos', J.reglas)];
+  if (J.credito) {
+    const credito = el('p', 'credito-cartas');
+    credito.innerHTML = J.credito;
+    partes.push(credito);
+  }
   if (r.partidas) partes.push(el('p', 'sin-datos', `Contra la máquina: ${r.ganadas} de ${r.partidas} ganadas`));
   partes.push(el('h3', 'categoria', '🤖 Contra la máquina'));
   if (J.maxMaquinas > 1) {

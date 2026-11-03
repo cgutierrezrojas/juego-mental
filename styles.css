@@ -1333,16 +1333,12 @@ button.seccion {
 .mesa-escoba { display: flex; flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px; min-height: 92px; padding: 8px; border-radius: 12px; background: color-mix(in srgb, var(--ok) 14%, transparent); }
 .mesa-escoba .naipe { width: 52px; }
 .mesa-escoba .naipe .centro { font-size: 1.6rem; }
-/* Baraja española: el marco y el número toman el color del palo. */
-.naipe.espanola { box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--palo) 45%, #fff); }
-.naipe.espanola .esquina { color: var(--palo); font-size: 1rem; }
-.naipe.espanola .pintas { position: absolute; inset: 0; pointer-events: none; }
-.naipe.espanola .pintas svg { position: absolute; translate: -50% -50%; height: auto; }
-.naipe.espanola .figura { position: absolute; left: 50%; top: 52%; translate: -50% -50%; font-size: 2.1rem; line-height: 1; }
-.naipe.oros { --palo: #a86b00; }
-.naipe.copas { --palo: #c0262d; }
-.naipe.espadas { --palo: #1f5fbf; }
-.naipe.bastos { --palo: #2e7d32; }
+/* Baraja española: cada carta es un recorte del sprite (12 columnas × 4 filas). */
+.naipe.espanola {
+  aspect-ratio: 208 / 319; border: none; border-radius: 5px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  background: url(img/baraja-espanola.webp) calc(var(--col) * 100% / 11) calc(var(--fila) * 100% / 3) / 1200% 400% no-repeat;
+}
+.credito-cartas { margin: 0; font-size: 0.8rem; opacity: 0.75; }
 .tabla-escoba { width: 100%; border-collapse: collapse; font-size: 1rem; }
 .tabla-escoba th, .tabla-escoba td { padding: 6px 4px; border-bottom: 1px solid color-mix(in srgb, var(--texto) 20%, transparent); text-align: center; }
 .tabla-escoba td:first-child { text-align: left; }
