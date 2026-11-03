@@ -9,7 +9,7 @@ import * as B from '../games/bacara.js';
 import { leerJSON } from './datos.js';
 import { $, mostrar, confeti, preguntar } from './ui.js';
 import { ligaAnotar } from './liga.js';
-import { abrirJuegoMesa, pintarPartidasCartas } from './cartas-mesa.js';
+import { abrirJuegoMesa, pintarPartidasCartas, claveRecord } from './cartas-mesa.js';
 
 export const JUEGOS_CARTAS = 5; // para la cuenta del inicio
 const NOMBRE_PALO = { '♠': 'picas', '♥': 'corazones', '♦': 'diamantes', '♣': 'tréboles' };
@@ -69,10 +69,12 @@ export function abrirCartas() {
     const x = r[robo];
     if (x?.partidas) filas.push(`🂡 De a ${robo}: ${x.ganadas} de ${x.partidas} ganadas${x.ganadas ? ` · mejor ${reloj(x.tiempo)} · ${x.movimientos} movimientos` : ''}`);
   }
-  const ocho = leerJSON('cartas:ocho');
-  if (ocho.partidas) filas.push(`🎱 Ocho locos: ${ocho.ganadas} de ${ocho.partidas} ganadas contra la máquina`);
-  const escoba = leerJSON('cartas:escoba');
-  if (escoba.partidas) filas.push(`🧹 Escoba: ${escoba.ganadas} de ${escoba.partidas} ganadas contra la máquina`);
+  for (const [id, nombre] of [['ocho', '🎱 Ocho locos'], ['escoba', '🧹 Escoba']]) {
+    for (const [nv, t] of [['normal', ''], ['dificil', ' (difícil)']]) {
+      const x = leerJSON(claveRecord(id, nv));
+      if (x.partidas) filas.push(`${nombre}${t}: ${x.ganadas} de ${x.partidas} ganadas contra la máquina`);
+    }
+  }
   const casino = { '🃏 21': leerJSON('cartas:21'), '🎴 Bacará': leerJSON('cartas:bacara') };
   for (const [nombre, x] of Object.entries(casino)) if (x.manos) filas.push(`${nombre}: ${x.ganadas} de ${x.manos} manos ganadas`);
   if (casino['🃏 21'].manos || casino['🎴 Bacará'].manos) filas.push(`🪙 Fichas: ${leerFichas().fichas} · récord ${leerFichas().max}`);

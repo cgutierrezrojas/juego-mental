@@ -24,7 +24,7 @@ function repartir(e, rnd) {
   const manos = Array.from({ length: e.n }, () => mazo.splice(-cuantas));
   const pila = [mazo.pop()];
   const ronda = e.ronda + 1;
-  return { ...e, manos, mazo, pila, palo: pila[0].p, sentido: 1, turno: ronda % e.n, robar: 0, robadas: 0, ronda, aviso: null };
+  return { ...e, manos, mazo, pila, palo: pila[0].p, sentido: 1, turno: ronda % e.n, robar: 0, robadas: 0, ronda, aviso: null, sinPalo: Array.from({ length: e.n }, () => []) };
 }
 
 export const puedeJugar = (e, c) => (e.robar ? c.v === 2 : c.v === 8 || c.p === e.palo || c.v === arriba(e).v);
@@ -39,6 +39,7 @@ export function jugar(e, i, palo, rnd = Math.random) {
   s.pila.push(c);
   s.palo = c.v === 8 ? palo : c.p;
   s.robadas = 0;
+  if (s.sinPalo) s.sinPalo[s.turno] = s.sinPalo[s.turno].filter((x) => x !== c.p);
   s.aviso = { j: s.turno, t: c.v === 8 ? `tiró un 8 y pide ${palo}` : `tiró ${nombre(c)}` };
   if (!s.manos[s.turno].length) return cerrarRonda(s, rnd);
   let pasos = 1;
@@ -80,6 +81,7 @@ export function robar(e, rnd = Math.random) {
     return s;
   }
   s.manos[s.turno].push(sacar(s, rnd));
+  if (!s.robadas) (s.sinPalo ??= Array.from({ length: s.n }, () => []))[s.turno].push(s.palo); // se ve que no tenía
   s.robadas++;
   s.aviso = { j: s.turno, t: 'roba una carta' };
   return s;
@@ -110,7 +112,8 @@ function cerrarRonda(s, rnd) {
 }
 
 // 🤖 Lo que haría la máquina: { jugar: i, palo } | { robar: true } | { pasar: true }.
-export function maquina(e) {
+export function maquina(e, nivel = 'normal') {
+  if (nivel === 'dificil') return maquinaDificil(e);
   const mano = e.manos[e.turno];
   const opciones = jugables(e);
   if (opciones.length) {
@@ -124,6 +127,42 @@ export function maquina(e) {
     return { jugar: i, palo };
   }
   return puedeRobar(e) ? { robar: true } : { pasar: true };
+}
+
+// 🤖 Difícil: le deja al siguiente la carta que menos probable es que pueda seguir (cuenta las que no vio, y recuerda
+// los palos que le faltaban cuando tuvo que robar); guarda los 8 y, si el siguiente está por ganar, lo ataca con 2, J o Q.
+function maquinaDificil(e) {
+  const mano = e.manos[e.turno];
+  const opciones = jugables(e);
+  if (!opciones.length) return puedeRobar(e) ? { robar: true } : { pasar: true };
+  const otro = siguiente(e);
+  const h = e.manos[otro].length;
+  const vistas = new Set([...mano, ...e.pila].map((c) => c.v + c.p));
+  const ocultas = baraja(() => 0).filter((c) => !vistas.has(c.v + c.p));
+  const leFalta = (palo) => e.sinPalo?.[otro]?.includes(palo) ?? false;
+  // Probabilidad de que el siguiente tenga con qué seguir sobre (palo, valor).
+  const puedeSeguir = (palo, v) => {
+    const m = ocultas.filter((c) => c.v === 8 || c.v === v || (c.p === palo && !leFalta(palo))).length;
+    let nada = 1;
+    for (let x = 0; x < h; x++) nada *= Math.max(0, ocultas.length - m - x) / (ocultas.length - x);
+    return 1 - nada;
+  };
+  const plan = (i) => {
+    const c = mano[i];
+    const resto = mano.filter((_, x) => x !== i);
+    if (!resto.length) return { nota: 1e6, palo: c.p };
+    // Con un 8, el palo que menos puede seguir el otro entre los que tengo.
+    const palos = c.v === 8 ? [...new Set(resto.filter((r) => r.v !== 8).map((r) => r.p))] : [c.p];
+    if (!palos.length) palos.push(c.p);
+    const palo = palos.reduce((a, b) => (puedeSeguir(b, 0) < puedeSeguir(a, 0) ? b : a));
+    let nota = -100 * puedeSeguir(palo, c.v === 8 ? 0 : c.v) + 3 * resto.filter((r) => r.v === 8 || r.p === palo).length + (c.v === 8 ? -30 : valorCarta(c) / 5);
+    if (e.n === 2 && (c.v === 11 || c.v === 12)) nota += 40; // a dos, vuelve a jugar
+    if (h <= 2 && (c.v === 2 || c.v === 11 || (c.v === 12 && e.n > 2))) nota += 40;
+    return { nota, palo };
+  };
+  const planes = opciones.map((i) => ({ i, ...plan(i) }));
+  const mejor = planes.reduce((a, b) => (b.nota > a.nota ? b : a));
+  return mano[mejor.i].v === 8 ? { jugar: mejor.i, palo: mejor.palo } : { jugar: mejor.i };
 }
 
 // Aplica una acción de `maquina` (o de quien sea).

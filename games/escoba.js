@@ -37,12 +37,12 @@ function repartir(e, rnd) {
 }
 
 // Las formas de llevarse cartas con la carta `i` de la mano: listas de índices de la mesa que con ella suman 15.
-export function opciones(e, i) {
-  const falta = 15 - e.manos[e.turno][i].v;
+export const opciones = (e, i) => formasDe(e.mesa, 15 - e.manos[e.turno][i].v);
+function formasDe(mesa, falta) {
   const formas = [];
   const buscar = (desde, quedan, elegidas) => {
     if (!quedan && elegidas.length) return formas.push(elegidas);
-    for (let x = desde; x < e.mesa.length; x++) if (e.mesa[x].v <= quedan) buscar(x + 1, quedan - e.mesa[x].v, [...elegidas, x]);
+    for (let x = desde; x < mesa.length; x++) if (mesa[x].v <= quedan) buscar(x + 1, quedan - mesa[x].v, [...elegidas, x]);
   };
   buscar(0, falta, []);
   return formas;
@@ -107,13 +107,53 @@ function cerrarRonda(s, rnd) {
 // 🤖 La máquina: si se puede llevar algo, lo que más vale (escoba, 7 de oros, sietes, oros); si no, tira lo que menos
 // vale cuidando no dejar la mesa entre 5 y 14 (el otro haría escoba con una sola carta).
 const precio = (c) => 1 + (c.p === 'oros' ? 3 : 0) + (c.v === 7 ? 4 : 0) + (c.v === 7 && c.p === 'oros' ? 20 : 0);
-export function maquina(e) {
+export function maquina(e, nivel = 'normal') {
+  if (nivel === 'dificil') return maquinaDificil(e);
   let mejor = null;
   e.manos[e.turno].forEach((c, i) => {
     const formas = opciones(e, i);
     const jugadas = formas.length
       ? formas.map((t, k) => ({ jugar: i, k, nota: 1000 + (t.length === e.mesa.length ? 100 : 0) + precio(c) + t.reduce((s, x) => s + precio(e.mesa[x]), 0) }))
       : [{ jugar: i, k: 0, nota: -2 * precio(c) - (suma(e.mesa) + c.v >= 5 && suma(e.mesa) + c.v <= 14 ? 50 : 0) + c.v / 100 }];
+    for (const j of jugadas) if (!mejor || j.nota > mejor.nota) mejor = j;
+  });
+  return { jugar: mejor.jugar, k: mejor.k };
+}
+
+// 🤖 Difícil: lleva la cuenta de las cartas que ya salieron (la mano propia, la mesa y lo llevado) y, para cada jugada,
+// resta lo peor que podría llevarse el otro con la mesa que queda, según la probabilidad de que tenga cada número.
+const peso = (c) => 0.5 + (c.p === 'oros' ? 1 : 0) + (c.v === 7 ? 2 : 0) + (c.v === 7 && c.p === 'oros' ? 6 : 0);
+const ESCOBA = 10;
+function maquinaDificil(e) {
+  const yo = e.turno;
+  const vistas = new Set([...e.manos[yo], ...e.mesa, ...e.llevadas.flat()].map((c) => c.v + c.p));
+  const ocultas = barajaEs(() => 0).filter((c) => !vistas.has(c.v + c.p));
+  const h = e.manos[1 - yo].length || (e.mazo.length ? 3 : 0);
+  // Probabilidad de que el otro tenga al menos un `v` (sus h cartas salen de las ocultas).
+  const tiene = (v) => {
+    const m = ocultas.filter((c) => c.v === v).length;
+    let nada = 1;
+    for (let x = 0; x < h; x++) nada *= Math.max(0, ocultas.length - m - x) / (ocultas.length - x);
+    return 1 - nada;
+  };
+  const prob = Array.from({ length: 11 }, (_, v) => (v ? tiene(v) : 0));
+  const peligro = (mesa) => {
+    let peor = 0;
+    for (let v = 1; v <= 10; v++) {
+      if (!prob[v]) continue;
+      for (const t of formasDe(mesa, 15 - v)) peor = Math.max(peor, prob[v] * (t.reduce((s, x) => s + peso(mesa[x]), 0) + (t.length === mesa.length ? ESCOBA : 0)));
+    }
+    return peor;
+  };
+  let mejor = null;
+  e.manos[yo].forEach((c, i) => {
+    const formas = opciones(e, i);
+    const jugadas = formas.length
+      ? formas.map((t, k) => {
+          const queda = e.mesa.filter((_, x) => !t.includes(x));
+          return { jugar: i, k, nota: peso(c) + t.reduce((s, x) => s + peso(e.mesa[x]), 0) + (queda.length ? 0 : ESCOBA) - peligro(queda) };
+        })
+      : [{ jugar: i, k: 0, nota: -peligro([...e.mesa, c]) - peso(c) / 2 }];
     for (const j of jugadas) if (!mejor || j.nota > mejor.nota) mejor = j;
   });
   return { jugar: mejor.jugar, k: mejor.k };

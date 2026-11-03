@@ -22,6 +22,10 @@ const FICHA = ['x', 'o'];
 // nombres, vista (a dos: de quién son las cartas a la vista), visto (última ronda cuyo resumen se vio), id, mesa, apuntada, timer }
 let p = null;
 let maquinas = 1; // rivales elegidos en el Ocho locos
+let nivel = 'normal'; // 'normal' | 'dificil', contra la máquina
+const NIVELES = { normal: 'Normal', dificil: 'Difícil' };
+// Récord contra la máquina por nivel: `cartas:ocho`, `cartas:ocho-dificil`…
+export const claveRecord = (id, nv) => `cartas:${id}${nv === 'dificil' ? '-dificil' : ''}`;
 
 function pararPartida() {
   clearTimeout(p?.timer);
@@ -35,7 +39,7 @@ const OCHO = {
   id: 'ocho', nombre: 'Ocho locos', icono: '🎱', maxMaquinas: 3, meta: (e) => O.meta(e.n),
   reglas: 'Tira una carta del mismo palo o número. El 8 cambia el palo; el 2 hace robar 2 (se acumulan); la J salta al siguiente; la Q cambia el sentido. Sin jugada robas hasta 3. Quien se queda sin cartas suma lo que tienen los demás: gana el primero en llegar a 100 (200 si son tres, 300 si son cuatro).',
   nueva: (n) => O.nueva(n),
-  maquina: (e) => O.accion(e, O.maquina(e)),
+  maquina: (e, nv) => O.accion(e, O.maquina(e, nv)),
   pintar: pintarOcho,
   resumen: (e) => [
     el('p', 'turno-trivia', `${p.nombres[e.resumen.j] === 'Tú' ? '🎉 Ganaste' : `Gana ${p.nombres[e.resumen.j]}`} la ronda ${e.resumen.ronda}`),
@@ -50,7 +54,7 @@ const ESCOBA = {
   credito: 'Cartas: <a href="https://commons.wikimedia.org/wiki/File:Baraja_espa%C3%B1ola_completa.png" target="_blank" rel="noopener">Baraja española completa</a> de <a href="https://commons.wikimedia.org/wiki/User:Basquetteur" target="_blank" rel="noopener">Basquetteur</a>, <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.es" target="_blank" rel="noopener">CC BY-SA 3.0</a> (reducida).',
   reglas: 'Baraja española: la sota (10) vale 8, el caballo (11) vale 9 y el rey (12) vale 10. Tira una carta: si con cartas de la mesa suma 15, te las llevas; dejar la mesa vacía es escoba. Cada ronda da 1 punto por escoba y 1 a quien tenga más cartas, más oros, más sietes y el 7 de oros. Gana el primero en llegar a 15.',
   nueva: () => ES.nueva(),
-  maquina: (e) => ES.accion(e, ES.maquina(e)),
+  maquina: (e, nv) => ES.accion(e, ES.maquina(e, nv)),
   pintar: pintarEscoba,
   resumen: (e) => {
     const r = e.resumen;
@@ -170,29 +174,21 @@ export function abrirJuegoMesa(id) {
   alSalir(pararPartida);
   pararPartida();
   const J = juegoDe(id);
-  const r = leerJSON(`cartas:${J.id}`);
   const partes = [el('h2', '', `${J.icono} ${J.nombre}`), el('p', 'sin-datos', J.reglas)];
   if (J.credito) {
     const credito = el('p', 'credito-cartas');
     credito.innerHTML = J.credito;
     partes.push(credito);
   }
-  if (r.partidas) partes.push(el('p', 'sin-datos', `Contra la máquina: ${r.ganadas} de ${r.partidas} ganadas`));
+  for (const nv of Object.keys(NIVELES)) {
+    const r = leerJSON(claveRecord(J.id, nv));
+    if (r.partidas) partes.push(el('p', 'sin-datos', `Contra la máquina (${NIVELES[nv]}): ${r.ganadas} de ${r.partidas} ganadas`));
+  }
   partes.push(el('h3', 'categoria', '🤖 Contra la máquina'));
+  partes.push(fila('Nivel', Object.entries(NIVELES).map(([nv, t]) => [t, t, nv === nivel, () => (nivel = nv)])));
   if (J.maxMaquinas > 1) {
-    const fila = el('div', 'opciones-ajuste');
-    fila.setAttribute('role', 'group');
-    fila.setAttribute('aria-label', 'Cuántas máquinas');
-    for (let n = 1; n <= J.maxMaquinas; n++) {
-      const b = boton(`${n} 🤖`, '', () => {
-        maquinas = n;
-        for (const x of fila.children) x.setAttribute('aria-pressed', String(x === b));
-      });
-      b.setAttribute('aria-pressed', String(n === maquinas));
-      b.setAttribute('aria-label', `${n} ${n === 1 ? 'máquina' : 'máquinas'}`);
-      fila.append(b);
-    }
-    partes.push(fila);
+    const opciones = Array.from({ length: J.maxMaquinas }, (_, i) => [`${i + 1} 🤖`, `${i + 1} ${i ? 'máquinas' : 'máquina'}`, i + 1 === maquinas, () => (maquinas = i + 1)]);
+    partes.push(fila('Cuántas máquinas', opciones));
   }
   partes.push(
     boton('▶ Jugar contra la máquina', 'color', () => empezar(J, 'maquina', J.maxMaquinas > 1 ? maquinas + 1 : 2)),
@@ -205,6 +201,23 @@ export function abrirJuegoMesa(id) {
   pantalla([], partes, [boton('Volver', '', abrirCartas)]);
   $('cartas-tapete').className = 'tapete-modos';
   pintarAmigos(J, amigos);
+}
+
+// Una fila de botones donde se elige uno: opciones = [[texto, etiqueta, elegido, alElegir]].
+function fila(nombre, opciones) {
+  const caja = el('div', 'opciones-ajuste');
+  caja.setAttribute('role', 'group');
+  caja.setAttribute('aria-label', nombre);
+  for (const [texto, etiqueta, elegido, alElegir] of opciones) {
+    const b = boton(texto, '', () => {
+      alElegir();
+      for (const x of caja.children) x.setAttribute('aria-pressed', String(x === b));
+    });
+    b.setAttribute('aria-pressed', String(elegido));
+    b.setAttribute('aria-label', etiqueta);
+    caja.append(b);
+  }
+  return caja;
 }
 
 async function pintarAmigos(J, caja) {
@@ -246,7 +259,7 @@ export async function pintarPartidasCartas() {
 function empezar(J, modo, n) {
   pararPartida();
   const nombres = modo === 'local' ? ['Jugador 1', 'Jugador 2'] : ['Tú', ...Array.from({ length: n - 1 }, (_, i) => (n > 2 ? `🤖 Máquina ${i + 1}` : '🤖 Máquina'))];
-  p = { J, modo, e: J.nueva(n), yo: 0, nombres, vista: null, visto: 0, apuntada: false };
+  p = { J, modo, nivel, e: J.nueva(n), yo: 0, nombres, vista: null, visto: 0, apuntada: false };
   alSalir(pararPartida);
   pintar();
 }
@@ -331,7 +344,7 @@ function pintar() {
   botones.push(boton('Salir', '', abrirCartas));
   pantalla(vista.marcador, vista.tapete, botones);
   $('cartas-tapete').className = 'tapete-mesa';
-  if (!humano) p.timer = setTimeout(() => actuar(J.maquina(p.e)), 900);
+  if (!humano) p.timer = setTimeout(() => actuar(J.maquina(p.e, p.nivel)), 900);
 }
 
 async function rendirse() {
@@ -360,8 +373,8 @@ function pintarFin(g) {
   if (!p.apuntada) {
     p.apuntada = true;
     if (p.modo === 'maquina') {
-      const r = leerJSON(`cartas:${p.J.id}`);
-      guardar(`cartas:${p.J.id}`, JSON.stringify({ partidas: (r.partidas ?? 0) + 1, ganadas: (r.ganadas ?? 0) + (gane ? 1 : 0) }));
+      const r = leerJSON(claveRecord(p.J.id, p.nivel));
+      guardar(claveRecord(p.J.id, p.nivel), JSON.stringify({ partidas: (r.partidas ?? 0) + 1, ganadas: (r.ganadas ?? 0) + (gane ? 1 : 0) }));
     }
     if (p.modo === 'amigo') apuntarResultadoAmigo(p.id, gane ? 'v' : 'd');
     else ligaAnotar('partida');

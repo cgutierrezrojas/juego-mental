@@ -1221,6 +1221,20 @@ probar('ocho locos: jugar, especiales, robar, pasar y rondas', () => {
   let p = ocho.nueva(4);
   for (let i = 0; i < 20000 && p.ganador === null; i++) p = ocho.accion(p, ocho.maquina(p));
   assert(p.ganador !== null && p.puntos[p.ganador] >= 300, 'la partida termina');
+  // Difícil: recuerda el palo que le faltaba al que robó y se lo deja; con un 8 pide ese palo.
+  s = base(['K♣', 'A♠', '7♦'], { mazo: cartas('J♠ 10♠ 9♠ 6♠') });
+  assert(ocho.robar(s).sinPalo[0].join() === '♥', 'robó sin tener ♥');
+  t = base(['8♥ 4♣ 5♦', '9♠ 10♠'], { n: 2, puntos: [0, 0], sinPalo: [[], []] });
+  t.pila = cartas('3♣');
+  t.palo = '♣';
+  assert(ocho.maquina(t, 'dificil').jugar === 1, 'guarda el 8');
+  t = base(['8♥ 5♦ 6♣', '9♠ 10♠'], { n: 2, puntos: [0, 0], sinPalo: [[], ['♦']] });
+  t.pila = cartas('3♥');
+  t.palo = '♥';
+  assert(JSON.stringify(ocho.maquina(t, 'dificil')) === JSON.stringify({ jugar: 0, palo: '♦' }), 'pide el palo que le falta');
+  p = ocho.nueva(3);
+  for (let i = 0; i < 20000 && p.ganador === null; i++) p = ocho.accion(p, ocho.maquina(p, 'dificil'));
+  assert(p.ganador !== null, 'una partida entre difíciles termina');
 });
 
 import * as esc from './games/escoba.js';
@@ -1263,4 +1277,10 @@ probar('escoba: llevarse 15, escoba, repartir y puntos', () => {
   for (let i = 0; i < 20000 && p.ganador === null; i++) p = esc.accion(p, esc.maquina(p));
   assert(p.ganador !== null && p.puntos[p.ganador] >= 15, 'la partida termina');
   assert(JSON.stringify(esc.nueva()).length < 8000, 'cabe en la regla de la base');
+  // Difícil: escoba si puede; sin llevarse nada, no deja la mesa en 5–14 (escoba fácil para el otro).
+  assert(esc.maquina(base(['1c 5o', ''], 'Rb'), 'dificil').jugar === 1);
+  assert(esc.maquina(base(['1c 2b', '4e'], '3c'), 'dificil').jugar === 0);
+  p = esc.nueva();
+  for (let i = 0; i < 20000 && p.ganador === null; i++) p = esc.accion(p, esc.maquina(p, 'dificil'));
+  assert(p.ganador !== null, 'una partida entre difíciles termina');
 });
