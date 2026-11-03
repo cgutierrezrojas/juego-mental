@@ -50,6 +50,7 @@ export function mover(e, o, d) {
   const desde = o.de === 'descarte' ? s.descarte : o.de === 'pila' ? s.pilas[o.i] : s.columnas[o.i];
   const cartas = desde.splice(-n);
   if (o.de === 'col' && desde.length) ultima(desde).a = true;
+  for (const c of cartas) c.a = true; // las del mazo no traen `a`: sin esto se veían tapadas en la columna
   (d.a === 'pila' ? s.pilas[d.i] : s.columnas[d.i]).push(...cartas);
   s.movimientos++;
   return s;

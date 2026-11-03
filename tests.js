@@ -1084,6 +1084,7 @@ probar('solitario: repartir, robar y mover', () => {
   assert(!sol.cartasDe(t, { de: 'col', i: 0, k: 0 }), 'boca abajo no se toma');
   const m = sol.mover(t, { de: 'descarte' }, { a: 'col', i: 0 });
   assert(m.columnas[0].length === 3 && !m.descarte.length && m.movimientos === 1);
+  assert(m.columnas[0].at(-1).a === true, 'la carta del mazo queda boca arriba en la columna');
   assert(t.descarte.length === 1, 'no cambia el estado original');
   assert(sol.mover(m, { de: 'col', i: 3, k: 0 }, { a: 'pila', i: 0 }) === null, 'el A♥ no va a la pila de ♠');
   const p = sol.mover(m, { de: 'col', i: 3, k: 0 }, { a: 'pila', i: 1 });

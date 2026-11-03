@@ -94,6 +94,8 @@ const guardarSol = () => guardar('solitario-partida', sol ? JSON.stringify(sol) 
 function abrirSolitario() {
   try {
     sol = JSON.parse(leer('solitario-partida'));
+    // Partidas guardadas antes del arreglo: una carta sin `a` en una columna vino del mazo y va boca arriba.
+    for (const e of [sol.e, ...sol.historia]) for (const col of e.columnas) for (const c of col) c.a ??= true;
   } catch {
     sol = null;
   }
