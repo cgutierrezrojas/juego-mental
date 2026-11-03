@@ -1339,6 +1339,28 @@ button.seccion {
   background: url(img/baraja-espanola.webp) calc(var(--col) * 100% / 11) calc(var(--fila) * 100% / 3) / 1200% 400% no-repeat;
 }
 .credito-cartas { margin: 0; font-size: 0.8rem; opacity: 0.75; }
+/* Carioca */
+.naipe.comodin { color: #7b2cbf; }
+.naipe.elegida { translate: 0 -8px; outline: 3px solid var(--amarillo); outline-offset: 1px; }
+.mano-carioca .naipe { width: 42px; }
+.mano-carioca .naipe .centro { font-size: 1.3rem; }
+.mesa-carioca { display: flex; flex-wrap: wrap; gap: 6px; }
+.centro-carioca .naipe, .centro-carioca .hueco-carta { width: 46px; }
+.centro-carioca .naipe .centro { font-size: 1.4rem; }
+.juego-carioca { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 4px 6px; font-size: 0.75rem; border: 2px solid color-mix(in srgb, var(--texto) 20%, transparent); border-radius: 10px; background: none; color: inherit; font: inherit; text-align: left; }
+.juego-carioca.sirve { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 12%, transparent); }
+.cartas-juego-carioca { display: flex; flex-wrap: wrap; gap: 2px; }
+.cartas-juego-carioca .naipe { width: 34px; }
+.cartas-juego-carioca .naipe .centro { font-size: 1.1rem; }
+.cartas-juego-carioca.chica { flex-wrap: nowrap; gap: 0; }
+.cartas-juego-carioca.chica .naipe { width: 26px; margin-right: -4px; }
+.cartas-juego-carioca.chica .naipe .esquina { font-size: 0.7rem; }
+.cartas-juego-carioca.chica .naipe .centro { font-size: 0.85rem; }
+.rondas-carioca { margin: 0; padding-left: 1.4em; }
+.rondas-carioca li { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.quitar-ronda { padding: 2px 10px; }
+.catalogo-carioca { display: flex; flex-wrap: wrap; gap: 6px; }
+.catalogo-carioca button { padding: 6px 10px; font-size: 0.85rem; }
 .tabla-escoba { width: 100%; border-collapse: collapse; font-size: 1rem; }
 .tabla-escoba th, .tabla-escoba td { padding: 6px 4px; border-bottom: 1px solid color-mix(in srgb, var(--texto) 20%, transparent); text-align: center; }
 .tabla-escoba td:first-child { text-align: left; }

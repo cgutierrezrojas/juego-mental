@@ -1284,3 +1284,104 @@ probar('escoba: llevarse 15, escoba, repartir y puntos', () => {
   for (let i = 0; i < 20000 && p.ganador === null; i++) p = esc.accion(p, esc.maquina(p, 'dificil'));
   assert(p.ganador !== null, 'una partida entre difíciles termina');
 });
+
+import * as rm from './games/rummy.js';
+
+probar('rummy: tríos, escalas con vuelta, comodines, agregar, cambiar y bajar', () => {
+  // '*' es un comodín.
+  const cs = (t) => t.split(' ').map((x) => (x === '*' ? { ...rm.COMODIN } : carta(x)));
+  const nombres = (j) => j.cartas.map((c) => (c.v ? `${['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'][c.v - 1]}${c.p}` : '*')).join(' ');
+  assert(rm.armar('T', cs('7♥ 7♠ 7♥')) && rm.armar('T', cs('7♥ 7♠ *')) && !rm.armar('T', cs('7♥ * *')) && !rm.armar('T', cs('7♥ 8♠ 7♦')));
+  assert(!rm.armar('T', cs('7♥ 7♠')), 'trío de 3 o más');
+  let j = rm.armar('E', cs('6♥ 4♥ 5♥ 7♥'));
+  assert(j && j.inicio === 4 && nombres(j) === '4♥ 5♥ 6♥ 7♥');
+  assert(nombres(rm.armar('E', cs('A♥ K♥ Q♥ 2♥'))) === 'Q♥ K♥ A♥ 2♥', 'da la vuelta por el As');
+  assert(nombres(rm.armar('E', cs('4♥ * 6♥ 7♥'))) === '4♥ * 6♥ 7♥');
+  assert(!rm.armar('E', cs('4♥ * * 7♥ 8♥')), 'dos comodines seguidos no');
+  assert(!rm.armar('E', cs('4♥ 5♠ 6♥ 7♥')) && !rm.armar('E', cs('4♥ 5♥ 6♥')) && !rm.armar('E', cs('4♥ 4♥ 5♥ 6♥')));
+  assert(rm.armar('S', cs('A♥ 2♠ 3♦ 4♣ 5♥ 6♥ 7♠ 8♦ * 10♣ J♥ Q♠ *')) && !rm.armar('R', cs('A♥ 2♠ 3♦ 4♣ 5♥ 6♥ 7♠ 8♦ 9♣ 10♣ J♥ Q♠ K♠')));
+  assert(rm.armar('R', cs('A♣ 2♣ 3♣ 4♣ 5♣ 6♣ 7♣ 8♣ 9♣ 10♣ J♣ Q♣ K♣')) && !rm.armar('R', cs('A♣ 2♣ 3♣ 4♣ 5♣ 6♣ 7♣ 8♣ * 10♣ J♣ Q♣ K♣')));
+  // Agregar y cambiar el comodín.
+  j = rm.armar('E', cs('4♥ * 6♥ 7♥'));
+  assert(nombres(rm.agregar(j, carta('8♥'))) === '4♥ * 6♥ 7♥ 8♥' && !rm.agregar(j, carta('9♥')) && !rm.agregar(j, carta('8♠')));
+  const c = rm.cambiar(j, carta('5♥'));
+  assert(nombres(c.juego) === '4♥ 5♥ 6♥ 7♥' && rm.esComodin(c.comodin) && !rm.cambiar(j, carta('5♠')));
+  const t = rm.cambiar(rm.armar('T', cs('9♦ 9♣ *')), carta('9♥'));
+  assert(t && !t.juego.cartas.some(rm.esComodin) && rm.agregar(t.juego, carta('9♠')).cartas.length === 4);
+  assert(rm.puntos(cs('A♥ K♠ * 7♦')) === 67);
+  // Bajar: la forma que deja menos puntos.
+  let b = rm.mejorBajada(cs('7♥ 7♠ 7♦ K♣ K♥ 2♠ 3♠ 4♠ 9♦ * 5♣ 6♦'), ['T', 'T']);
+  assert(b && b.usados.length === 6 && b.juegos.every((x) => x.tipo === 'T'), 'dos tríos con el comodín');
+  assert(b.usados.map((i) => i).includes(9), 'usa el comodín para el trío de K');
+  assert(!rm.mejorBajada(cs('7♥ 7♠ 7♦ 4♠ 5♠ 6♠ 8♠ 2♥ 9♦ 10♣ J♣ Q♦'), ['T', 'E']), 'un solo 7♠ no alcanza para los dos');
+  b = rm.mejorBajada(cs('7♥ 7♠ 7♦ 4♠ 5♠ 6♠ 8♠ 7♠ 9♦ 10♣ J♣ Q♦'), ['T', 'E']);
+  assert(b && nombres(b.juegos[1]) === '4♠ 5♠ 6♠ 7♠ 8♠' && b.juegos[0].cartas.length === 3, 'un 7♠ en el trío y el otro en la escala');
+  assert(!rm.mejorBajada(cs('7♥ 7♠ 7♦ 4♠ 5♠ 6♠ 2♥ 9♦ 10♣ J♣ Q♦ K♦'), ['T', 'T']));
+  b = rm.mejorBajada(cs('3♥ 4♥ 5♥ 6♥ 9♥ 10♥ J♥ Q♥ 2♣ 2♦ 2♠ K♠'), ['E', 'E']);
+  assert(b && b.usados.length === 8, 'dos escalas del mismo palo');
+  b = rm.mejorBajada(cs('A♥ 2♠ 3♦ 4♣ 5♥ 6♥ 7♠ 8♦ 9♣ 10♣ J♥ * K♠ 4♦'), ['S']);
+  assert(b && b.juegos[0].cartas.length === 13 && !b.usados.includes(13), 'escala sucia');
+});
+
+import * as car from './games/carioca.js';
+
+probar('carioca: robar, bajar, agregar, comprar, cambiar comodín y puntos', () => {
+  const cs = (t) => t.split(' ').filter(Boolean).map((x) => (x === '*' ? { ...rm.COMODIN } : carta(x)));
+  const base = (manos, extra = {}) => ({ n: manos.length, contratos: ['2T', 'TE'], extras: { comprar: false, comodin: false }, ronda: 1, reparte: manos.length - 1, turno: 0, fase: 'robar',
+    manos: manos.map(cs), mazo: cs('2♣ 3♣ 4♣ 5♣ 6♣ 7♣'), pozo: cs('9♥'), mesa: [], bajados: manos.map(() => false), bajoAhora: false, compras: manos.map(() => 0), oferta: null, vueltas: 0,
+    puntos: manos.map(() => 0), ganadas: manos.map(() => 0), ganador: null, aviso: null, resumen: null, ...extra });
+  const e = car.nueva(2);
+  assert(e.manos.every((m) => m.length === 12) && e.pozo.length === 1 && e.mazo.length === 83 && e.turno === 0 && e.fase === 'robar');
+  // Robar del pozo y botar.
+  let s = base(['7♥ 7♠ 7♦ K♣ K♥ K♠ 2♦ 4♠', 'A♠ A♥']);
+  assert(car.botar(s, 0) === null, 'primero se roba');
+  let t = car.robar(s, 'pozo');
+  assert(t.manos[0].length === 9 && !t.pozo.length && t.fase === 'jugar');
+  // Bajar 2 tríos: en el mismo turno no se agrega; en el siguiente sí.
+  t = car.bajar(t);
+  assert(t.bajados[0] && t.mesa.length === 2 && t.manos[0].length === 3 && t.bajoAhora);
+  t = car.botar(t, 0);
+  assert(t.turno === 1 && t.fase === 'robar' && !t.bajoAhora);
+  s = base(['7♣ 2♦', 'A♠'], { fase: 'jugar', bajados: [true, false], bajoAhora: true, mesa: [{ ...rm.armar('T', cs('7♥ 7♠ 7♦')), dueno: 0 }] });
+  assert(car.agregar(s, 0, 0) === null, 'en el turno de bajar no se agrega');
+  t = car.agregar({ ...s, bajoAhora: false }, 0, 0);
+  assert(t.mesa[0].cartas.length === 4 && t.manos[0].length === 1);
+  assert(car.agregar({ ...s, bajoAhora: false, bajados: [false, false] }, 0, 0) === null, 'sin bajar no se agrega');
+  // Agregar la última carta gana la ronda: suman los demás (As 20, figuras 10, comodín 30).
+  s = base(['7♣', 'A♠ K♥ * 5♦'], { fase: 'jugar', bajados: [true, false], mesa: [{ ...rm.armar('T', cs('7♥ 7♠ 7♦')), dueno: 0 }] });
+  t = car.agregar(s, 0, 0);
+  assert(t.resumen.j === 0 && t.resumen.sumas.join() === '0,65' && t.ronda === 2 && t.manos[0].length === 12, 'cierra la ronda y reparte');
+  // Última ronda: gana quien tiene menos puntos.
+  t = car.agregar({ ...s, ronda: 2, puntos: [100, 10] }, 0, 0);
+  assert(t.ganador === 1 && t.puntos.join() === '100,75');
+  t = car.agregar({ ...s, ronda: 2, puntos: [10, 0], ganadas: [0, 0] }, 0, 0);
+  assert(t.puntos.join() === '10,65' && t.ganador === 0);
+  // Escala sucia: quien la baja gana la ronda aunque le sobren cartas.
+  s = base(['A♥ 2♠ 3♦ 4♣ 5♥ 6♥ 7♠ 8♦ 9♣ 10♣ J♥ * K♠ 4♦', '5♠'], { contratos: ['S'], fase: 'jugar' });
+  t = car.bajar(s);
+  assert(t.ganador === 0 && t.resumen.sumas.join() === '0,5');
+  // Comprar (3 jugadores): el siguiente roba del mazo; el otro compra la botada y se lleva una de castigo.
+  s = base(['2♦ 3♦', '4♦ 5♦', '9♥ 9♠'], { extras: { comprar: true, comodin: false }, turno: 1 });
+  t = car.robar(s, 'mazo');
+  assert(t.fase === 'comprar' && t.turno === 2 && t.oferta.cola.join() === '2');
+  let u = car.comprar(t, true);
+  assert(u.manos[2].length === 4 && u.compras[2] === 1 && u.turno === 1 && u.fase === 'jugar' && u.manos[1].length === 3);
+  u = car.comprar(t, false);
+  assert(u.manos[2].length === 2 && u.turno === 1 && u.manos[1].length === 3);
+  assert(car.robar(base(['2♦', '4♦', '9♥'], { turno: 1 }), 'mazo').fase === 'jugar', 'sin la regla no se compra');
+  // Cambiar el comodín (regla extra), después de bajar.
+  s = base(['5♥ 2♣', 'A♠'], { fase: 'jugar', bajados: [true, false], mesa: [{ ...rm.armar('E', cs('4♥ * 6♥ 7♥')), dueno: 1 }] });
+  assert(car.cambiar(s, 0, 0) === null, 'sin la regla no');
+  t = car.cambiar({ ...s, extras: { comprar: false, comodin: true } }, 0, 0);
+  assert(t && rm.esComodin(t.manos[0][0]) && !t.mesa[0].cartas.some(rm.esComodin));
+  // El mazo se rebarajó 3 veces: la ronda termina sin ganador.
+  s = base(['2♦ 3♦', '4♦'], { fase: 'jugar', vueltas: 3 });
+  t = car.botar(s, 0);
+  assert(t.ronda === 2 && t.resumen.j === null && t.resumen.sumas.join() === '3,4' && t.ganadas.join() === '0,0');
+  // Partidas cortas enteras entre máquinas (normal y difícil) terminan y caben en la base.
+  for (const nivel of ['normal', 'dificil']) {
+    let p = car.nueva(3, { contratos: car.CORTA, comprar: true, comodin: true });
+    for (let i = 0; i < 8000 && p.ganador === null; i++) p = car.accion(p, car.maquina(p, nivel));
+    assert(p.ganador !== null && JSON.stringify(p).length < 8000, `partida ${nivel}`);
+  }
+});

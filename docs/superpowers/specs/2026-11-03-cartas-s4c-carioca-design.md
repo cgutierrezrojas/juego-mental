@@ -9,8 +9,8 @@ S4c se publica en dos partes: **S4c1 Carioca**, que crea el motor común de jueg
 - **Escala**: 4 o más cartas seguidas del mismo palo (hasta 13); puede dar la vuelta por el As (J-Q-K-A, Q-K-A-2 y K-A-2-3 valen).
 - **Escala sucia**: las 13 cartas del As al Rey, de cualquier palo, con comodines. **Escala real**: las 13 del As al Rey de un solo palo, sin comodines.
 - **Comodines**: en cada juego hay más cartas normales que comodines; en una escala no van dos comodines seguidos.
-- **Turno**: 1) robar del mazo o la de arriba del pozo; 2) si no bajaste y tienes el contrato de la ronda, bajarlo (exactamente los juegos del contrato; cada juego puede tener más cartas que el mínimo); 3) desde el turno siguiente al de bajar, agregar cartas a cualquier juego de la mesa (propio o ajeno); 4) botar una carta al pozo. Si te quedas sin cartas (al bajar, agregar o botar), ganas la ronda.
-- Mazo vacío: se baraja el pozo menos la de arriba.
+- **Turno**: 1) robar del mazo o la de arriba del pozo; 2) si no bajaste y tienes el contrato de la ronda, bajarlo (exactamente los juegos del contrato; cada juego puede tener más cartas que el mínimo); 3) desde el turno siguiente al de bajar, agregar cartas a cualquier juego de la mesa (propio o ajeno); 4) botar una carta al pozo. Si te quedas sin cartas (al bajar, agregar o botar), ganas la ronda. En la escala sucia y la real gana la ronda quien baja la escala (a una escala de 13 no se le agregan cartas).
+- Mazo vacío: se baraja el pozo menos la de arriba. Si en una ronda eso pasa 3 veces, la ronda termina sin ganador y todos suman lo que tienen (así ninguna ronda queda infinita).
 - **Puntos** de lo que queda en la mano: As 20, J/Q/K 10, comodín 30, del 2 al 10 su número. Gana la partida quien termina con **menos** puntos; empate: más rondas ganadas; si sigue, quien ganó la última ronda.
 
 ## Partidas

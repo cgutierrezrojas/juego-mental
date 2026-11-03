@@ -1,7 +1,8 @@
 // 🃏 Juegos de cartas por turnos (🎱 Ocho locos y 🧹 Escoba): contra la máquina, a dos en un celular
 // (con una pantalla para pasarlo sin ver las cartas del otro) o contra un amigo (en `mesas/{id}` como la Mesa:
 // el estado entero va como texto en `estado.datos` y `estado.turno` dice a quién le toca: 'x' es el jugador 0, 'o' el 1).
-// Cada juego da sus reglas (games/ocho.js, games/escoba.js), su `pintar` (la mesa del jugador que mira) y su `resumen` de ronda.
+// Cada juego da sus reglas (games/ocho.js, games/escoba.js, games/carioca.js), su `pintar` (la mesa del jugador que mira) y su
+// `resumen` de ronda; puede dar `opciones` para la pantalla de modos, `pausa` de la máquina y `menosGana` (gana el de menos puntos).
 import { el, leer, guardar } from '../games/comun.js';
 import { sonar } from '../games/efectos.js';
 import { esRoja } from '../games/cartas.js';
@@ -15,6 +16,7 @@ import { ligaAnotar } from './liga.js';
 import { asegurarDuelista } from './duelos.js';
 import { misPartidas, resultadoMesa, apuntarResultadoAmigo } from './mesa.js';
 import { naipe, pantalla, boton, abrirCartas, alSalir, temblar } from './cartas.js';
+import { CARIOCA } from './carioca.js';
 
 const FICHA = ['x', 'o'];
 
@@ -68,7 +70,7 @@ const ESCOBA = {
     return [el('p', 'turno-trivia', `🧹 Fin de la ronda ${r.ronda}`), tabla];
   },
 };
-export const JUEGOS_MESA_CARTAS = [OCHO, ESCOBA];
+export const JUEGOS_MESA_CARTAS = [OCHO, ESCOBA, CARIOCA];
 const juegoDe = (id) => JUEGOS_MESA_CARTAS.find((j) => j.id === id);
 
 function pintarOcho(e, quien, miTurno, actuar) {
@@ -174,7 +176,7 @@ export function abrirJuegoMesa(id) {
   alSalir(pararPartida);
   pararPartida();
   const J = juegoDe(id);
-  const partes = [el('h2', '', `${J.icono} ${J.nombre}`), el('p', 'sin-datos', J.reglas)];
+  const partes = [el('h2', '', `${J.icono} ${J.nombre}`), el('p', 'sin-datos', J.reglas), ...(J.opciones?.() ?? [])];
   if (J.credito) {
     const credito = el('p', 'credito-cartas');
     credito.innerHTML = J.credito;
@@ -204,7 +206,7 @@ export function abrirJuegoMesa(id) {
 }
 
 // Una fila de botones donde se elige uno: opciones = [[texto, etiqueta, elegido, alElegir]].
-function fila(nombre, opciones) {
+export function fila(nombre, opciones) {
   const caja = el('div', 'opciones-ajuste');
   caja.setAttribute('role', 'group');
   caja.setAttribute('aria-label', nombre);
@@ -338,13 +340,13 @@ function pintar() {
   }
   const quien = p.modo === 'local' ? e.turno : p.yo;
   const humano = p.modo !== 'maquina' || e.turno === p.yo;
-  const vista = J.pintar(e, quien, humano && e.turno === quien, actuar);
+  const vista = J.pintar(e, quien, humano && e.turno === quien, actuar, { nombres: p.nombres, repintar: pintar });
   const botones = [...vista.botones];
   if (p.modo === 'amigo') botones.push(boton('🏳️ Rendirse', '', rendirse));
   botones.push(boton('Salir', '', abrirCartas));
   pantalla(vista.marcador, vista.tapete, botones);
   $('cartas-tapete').className = 'tapete-mesa';
-  if (!humano) p.timer = setTimeout(() => actuar(J.maquina(p.e, p.nivel)), 900);
+  if (!humano) p.timer = setTimeout(() => actuar(J.maquina(p.e, p.nivel)), J.pausa ?? 900);
 }
 
 async function rendirse() {
@@ -354,14 +356,14 @@ async function rendirse() {
 
 const tablaPuntos = (e) => {
   const lista = el('ul', 'puntos-cartas');
-  e.puntos.map((pts, i) => [pts, i]).sort((a, b) => b[0] - a[0]).forEach(([pts, i]) => lista.append(el('li', '', `${p.nombres[i]}: ${pts}`)));
+  e.puntos.map((pts, i) => [pts, i]).sort((a, b) => (p.J.menosGana ? a[0] - b[0] : b[0] - a[0])).forEach(([pts, i]) => lista.append(el('li', '', `${p.nombres[i]}: ${pts}`)));
   return lista;
 };
 
 function pintarResumen() {
   const { e } = p;
   const r = e.resumen;
-  pantalla([el('span', '', `${p.J.icono} Ronda ${r.ronda}`), el('span', '', `Meta ${p.J.meta(e)}`)], [...p.J.resumen(e), tablaPuntos(e)], [boton('▶ Seguir', 'color', () => {
+  pantalla([el('span', '', `${p.J.icono} Ronda ${r.ronda}`), el('span', '', p.J.metaTexto?.(e) ?? `Meta ${p.J.meta(e)}`)], [...p.J.resumen(e, p.nombres), tablaPuntos(e)], [boton('▶ Seguir', 'color', () => {
     p.visto = r.ronda;
     p.vista = null;
     pintar();
