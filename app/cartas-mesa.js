@@ -1,11 +1,12 @@
-// 🃏 Juegos de cartas por turnos (🎱 Ocho locos; S4b sigue con la 🧹 Escoba): contra la máquina, a dos en un celular
+// 🃏 Juegos de cartas por turnos (🎱 Ocho locos y 🧹 Escoba): contra la máquina, a dos en un celular
 // (con una pantalla para pasarlo sin ver las cartas del otro) o contra un amigo (en `mesas/{id}` como la Mesa:
 // el estado entero va como texto en `estado.datos` y `estado.turno` dice a quién le toca: 'x' es el jugador 0, 'o' el 1).
-// Cada juego da sus reglas (games/ocho.js) y su `pintar`, que dibuja la mesa del jugador que mira.
+// Cada juego da sus reglas (games/ocho.js, games/escoba.js), su `pintar` (la mesa del jugador que mira) y su `resumen` de ronda.
 import { el, leer, guardar } from '../games/comun.js';
 import { sonar } from '../games/efectos.js';
 import { esRoja } from '../games/cartas.js';
 import * as O from '../games/ocho.js';
+import * as ES from '../games/escoba.js';
 import { amigosDe } from '../games/amigos.js';
 import { E } from './estado.js';
 import { leerJSON } from './datos.js';
@@ -36,8 +37,33 @@ const OCHO = {
   nueva: (n) => O.nueva(n),
   maquina: (e) => O.accion(e, O.maquina(e)),
   pintar: pintarOcho,
+  resumen: (e) => [
+    el('p', 'turno-trivia', `${p.nombres[e.resumen.j] === 'Tú' ? '🎉 Ganaste' : `Gana ${p.nombres[e.resumen.j]}`} la ronda ${e.resumen.ronda}`),
+    el('p', 'sin-datos', `Suma ${e.resumen.suma} puntos con las cartas de los demás.`),
+  ],
 };
-export const JUEGOS_MESA_CARTAS = [OCHO];
+
+// --- 🧹 Escoba ---
+
+const ESCOBA = {
+  id: 'escoba', nombre: 'Escoba', icono: '🧹', maxMaquinas: 1, meta: () => ES.META,
+  reglas: 'Baraja española (sota 8, caballo 9, rey 10). Tira una carta: si con cartas de la mesa suma 15, te las llevas; dejar la mesa vacía es escoba. Cada ronda da 1 punto por escoba y 1 a quien tenga más cartas, más oros, más sietes y el 7 de oros. Gana el primero en llegar a 15.',
+  nueva: () => ES.nueva(),
+  maquina: (e) => ES.accion(e, ES.maquina(e)),
+  pintar: pintarEscoba,
+  resumen: (e) => {
+    const r = e.resumen;
+    const tabla = el('table', 'tabla-escoba');
+    const fila = (celdas, tag = 'td') => {
+      const tr = el('tr');
+      tr.append(...celdas.map((c) => el(tag, '', String(c))));
+      return tr;
+    };
+    tabla.append(fila(['', ...p.nombres], 'th'), ...r.filas.map((f) => fila([f.t, ...f.valores.map((v, j) => `${v}${f.pts[j] ? ' ⭐' : ''}`)])), fila(['Puntos', ...r.suma.map((x) => `+${x}`)], 'th'));
+    return [el('p', 'turno-trivia', `🧹 Fin de la ronda ${r.ronda}`), tabla];
+  },
+};
+export const JUEGOS_MESA_CARTAS = [OCHO, ESCOBA];
 const juegoDe = (id) => JUEGOS_MESA_CARTAS.find((j) => j.id === id);
 
 function pintarOcho(e, quien, miTurno, actuar) {
@@ -84,6 +110,54 @@ function pintarOcho(e, quien, miTurno, actuar) {
     marcador: [el('span', '', `🎱 Ronda ${e.ronda}`), el('span', '', `${p.nombres[quien]}: ${e.puntos[quien]} / ${O.meta(e.n)}`)],
     tapete: [rivales, centro, el('p', 'ultimo-cartas', ultimo + turno), mano],
     botones,
+  };
+}
+
+// Carta española: valor (S, C, R) y palo con su emoji; el color sale del palo.
+function naipeEs(c) {
+  const n = el('button', `naipe espanola ${c.p}`);
+  n.append(el('span', 'esquina', ES.VALOR_ES[c.v - 1]), el('span', 'centro', ES.EMOJI[c.p]));
+  n.setAttribute('aria-label', ES.nombreLargo(c));
+  return n;
+}
+
+function pintarEscoba(e, quien, miTurno, actuar) {
+  const otro = 1 - quien;
+  const rival = el('div', `rival-cartas${e.turno === otro ? ' turno' : ''}`);
+  rival.append(el('strong', '', p.nombres[otro]), el('span', '', `🂠 ${e.manos[otro].length} · 🧹 ${e.escobas[otro]} · ${e.llevadas[otro].length} llevadas · ${e.puntos[otro]} pts`));
+  const mesa = el('div', 'mesa-escoba');
+  mesa.setAttribute('aria-label', 'La mesa');
+  const naipes = e.mesa.map((c) => naipeEs(c));
+  naipes.forEach((n) => (n.tabIndex = -1));
+  mesa.append(...(naipes.length ? naipes : [el('span', 'sin-datos', 'Mesa vacía')]));
+
+  const mano = el('div', 'mano-cartas');
+  mano.setAttribute('aria-label', 'Tus cartas');
+  e.manos[quien].forEach((c, i) => {
+    const n = naipeEs(c);
+    const formas = miTurno ? ES.opciones(e, i) : [];
+    if (formas.length) n.classList.add('sirve');
+    n.onclick = () => {
+      if (!miTurno) return temblar(n);
+      if (formas.length <= 1) return actuar(ES.jugar(e, i, 0));
+      // Varias formas de sumar 15: se elige cuál llevarse (se marcan en la mesa al pasar por encima).
+      const marcar = (t) => naipes.forEach((x, k) => x.classList.toggle('pista', t?.includes(k) ?? false));
+      $('cartas-botones').replaceChildren(...formas.map((t, k) => {
+        const b = boton(`Llevar ${t.map((x) => ES.nombre(e.mesa[x])).join(' ')}`, 'color', () => actuar(ES.jugar(e, i, k)));
+        b.onpointerenter = b.onfocus = () => marcar(t);
+        return b;
+      }), boton('Cancelar', '', () => pintar()));
+      $('cartas-aviso').textContent = `¿Qué te llevas con ${ES.nombre(c)}?`;
+    };
+    mano.append(n);
+  });
+
+  const ultimo = e.aviso ? `${p.nombres[e.aviso.j]}: ${e.aviso.t}. ` : '';
+  const turno = miTurno ? '▶ Tu turno: las que suman 15 brillan' : `⏳ Turno de ${p.nombres[e.turno]}`;
+  return {
+    marcador: [el('span', '', `🧹 Ronda ${e.ronda} · mazo ${e.mazo.length}`), el('span', '', `${p.nombres[quien]}: ${e.puntos[quien]} / ${ES.META}`)],
+    tapete: [rival, mesa, el('p', 'ultimo-cartas', ultimo + turno), mano, el('p', 'sin-datos', `${p.nombres[quien]}: 🧹 ${e.escobas[quien]} · ${e.llevadas[quien].length} llevadas`)],
+    botones: [],
   };
 }
 
@@ -197,7 +271,13 @@ async function abrirAmigo(id) {
     const yo = mesa.jugadores.x === E.usuario.uid ? 0 : 1;
     const nombre = (i) => (i === yo ? 'Tú' : mesa.nombres?.[mesa.jugadores[FICHA[i]]] ?? 'Rival');
     const primera = !p.e;
-    Object.assign(p, { J: juegoDe(mesa.juego), mesa, yo, nombres: [nombre(0), nombre(1)], e: JSON.parse(mesa.estado.datos) });
+    let e;
+    try {
+      e = JSON.parse(mesa.estado.datos);
+    } catch {
+      return; // datos dañados (o una escritura que el servidor va a rechazar): se queda lo que había
+    }
+    Object.assign(p, { J: juegoDe(mesa.juego), mesa, yo, nombres: [nombre(0), nombre(1)], e });
     if (primera) p.visto = p.e.resumen?.ronda ?? 0; // al abrir no se repite el resumen de una ronda vieja
     pintar();
   });
@@ -260,11 +340,7 @@ const tablaPuntos = (e) => {
 function pintarResumen() {
   const { e } = p;
   const r = e.resumen;
-  pantalla([el('span', '', `${p.J.icono} Ronda ${r.ronda}`), el('span', '', `Meta ${p.J.meta(e)}`)], [
-    el('p', 'turno-trivia', `${p.nombres[r.j] === 'Tú' ? '🎉 Ganaste' : `Gana ${p.nombres[r.j]}`} la ronda ${r.ronda}`),
-    el('p', 'sin-datos', `Suma ${r.suma} puntos con las cartas de los demás.`),
-    tablaPuntos(e),
-  ], [boton('▶ Seguir', 'color', () => {
+  pantalla([el('span', '', `${p.J.icono} Ronda ${r.ronda}`), el('span', '', `Meta ${p.J.meta(e)}`)], [...p.J.resumen(e), tablaPuntos(e)], [boton('▶ Seguir', 'color', () => {
     p.visto = r.ronda;
     p.vista = null;
     pintar();

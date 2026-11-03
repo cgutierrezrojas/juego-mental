@@ -1222,3 +1222,45 @@ probar('ocho locos: jugar, especiales, robar, pasar y rondas', () => {
   for (let i = 0; i < 20000 && p.ganador === null; i++) p = ocho.accion(p, ocho.maquina(p));
   assert(p.ganador !== null && p.puntos[p.ganador] >= 300, 'la partida termina');
 });
+
+import * as esc from './games/escoba.js';
+
+probar('escoba: llevarse 15, escoba, repartir y puntos', () => {
+  // Cartas como '7o 5c R e' (o oros, c copas, e espadas, b bastos; S C R = 8 9 10).
+  const PAL = { o: 'oros', c: 'copas', e: 'espadas', b: 'bastos' };
+  const es = (t) => t.split(' ').filter(Boolean).map((x) => ({ v: { S: 8, C: 9, R: 10 }[x[0]] ?? Number(x[0]), p: PAL[x.at(-1)] }));
+  const base = (manos, mesa, extra = {}) => ({ n: 2, manos: manos.map(es), mesa: es(mesa), mazo: es('1b 2b 3b 4b 5b 6b'), llevadas: [[], []], escobas: [0, 0], ultimo: null, turno: 0, puntos: [0, 0], ronda: 1, ganador: null, aviso: null, resumen: null, ...extra });
+  const e = esc.nueva();
+  assert(e.manos.every((m) => m.length === 3) && e.mazo.length + e.mesa.length + e.llevadas.flat().length === 34 && e.turno === 0);
+  // 5 sobre 4 + 6 o sobre R: dos formas; sin forma queda en la mesa.
+  let s = base(['5o 2c', '1e'], '4c 6e Rb 2o');
+  assert(JSON.stringify(esc.opciones(s, 0)) === '[[0,1],[2]]' && !esc.opciones(s, 1).length);
+  let t = esc.jugar(s, 0, 1);
+  assert(t.llevadas[0].length === 2 && t.mesa.length === 3 && t.turno === 1 && t.ultimo === 0 && !t.escobas[0]);
+  assert(esc.jugar(s, 0, 5) === null, 'forma inexistente');
+  t = esc.jugar(s, 1);
+  assert(t.mesa.length === 5 && !t.llevadas[0].length, 'sin 15 queda en la mesa');
+  // Escoba: dejar la mesa vacía.
+  t = esc.jugar(base(['So', '1e 2e'], '3c 4c'), 0);
+  assert(t.escobas[0] === 1 && !t.mesa.length && t.aviso.t.startsWith('¡escoba!'));
+  // Manos vacías: se reparten 3 más.
+  t = esc.jugar(base(['1o', ''], 'Rb'), 0);
+  assert(t.manos.every((m) => m.length === 3) && !t.mazo.length);
+  // Fin de ronda: la mesa va al último que se llevó; más cartas, oros, sietes y el 7 de oros.
+  s = base(['3c', ''], '2b', { mazo: [], llevadas: [es('7o 7c 5o 3o'), es('1e 2e')], ultimo: 0, escobas: [1, 0], puntos: [10, 3] });
+  t = esc.jugar(s, 0);
+  const pts = Object.fromEntries(t.resumen.filas.map((f) => [f.t, f.pts.join()]));
+  assert(t.llevadas[0].length === 6 && pts['🧹 Escobas'] === '1,0' && pts['🂠 Más cartas'] === '1,0' && pts['🪙 Más oros'] === '1,0');
+  assert(pts['7️⃣ Más sietes'] === '1,0' && pts['✨ 7 de oros'] === '1,0' && t.puntos.join() === '15,3' && t.ganador === 0);
+  t = esc.jugar({ ...s, puntos: [0, 0] }, 0);
+  assert(t.ganador === null && t.ronda === 2 && t.resumen.suma.join() === '5,0' && t.manos[0].length === 3);
+  // La máquina: escoba antes que nada; si no se lleva nada, no deja la mesa entre 5 y 14.
+  assert(esc.maquina(base(['1c 5o', ''], 'Rb')).jugar === 1, '5 + R = escoba');
+  assert(esc.maquina(base(['7c 7o', ''], 'Sc')).jugar === 1, 'escoba con el 7 de oros');
+  assert(esc.maquina(base(['1c 2b', ''], '3c')).jugar === 0, 'el 2 dejaría 5 en la mesa (escoba con un R)');
+  // Una partida entera entre máquinas termina.
+  let p = esc.nueva();
+  for (let i = 0; i < 20000 && p.ganador === null; i++) p = esc.accion(p, esc.maquina(p));
+  assert(p.ganador !== null && p.puntos[p.ganador] >= 15, 'la partida termina');
+  assert(JSON.stringify(esc.nueva()).length < 8000, 'cabe en la regla de la base');
+});

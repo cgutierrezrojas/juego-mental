@@ -11,7 +11,7 @@ import { $, mostrar, confeti, preguntar } from './ui.js';
 import { ligaAnotar } from './liga.js';
 import { abrirJuegoMesa, pintarPartidasCartas } from './cartas-mesa.js';
 
-export const JUEGOS_CARTAS = 4; // para la cuenta del inicio
+export const JUEGOS_CARTAS = 5; // para la cuenta del inicio
 const NOMBRE_PALO = { '♠': 'picas', '♥': 'corazones', '♦': 'diamantes', '♣': 'tréboles' };
 const NOMBRE_VALOR = { 1: 'As', 11: 'J', 12: 'Q', 13: 'K' };
 const reloj = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -62,7 +62,7 @@ export function abrirCartas() {
     b.append(el('span', 'icono', icono), el('span', '', nombre));
     return b;
   };
-  $('cartas-juegos').replaceChildren(tarjeta('🂡', 'Solitario', abrirSolitario), tarjeta('🃏', '21', abrir21), tarjeta('🎴', 'Bacará', abrirBacara), tarjeta('🎱', 'Ocho locos', () => abrirJuegoMesa('ocho')));
+  $('cartas-juegos').replaceChildren(tarjeta('🂡', 'Solitario', abrirSolitario), tarjeta('🃏', '21', abrir21), tarjeta('🎴', 'Bacará', abrirBacara), tarjeta('🎱', 'Ocho locos', () => abrirJuegoMesa('ocho')), tarjeta('🧹', 'Escoba', () => abrirJuegoMesa('escoba')));
   const filas = [];
   const r = leerJSON('cartas:solitario');
   for (const robo of ['1', '3']) {
@@ -71,6 +71,8 @@ export function abrirCartas() {
   }
   const ocho = leerJSON('cartas:ocho');
   if (ocho.partidas) filas.push(`🎱 Ocho locos: ${ocho.ganadas} de ${ocho.partidas} ganadas contra la máquina`);
+  const escoba = leerJSON('cartas:escoba');
+  if (escoba.partidas) filas.push(`🧹 Escoba: ${escoba.ganadas} de ${escoba.partidas} ganadas contra la máquina`);
   const casino = { '🃏 21': leerJSON('cartas:21'), '🎴 Bacará': leerJSON('cartas:bacara') };
   for (const [nombre, x] of Object.entries(casino)) if (x.manos) filas.push(`${nombre}: ${x.ganadas} de ${x.manos} manos ganadas`);
   if (casino['🃏 21'].manos || casino['🎴 Bacará'].manos) filas.push(`🪙 Fichas: ${leerFichas().fichas} · récord ${leerFichas().max}`);

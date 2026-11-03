@@ -23,7 +23,7 @@
 - 3 a cada uno y 4 a la mesa; si la mesa suma 15, se la lleva quien reparte (escoba).
 - Tiras una carta: si con cartas de la mesa suma 15 te las llevas (eliges si hay varias formas); si no, queda en la mesa. Dejar la mesa vacía: escoba (+1).
 - Se reparten 3 más cuando se acaban las manos; al final, lo que queda en la mesa es del último que se llevó cartas.
-- Puntos por ronda: escobas, más cartas, más oros, 7 de oros, más sietes (+1 cada uno; empate = nadie). Gana quien llega a 15.
+- Puntos por ronda: escobas, más cartas, más oros, 7 de oros, más sietes (+1 cada uno; empate = nadie). Gana quien llega a 15 (si los dos llegan con los mismos puntos, otra ronda).
 - Máquina: busca escoba, el 7 de oros, oros y sietes; al tirar sin llevarse nada, evita dejar escoba fácil.
 
 ## Orden
