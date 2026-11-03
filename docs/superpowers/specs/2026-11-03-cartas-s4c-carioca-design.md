@@ -6,7 +6,7 @@ S4c se publica en dos partes: **S4c1 Carioca**, que crea el motor común de jueg
 
 - 2 barajas inglesas + 4 comodines (108 cartas). 12 cartas a cada uno; se da vuelta una para empezar el pozo. Reparte cada ronda el siguiente; empieza quien sigue al que reparte.
 - **Trío**: 3 o más cartas del mismo número (los palos se pueden repetir).
-- **Escala**: 4 o más cartas seguidas del mismo palo; el As va abajo (A-2-3-4) o arriba (J-Q-K-A), sin dar la vuelta (Q-K-A-2 no vale).
+- **Escala**: 4 o más cartas seguidas del mismo palo (hasta 13); puede dar la vuelta por el As (J-Q-K-A, Q-K-A-2 y K-A-2-3 valen).
 - **Escala sucia**: las 13 cartas del As al Rey, de cualquier palo, con comodines. **Escala real**: las 13 del As al Rey de un solo palo, sin comodines.
 - **Comodines**: en cada juego hay más cartas normales que comodines; en una escala no van dos comodines seguidos.
 - **Turno**: 1) robar del mazo o la de arriba del pozo; 2) si no bajaste y tienes el contrato de la ronda, bajarlo (exactamente los juegos del contrato; cada juego puede tener más cartas que el mínimo); 3) desde el turno siguiente al de bajar, agregar cartas a cualquier juego de la mesa (propio o ajeno); 4) botar una carta al pozo. Si te quedas sin cartas (al bajar, agregar o botar), ganas la ronda.
