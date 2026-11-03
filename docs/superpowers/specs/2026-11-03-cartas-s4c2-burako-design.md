@@ -52,5 +52,5 @@ Segunda parte de S4c. Reutiliza el motor de juegos de la Carioca (`games/rummy.j
 
 - `games/rummy.js`: los juegos del Burako (escalera de 3 sin vuelta con el 1 alto o bajo y pierna; un comodín; el 2 como comodín o como 2 normal) junto a los de la Carioca, con pruebas.
 - `games/burako.js`: fichas, reparto, turnos (robar, llevarse el pozo, bajar, agregar, botar), muertos, cierre, puntos, máquinas Normal y Difícil (la Difícil se mide con simulaciones contra la Normal y debe ganar claramente más). Puro.
-- `app/burako.js`: pantalla (`pintar`, `resumen`) y el juego en `JUEGOS_MESA_CARTAS`; la ficha `.ficha` en `styles.css`.
+- `app/burako.js`: pantalla (`pintar`, `resumen`) y el juego en `JUEGOS_MESA_CARTAS`; la ficha `.ficha-burako` en `styles.css`.
 - Pruebas: juegos válidos e inválidos, bajar y agregar, muerto, cerrar (y no poder quedarse sin fichas), puntos, partidas completas entre máquinas de 2 y 4 jugadores, y que el estado quepa en 8000 caracteres. Chrome en claro y oscuro y modo amigo con dos cuentas.

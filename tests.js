@@ -1385,3 +1385,69 @@ probar('carioca: robar, bajar, agregar, comprar, cambiar comodín y puntos', () 
     assert(p.ganador !== null && JSON.stringify(p).length < 8000, `partida ${nivel}`);
   }
 });
+
+import * as bk from './games/burako.js';
+
+probar('burako: escaleras, piernas, comodines, muerto, cierre y puntos', () => {
+  // '7r' = 7 rojo (r, a azul, m amarillo, n negro); '*' = comodín.
+  const COL = { r: 'rojo', a: 'azul', m: 'amarillo', n: 'negro' };
+  const fs = (t) => t.split(' ').filter(Boolean).map((x) => (x === '*' ? { ...rm.COMODIN } : { v: +x.slice(0, -1), p: COL[x.at(-1)] }));
+  const vs = (j) => j.cartas.map((c) => (c.v ? c.v : '*')).join(' ');
+  // Juegos.
+  assert(vs(rm.armar('L', fs('5r 3r 4r'))) === '3 4 5' && !rm.armar('L', fs('3r 4a 5r')) && !rm.armar('L', fs('3r 4r')));
+  assert(vs(rm.armar('L', fs('1r 12r 13r'))) === '12 13 1' && vs(rm.armar('L', fs('1r 2r 3r'))) === '1 2 3', 'el 1 abajo o arriba');
+  assert(!rm.armar('L', fs('13r 1r 2r 3r')), 'sin vuelta');
+  assert(vs(rm.armar('L', fs('3r * 5r'))) === '3 * 5' && !rm.armar('L', fs('3r * * 6r')), 'un comodín');
+  let j = rm.armar('L', fs('3r 2a 5r'));
+  assert(j && j.sucio && vs(j) === '3 2 5', 'un 2 de otro color es comodín');
+  j = rm.armar('L', fs('1r 2r 3r'));
+  assert(j && !j.sucio, 'el 2 en su lugar es natural');
+  assert(rm.armar('L', fs('2r 3r 4r 2n')).sucio && !rm.armar('L', fs('2a 3r 4r 2n')), 'dos 2 de otro color no');
+  assert(rm.armar('P', fs('7r 7r 7a')) && rm.armar('P', fs('7r * 7a')).sucio && !rm.armar('P', fs('7r * 2a')) && !rm.armar('P', fs('2r 2a 2n')));
+  assert(bk.valor({ v: 1 }) + bk.valor({ v: 2 }) + bk.valor({ v: 7 }) + bk.valor({ v: 8 }) + bk.valor({ v: 0 }) === 100);
+  const e = bk.nueva(4);
+  assert(e.manos.every((m) => m.length === 11) && e.muertos.every((m) => m.length === 11) && e.pozo.length === 1 && e.mazo.length === 106 - 44 - 22 - 1);
+  const base = (manos, extra = {}) => ({ n: manos.length, ronda: 1, reparte: manos.length - 1, turno: 0, fase: 'jugar', manos: manos.map(fs), mazo: fs('9n 9n 9n'), pozo: fs('4a 6m'),
+    muertos: [fs('5n 5n'), fs('6n 6n')], mesa: [[], []], puntos: [0, 0], ganador: null, aviso: null, resumen: null, ...extra });
+  // Robar: el pozo entero.
+  let t = bk.robar({ ...base(['1r']), fase: 'robar' }, 'pozo');
+  assert(t.manos[0].length === 3 && !t.pozo.length && t.fase === 'jugar');
+  // Bajar y agregar (solo a los juegos del equipo).
+  t = bk.bajar(base(['3r 4r 5r 9a 10a']), [0, 1, 2]);
+  assert(t.mesa[0].length === 1 && t.manos[0].length === 2);
+  assert(bk.bajar(base(['3r 4r 6r 9a']), [0, 1, 2]) === null);
+  t = bk.agregar(base(['6r 9a'], { mesa: [[rm.armar('L', fs('3r 4r 5r'))], []] }), [0], 0);
+  assert(vs(t.mesa[0][0]) === '3 4 5 6');
+  // Quedarse sin fichas: toma el muerto y sigue; si fue al botar, el turno pasa.
+  t = bk.bajar(base(['7r 7a 7n', '1r']), [0, 1, 2]);
+  assert(t.manos[0].length === 2 && !t.muertos[0] && t.turno === 0);
+  t = bk.botar(base(['8r', '1r']), 0);
+  assert(t.manos[0].length === 2 && !t.muertos[0] && t.turno === 1);
+  // Sin burako no se cierra: le tiene que quedar una para botar.
+  const sinMuerto = { muertos: [null, fs('6n 6n')], mesa: [[rm.armar('P', fs('9r 9r 9a 9a 9n 9n'))], []] };
+  assert(bk.agregar(base(['9m 4r'], { ...sinMuerto, mesa: [[rm.armar('P', fs('9r 9r 9a 9a 9n'))], []] }), [0], 0) === null, 'quedaría con una sola');
+  assert(bk.botar(base(['4r'], sinMuerto), 0) === null);
+  // Con burako (7) cierra: +100, el rival resta su atril y el muerto que no tomó.
+  t = bk.agregar(base(['9m 4r', '1r 13a'], sinMuerto), [0], 0);
+  t = bk.botar(t, 0);
+  assert(t.resumen.cierra === 0 && t.ronda === 2, 'cierra la mano');
+  const [a, b] = t.resumen.filas;
+  assert(a.juegos === 70 && a.burakos === 200 && a.cierre === 100 && a.atril === 0 && a.total === 370, JSON.stringify(a));
+  assert(b.muerto === -100 && b.atril === -25 && b.total === -125 && t.puntos.join() === '370,-125', JSON.stringify(b));
+  // A 3000 gana el equipo con más.
+  t = bk.botar(bk.agregar(base(['9m 4r', '1r'], { ...sinMuerto, puntos: [2700, 2900] }), [0], 0), 0);
+  assert(t.ganador === 0 && t.fase === 'fin');
+  // Mazo agotado: termina la mano sin cierre.
+  t = bk.botar(base(['4r 5r', '1r'], { mazo: [] }), 0);
+  assert(t.resumen.cierra === null && t.ronda === 2);
+  // Partidas enteras entre máquinas (2 y 4, normal y difícil) terminan y caben en la base.
+  for (const [n, nivel] of [[2, 'normal'], [4, 'dificil']]) {
+    let p = bk.nueva(n);
+    let max = 0;
+    for (let i = 0; i < 20000 && p.ganador === null; i++) {
+      p = bk.accion(p, bk.maquina(p, nivel));
+      max = Math.max(max, JSON.stringify(p).length);
+    }
+    assert(p.ganador !== null && max < 8000, `partida de ${n} ${nivel}`);
+  }
+});

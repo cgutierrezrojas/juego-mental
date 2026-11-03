@@ -1364,3 +1364,29 @@ button.seccion {
 .tabla-escoba { width: 100%; border-collapse: collapse; font-size: 1rem; }
 .tabla-escoba th, .tabla-escoba td { padding: 6px 4px; border-bottom: 1px solid color-mix(in srgb, var(--texto) 20%, transparent); text-align: center; }
 .tabla-escoba td:first-child { text-align: left; }
+/* Burako: fichas color marfil con el número grande en su color. */
+.ficha-burako {
+  display: inline-flex; align-items: center; justify-content: center; width: 30px; aspect-ratio: 3 / 4; padding: 0;
+  border: 1px solid #b9ae94; border-radius: 5px; background: #fbf6e9; box-shadow: 0 2px 0 #cfc3a6; font-size: 1.05rem; font-weight: 900; line-height: 1;
+}
+.ficha-burako.color-rojo { color: #c81e2a; }
+.ficha-burako.color-azul { color: #1f5fbf; }
+.ficha-burako.color-amarillo { color: #b07400; }
+.ficha-burako.color-negro { color: #1d1d1f; }
+.ficha-burako.comodin { color: #7b2cbf; }
+.ficha-burako.dorso { width: 40px; border-color: #fff; background: var(--azul); box-shadow: none; color: #fff; font-size: 0.85rem; }
+.ficha-burako.elegida { translate: 0 -6px; outline: 3px solid var(--amarillo); outline-offset: 1px; }
+.ficha-burako.tiembla { animation: temblar 0.3s; }
+[data-tema="oscuro"] .ficha-burako:not(.dorso) { box-shadow: none; }
+.atril-burako { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; padding-top: 6px; }
+.atril-burako .ficha-burako { width: 32px; font-size: 1.15rem; }
+.mesa-burako { display: flex; flex-wrap: wrap; gap: 6px; }
+.fichas-juego { display: flex; gap: 1px; }
+.fichas-juego .ficha-burako { width: 20px; font-size: 0.75rem; border-radius: 3px; box-shadow: none; }
+.juego-carioca.burako { border-color: var(--amarillo); }
+.centro-burako { align-items: center; }
+.centro-burako .ficha-burako:not(.dorso) { width: 40px; font-size: 1.4rem; }
+@media (prefers-reduced-motion: reduce) { .ficha-burako.tiembla { animation: none; } }
+.centro-burako .hueco-carta { width: 40px; aspect-ratio: 3 / 4; font-size: 0.7rem; }
+.titulo-burako { margin: 0; font-weight: 800; text-align: left; }
+#cartas-botones { flex-wrap: wrap; }

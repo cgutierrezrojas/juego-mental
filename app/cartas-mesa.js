@@ -2,7 +2,8 @@
 // (con una pantalla para pasarlo sin ver las cartas del otro) o contra un amigo (en `mesas/{id}` como la Mesa:
 // el estado entero va como texto en `estado.datos` y `estado.turno` dice a quién le toca: 'x' es el jugador 0, 'o' el 1).
 // Cada juego da sus reglas (games/ocho.js, games/escoba.js, games/carioca.js), su `pintar` (la mesa del jugador que mira) y su
-// `resumen` de ronda; puede dar `opciones` para la pantalla de modos, `pausa` de la máquina y `menosGana` (gana el de menos puntos).
+// `resumen` de ronda; puede dar `opciones` para la pantalla de modos, `pausa` de la máquina, `menosGana` (gana el de menos puntos),
+// `maquinas` ([[cuántas, texto]]), `nombres(n)` de los jugadores contra la máquina y `equipos(nombres)` si los puntos son por equipo.
 import { el, leer, guardar } from '../games/comun.js';
 import { sonar } from '../games/efectos.js';
 import { esRoja } from '../games/cartas.js';
@@ -17,13 +18,14 @@ import { asegurarDuelista } from './duelos.js';
 import { misPartidas, resultadoMesa, apuntarResultadoAmigo } from './mesa.js';
 import { naipe, pantalla, boton, abrirCartas, alSalir, temblar } from './cartas.js';
 import { CARIOCA } from './carioca.js';
+import { BURAKO } from './burako.js';
 
 const FICHA = ['x', 'o'];
 
 // Partida: { J (juego), modo: 'maquina' | 'local' | 'amigo', e, yo (el que mira, salvo a dos en un celular),
 // nombres, vista (a dos: de quién son las cartas a la vista), visto (última ronda cuyo resumen se vio), id, mesa, apuntada, timer }
 let p = null;
-let maquinas = 1; // rivales elegidos en el Ocho locos
+let maquinas = 1; // máquinas elegidas (Ocho locos, Carioca, Burako)
 let nivel = 'normal'; // 'normal' | 'dificil', contra la máquina
 const NIVELES = { normal: 'Normal', dificil: 'Difícil' };
 // Récord contra la máquina por nivel: `cartas:ocho`, `cartas:ocho-dificil`…
@@ -70,7 +72,7 @@ const ESCOBA = {
     return [el('p', 'turno-trivia', `🧹 Fin de la ronda ${r.ronda}`), tabla];
   },
 };
-export const JUEGOS_MESA_CARTAS = [OCHO, ESCOBA, CARIOCA];
+export const JUEGOS_MESA_CARTAS = [OCHO, ESCOBA, CARIOCA, BURAKO];
 const juegoDe = (id) => JUEGOS_MESA_CARTAS.find((j) => j.id === id);
 
 function pintarOcho(e, quien, miTurno, actuar) {
@@ -188,12 +190,11 @@ export function abrirJuegoMesa(id) {
   }
   partes.push(el('h3', 'categoria', '🤖 Contra la máquina'));
   partes.push(fila('Nivel', Object.entries(NIVELES).map(([nv, t]) => [t, t, nv === nivel, () => (nivel = nv)])));
-  if (J.maxMaquinas > 1) {
-    const opciones = Array.from({ length: J.maxMaquinas }, (_, i) => [`${i + 1} 🤖`, `${i + 1} ${i ? 'máquinas' : 'máquina'}`, i + 1 === maquinas, () => (maquinas = i + 1)]);
-    partes.push(fila('Cuántas máquinas', opciones));
-  }
+  const cuantas = J.maquinas ?? Array.from({ length: J.maxMaquinas }, (_, i) => [i + 1, `${i + 1} 🤖`]);
+  if (!cuantas.some(([k]) => k === maquinas)) maquinas = cuantas[0][0];
+  if (cuantas.length > 1) partes.push(fila('Cuántas máquinas', cuantas.map(([k, texto]) => [texto, `${k} ${k > 1 ? 'máquinas' : 'máquina'}`, k === maquinas, () => (maquinas = k)])));
   partes.push(
-    boton('▶ Jugar contra la máquina', 'color', () => empezar(J, 'maquina', J.maxMaquinas > 1 ? maquinas + 1 : 2)),
+    boton('▶ Jugar contra la máquina', 'color', () => empezar(J, 'maquina', maquinas + 1)),
     el('h3', 'categoria', '📱 Dos en este celular'),
     boton('▶ Jugar a dos (pasándose el celular)', '', () => empezar(J, 'local', 2)),
     el('h3', 'categoria', '👥 Contra un amigo'),
@@ -260,7 +261,7 @@ export async function pintarPartidasCartas() {
 
 function empezar(J, modo, n) {
   pararPartida();
-  const nombres = modo === 'local' ? ['Jugador 1', 'Jugador 2'] : ['Tú', ...Array.from({ length: n - 1 }, (_, i) => (n > 2 ? `🤖 Máquina ${i + 1}` : '🤖 Máquina'))];
+  const nombres = modo === 'local' ? ['Jugador 1', 'Jugador 2'] : J.nombres?.(n) ?? ['Tú', ...Array.from({ length: n - 1 }, (_, i) => (n > 2 ? `🤖 Máquina ${i + 1}` : '🤖 Máquina'))];
   p = { J, modo, nivel, e: J.nueva(n), yo: 0, nombres, vista: null, visto: 0, apuntada: false };
   alSalir(pararPartida);
   pintar();
@@ -354,9 +355,12 @@ async function rendirse() {
   if (seguro) E.nube.rendirseMesa(p.id, E.usuario.uid, FICHA[1 - p.yo]).catch(() => {});
 }
 
+// Nombres de quienes tienen puntos (los jugadores o, si el juego es por equipos, los equipos); `ganador` es uno de esos índices.
+const conPuntos = () => p.J.equipos?.(p.nombres) ?? p.nombres;
+
 const tablaPuntos = (e) => {
   const lista = el('ul', 'puntos-cartas');
-  e.puntos.map((pts, i) => [pts, i]).sort((a, b) => (p.J.menosGana ? a[0] - b[0] : b[0] - a[0])).forEach(([pts, i]) => lista.append(el('li', '', `${p.nombres[i]}: ${pts}`)));
+  e.puntos.map((pts, i) => [pts, i]).sort((a, b) => (p.J.menosGana ? a[0] - b[0] : b[0] - a[0])).forEach(([pts, i]) => lista.append(el('li', '', `${conPuntos()[i]}: ${pts}`)));
   return lista;
 };
 
@@ -386,7 +390,7 @@ function pintarFin(g) {
     }
   }
   const rendido = p.mesa?.rendido?.[E.usuario?.uid];
-  const titulo = p.modo === 'local' || g !== p.yo ? (rendido ? 'Te rendiste.' : `🏆 Gana ${p.nombres[g]}`) : '🏆 ¡Ganaste!';
+  const titulo = p.modo === 'local' || g !== p.yo ? (rendido ? 'Te rendiste.' : `🏆 Gana ${conPuntos()[g]}`) : '🏆 ¡Ganaste!';
   pantalla([el('span', '', `${p.J.icono} ${p.J.nombre}`)], [el('p', 'turno-trivia', titulo), tablaPuntos(p.e)], [
     boton(p.modo === 'amigo' ? '🔄 Revancha' : '🔄 Otra partida', 'color', () => {
       if (p.modo !== 'amigo') return empezar(p.J, p.modo, p.e.n);

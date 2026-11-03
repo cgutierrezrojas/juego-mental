@@ -9,7 +9,7 @@ export const COMODIN = { v: 0, p: '🃏' };
 export const esComodin = (c) => c.v === 0;
 export const puntos = (cartas) => cartas.reduce((t, c) => t + (c.v === 0 ? 30 : c.v === 1 ? 20 : c.v >= 11 ? 10 : c.v), 0);
 export const valorEn = (inicio, k) => ((inicio - 1 + k) % 13) + 1;
-export const NOMBRE_JUEGO = { T: 'trío', E: 'escala', S: 'escala sucia', R: 'escala real' };
+export const NOMBRE_JUEGO = { T: 'trío', E: 'escala', S: 'escala sucia', R: 'escala real', P: 'pierna', L: 'escalera' };
 
 function trio(cartas) {
   const reales = cartas.filter((c) => !esComodin(c));
@@ -39,12 +39,48 @@ function escala(cartas, tipo) {
   return null;
 }
 
+// --- Burako: 'P' (pierna: 3 o más del mismo número) y 'L' (escalera: 3 o más seguidas del mismo color, el 1 abajo o
+// arriba, sin vuelta). Comodín: el comodín y los 2; uno por juego como mucho. `sucio` dice si lleva comodín.
+const comodinB = (c) => c.v === 0 || c.v === 2;
+
+function pierna(cartas) {
+  const reales = cartas.filter((c) => !comodinB(c));
+  if (cartas.length < 3 || cartas.length - reales.length > 1 || reales.some((c) => c.v !== reales[0].v)) return null;
+  return { tipo: 'P', cartas: [...reales, ...cartas.filter(comodinB)], sucio: cartas.length > reales.length };
+}
+
+// Posiciones 1–14 (el 1 vale 1 o 14). Prueba primero con todos los 2 naturales y después con cada comodín posible.
+function escalera(cartas) {
+  const largo = cartas.length;
+  if (largo < 3 || largo > 14 || cartas.filter(esComodin).length > 1) return null;
+  const opciones = [-1, ...cartas.map((c, i) => (comodinB(c) ? i : -1)).filter((i) => i >= 0)];
+  for (const w of opciones) {
+    const naturales = cartas.filter((c, i) => i !== w);
+    if (naturales.some((c) => esComodin(c) || c.p !== naturales[0].p)) continue;
+    for (let inicio = 1; inicio + largo - 1 <= 14; inicio++) {
+      const fin = inicio + largo - 1;
+      const lugar = new Map();
+      let ases = 0;
+      const ok = naturales.every((c) => {
+        const pos = c.v !== 1 ? c.v : ases++ === 0 && inicio === 1 ? 1 : 14;
+        if (pos < inicio || pos > fin || lugar.has(pos)) return false;
+        lugar.set(pos, c);
+        return true;
+      });
+      if (!ok) continue;
+      const orden = Array.from({ length: largo }, (_, k) => lugar.get(inicio + k) ?? cartas[w]);
+      return { tipo: 'L', cartas: orden, inicio, sucio: w >= 0 };
+    }
+  }
+  return null;
+}
+
 // ¿Forman estas cartas un juego de ese tipo? Devuelve el juego ordenado o null.
-export const armar = (tipo, cartas) => (tipo === 'T' ? trio(cartas) : escala(cartas, tipo));
+export const armar = (tipo, cartas) => (tipo === 'T' ? trio(cartas) : tipo === 'P' ? pierna(cartas) : tipo === 'L' ? escalera(cartas) : escala(cartas, tipo));
 
 // Agregar una carta a un juego de la mesa (las escalas de 13 ya están llenas).
 // ponytail: en una escala se vuelve a acomodar entera, así que un comodín puede correrse a una punta.
-export const agregar = (juego, carta) => (juego.tipo === 'T' || juego.tipo === 'E' ? armar(juego.tipo, [...juego.cartas, carta]) : null);
+export const agregar = (juego, carta) => (['T', 'E', 'P', 'L'].includes(juego.tipo) ? armar(juego.tipo, [...juego.cartas, carta]) : null);
 
 // Cambiar el comodín: la carta que reemplaza ocupa su lugar y el comodín vuelve a la mano. { juego, comodin } o null.
 export function cambiar(juego, carta) {
