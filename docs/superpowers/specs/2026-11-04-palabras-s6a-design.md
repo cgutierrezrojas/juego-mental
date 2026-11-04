@@ -16,7 +16,7 @@ La sección 🔤 Palabras va en dos partes: **S6a** 📅 Palabra del día, 🪢 
 - Palabra de 5 letras en 6 intentos. Cada letra: 🟩 en su lugar, 🟨 está en otra posición, ⬛ no está (con letras repetidas, cada 🟨 cuenta solo las que faltan por marcar).
 - Teclado en pantalla de tres filas con Ñ, ⌫ y «Enviar»; también el teclado físico. Las teclas toman el mejor color que ya tuvo su letra.
 - Si el intento no está en `VALIDAS`: «No está en la lista», sin gastar intento.
-- La misma para todos: el número del día es días desde el 2026-11-05 en hora local; la palabra es `SOLUCIONES` barajada con semilla fija en esa posición (vuelve a empezar al acabarse).
+- La misma para todos: el número del día es días desde el 2026-11-04 en hora local (el #1); la palabra es `SOLUCIONES` barajada con semilla fija en esa posición (vuelve a empezar al acabarse).
 - Una partida al día; si sales a mitad, sigue donde ibas. Al terminar: la palabra, tu racha, la mejor racha y cuántas veces acertaste en 1, 2… 6 intentos; «📤 Compartir» manda `Pa'l Rato 🔤 #<n> <k>/6` (o `X/6`) y los cuadritos, sin la palabra.
 - Datos: `palabra:hoy` = { n, intentos, fin }, `palabra:stats` = { racha, mejor, ultimo (n del último día acertado), dist: [6] }. La racha se corta si fallas o te saltas un día. `record:palabra` = mejor racha → ranking.
 - Sin retos (ya es la misma para todos). Liga: +1 al terminar.

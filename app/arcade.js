@@ -4,8 +4,6 @@
 import { el, leer, guardar, esRecord } from '../games/comun.js';
 import { sonar } from '../games/efectos.js';
 import { semillaNueva } from '../games/semilla.js';
-import { PLAZO } from '../games/duelos.js';
-import { amigosDe } from '../games/amigos.js';
 import * as S from '../games/serpiente.js';
 import * as J from '../games/saltar.js';
 import * as A from '../games/autos.js';
@@ -15,7 +13,8 @@ import { leerJSON } from './datos.js';
 import { $, mostrar, confeti } from './ui.js';
 import { ligaAnotar } from './liga.js';
 import { JUEGOS_ARCADE } from './juegos.js';
-import { asegurarDuelista, anotarEnDuelo, volverAlDuelo, abrirDuelo } from './duelos.js';
+import { anotarEnDuelo, volverAlDuelo } from './duelos.js';
+import { elegirAmigo } from './retos.js';
 
 const CUADRO = 1000 / 60;
 
@@ -334,37 +333,6 @@ function terminar() {
   $('arcade-aviso').textContent = duelo ? `⚔️ ${puntos} puntos anotados en el reto.` : nuevo ? `🏆 ¡Nuevo récord: ${puntos}!` : `${puntos} puntos · récord ${record}`;
   if (duelo) return $('arcade-botones').replaceChildren(boton('⚔️ Volver al duelo', 'color', volverAlDuelo));
   const amigos = el('div', 'opciones-duelo');
-  $('arcade-botones').replaceChildren(boton('🔄 Otra vez', 'color', () => jugar(id, null)), boton('⚔️ Retar a un amigo', '', () => elegirAmigo(id, semilla, puntos, amigos)), boton('Volver', '', abrirArcade));
+  $('arcade-botones').replaceChildren(boton('🔄 Otra vez', 'color', () => jugar(id, null)), boton('⚔️ Retar a un amigo', '', () => elegirAmigo(amigos, { id, semilla, puntos })), boton('Volver', '', abrirArcade));
   $('arcade-tapete').append(amigos);
-}
-
-// --- Retos: un duelo de un solo juego con la semilla de esta partida ---
-
-async function elegirAmigo(id, semilla, puntos, caja) {
-  if (!(await asegurarDuelista())) return;
-  caja.replaceChildren(el('span', 'sin-datos', 'Cargando tus amigos…'));
-  try {
-    const { amigos } = amigosDe(await E.nube.misSolicitudes(E.usuario.uid), E.usuario.uid);
-    if (!amigos.length) return caja.replaceChildren(el('span', 'sin-datos', 'Aún no tienes amigos: agrégalos en 👥 Amigos.'));
-    caja.replaceChildren(el('p', 'sin-datos', `¿A quién retas a superar tus ${puntos} puntos?`), ...amigos.map((a) => boton(`👥 ${a.apodo}`, '', () => retar(id, semilla, puntos, a, caja))));
-  } catch {
-    caja.replaceChildren(el('span', 'sin-datos', 'No se pudieron cargar tus amigos (¿sin conexión?).'));
-  }
-}
-
-async function retar(id, semilla, puntos, amigo, caja) {
-  caja.replaceChildren(el('span', 'sin-datos', 'Creando el reto…'));
-  try {
-    const ahora = Date.now();
-    const duelo = await E.nube.crearDuelo({
-      anfitrion: E.usuario.uid, jugadores: [E.usuario.uid], nombres: { [E.usuario.uid]: leer('nube:apodo') }, invitado: amigo.uid, abierto: true, azar: false,
-      juegos: [id], dificultad: 'normal', victoria: 'puntos', creado: ahora, caduca: ahora + PLAZO, resultados: {}, semilla,
-    });
-    E.enDuelo = { id: duelo, juego: id };
-    anotarEnDuelo(puntos);
-    E.enDuelo = null;
-    abrirDuelo(duelo, `📨 Reto enviado a ${amigo.apodo}: jugará la misma partida y tiene 48 horas.`);
-  } catch {
-    caja.replaceChildren(el('span', 'sin-datos', 'No se pudo crear el reto (¿sin conexión?).'));
-  }
 }

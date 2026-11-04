@@ -17,6 +17,7 @@ import { avisarNube, pedirApodo } from './cuenta.js';
 import { agregarAmigo } from './amigos.js';
 import { jugar } from './partida.js';
 import { abrirJuegoArcade } from './arcade.js';
+import { abrirJuegoPalabras } from './palabras.js';
 
 export const NOMBRE_RESULTADO = { v: 'ganaste', d: 'perdiste', e: 'empate' };
 
@@ -415,6 +416,7 @@ export function pintarDuelo(duelo, aviso) {
 export function jugarDuelo(duelo, juego) {
   E.enDuelo = { id: duelo.id, juego, rival: nombreRival(duelo), numero: duelo.juegos.indexOf(juego) + 1, total: duelo.juegos.length };
   if (INFO_JUEGOS[juego].arcade) return abrirJuegoArcade(juego, { semilla: duelo.semilla });
+  if (INFO_JUEGOS[juego].palabras) return abrirJuegoPalabras(juego, { semilla: duelo.semilla, dificultad: duelo.dificultad });
   E.actual = INFO_JUEGOS[juego];
   E.eleccion = { modo: 'normal', dificultad: E.actual.sinDificultad ? 'normal' : duelo.dificultad };
   jugar();

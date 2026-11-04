@@ -1523,3 +1523,73 @@ probar('arcade: semilla, serpiente, saltar, autos y ladrillos', () => {
     assert(x.fin && JSON.stringify(x) === JSON.stringify(y), 'misma partida');
   }
 });
+
+import * as dic from './games/diccionario.js';
+import * as pd from './games/palabra.js';
+import * as hc from './games/ahorcado.js';
+import * as so from './games/sopa.js';
+
+probar('palabras: listas, palabra del día, ahorcado y sopa', () => {
+  // Listas: mayúsculas sin tildes (con Ñ), sin repetidas; las soluciones y las válidas, de 5 letras.
+  const todas = dic.TEMAS.flatMap((t) => t.palabras);
+  assert(todas.every((x) => /^[A-ZÑ]{4,12}$/.test(x)) && new Set(todas).size === todas.length, 'temas');
+  assert(dic.TEMAS.every((t) => t.palabras.length >= 40), 'al menos 40 por tema');
+  assert(dic.SOLUCIONES.every((x) => /^[A-ZÑ]{5}$/.test(x) && dic.VALIDAS.has(x)) && dic.SOLUCIONES.length >= 365, 'soluciones');
+  assert([...dic.VALIDAS].every((x) => /^[A-ZÑ]{5}$/.test(x)), 'válidas');
+  assert(dic.mostrar('CAMION') === 'CAMIÓN' && dic.mostrar('PERRO') === 'PERRO');
+  // Colores, con letras repetidas: cada 🟨 cuenta solo las que faltan por marcar.
+  assert(pd.pista('PERRO', 'PERRO').join('') === 'vvvvv');
+  assert(pd.pista('RROPA', 'PERRO').join('') === 'aaaag', pd.pista('RROPA', 'PERRO').join(''));
+  assert(pd.pista('ERRAR', 'PERRO').join('') === 'aavgg', 'la última R ya no tiene pareja');
+  assert(pd.pista('OSITO', 'PERRO').join('') === 'ggggv', 'una sola O: la que está en su lugar');
+  const teclas = pd.colorTeclas(['RROPA', 'PERRO'], 'PERRO');
+  assert(teclas.P === 'v' && teclas.A === 'g', 'el teclado guarda el mejor color');
+  // El día: 1 el 2026-11-04, igual a cualquier hora; la palabra no cambia en el día.
+  assert(pd.numeroDia(new Date(2026, 10, 4, 0, 1)) === 1 && pd.numeroDia(new Date(2026, 10, 4, 23, 59)) === 1 && pd.numeroDia(new Date(2026, 10, 5)) === 2);
+  assert(pd.palabraDelDia(1) === pd.palabraDelDia(1) && pd.palabraDelDia(1) !== pd.palabraDelDia(2));
+  assert(pd.palabraDelDia(1) === pd.palabraDelDia(1 + dic.SOLUCIONES.length), 'vuelve a empezar');
+  // Racha: sigue al acertar el día siguiente, se corta al fallar o al saltarse un día.
+  let st = pd.anotar({}, 1, true, 3);
+  st = pd.anotar(st, 2, true, 4);
+  assert(st.racha === 2 && st.mejor === 2 && st.dist[2] === 1 && st.dist[3] === 1 && st.jugadas === 2);
+  assert(pd.rachaActual(st, 3) === 2 && pd.rachaActual(st, 4) === 0, 'saltarse un día la corta');
+  st = pd.anotar(st, 4, true, 1);
+  assert(st.racha === 1 && st.mejor === 2);
+  st = pd.anotar(st, 5, false, 6);
+  assert(st.racha === 0 && st.mejor === 2 && st.jugadas === 4);
+  assert(pd.textoCompartir(7, ['RROPA', 'PERRO'], 'PERRO') === "Pa'l Rato 🔤 #7 2/6\n🟨🟨🟨🟨⬛\n🟩🟩🟩🟩🟩");
+  // Ahorcado: acierto, fallo, letra repetida, puntos y perder.
+  let h = hc.nueva(5, 'facil');
+  const pal = h.ronda.palabra;
+  assert(pal.length >= 4 && pal.length <= 6, 'largo del nivel');
+  const falla = [...hc.LETRAS].find((l) => !pal.includes(l));
+  hc.probar(h, falla);
+  hc.probar(h, falla);
+  assert(h.ronda.fallos === 1, 'repetir una letra no cuenta');
+  for (const l of new Set(pal)) hc.probar(h, l);
+  assert(h.ronda.estado === 'ganada' && h.puntos === 10 + hc.FALLOS - 1 && h.palabras === 1);
+  hc.siguiente(h);
+  for (const l of [...hc.LETRAS].filter((x) => !h.ronda.palabra.includes(x)).slice(0, hc.FALLOS)) hc.probar(h, l);
+  assert(h.ronda.estado === 'perdida' && h.fin, 'al sexto fallo pierde');
+  assert(JSON.stringify(hc.nueva(9, 'dificil')) === JSON.stringify(hc.nueva(9, 'dificil')) && hc.nueva(9, 'dificil').ronda.palabra.length >= 8, 'misma semilla');
+  // Sopa: las 8 caben y se leen en su lugar; misma semilla = misma sopa; marcar al revés y en diagonal.
+  for (const nivel of ['facil', 'normal', 'dificil']) {
+    for (let s = 1; s <= 200; s++) {
+      const e = so.nueva(s, nivel);
+      assert(e.palabras.length === so.CUANTAS && e.filas.length === e.n && e.filas.every((f) => [...f].length === e.n), `${nivel} ${s}`);
+      for (const w of e.palabras) assert([...w.palabra].every((l, i) => [...e.filas[w.y + w.dy * i]][w.x + w.dx * i] === l), w.palabra);
+    }
+  }
+  assert(JSON.stringify(so.nueva(3, 'dificil')) === JSON.stringify(so.nueva(3, 'dificil')));
+  const e = so.nueva(3, 'dificil');
+  const w = e.palabras[0];
+  const fin = [w.x + w.dx * (w.palabra.length - 1), w.y + w.dy * (w.palabra.length - 1)];
+  assert(so.marcar(e, [w.x, w.y], [w.x, w.y]) === -1, 'una sola letra no');
+  assert(so.marcar(e, fin, [w.x, w.y]) === 0 && e.puntos === 100 && e.palabras[0].hallada, 'al revés también vale');
+  assert(so.marcar(e, fin, [w.x, w.y]) === -1 && e.puntos === 100, 'no se cuenta dos veces');
+  for (const x of e.palabras.slice(1)) so.marcar(e, [x.x, x.y], [x.x + x.dx * (x.palabra.length - 1), x.y + x.dy * (x.palabra.length - 1)]);
+  assert(e.fin && e.puntos === 800);
+  so.cerrar(e, 30);
+  assert(e.puntos === 950, 'bonus por segundos');
+  assert(so.linea([0, 0], [3, 3]).length === 4 && so.linea([0, 0], [2, 3]).length === 0 && so.linea([4, 1], [1, 1]).join() === '4,1,3,1,2,1,1,1');
+});

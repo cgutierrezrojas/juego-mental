@@ -84,4 +84,11 @@ export const JUEGOS_ARCADE = [
   { id: 'ladrillos', nombre: 'Ladrillos', icono: '🧱', seccion: 'arcade', unidad: 'pts', arcade: true },
 ];
 
-export const INFO_JUEGOS = Object.fromEntries([...JUEGOS, ...JUEGOS_ARCADE].map((j) => [j.id, j]));
+// 🔤 Palabras (app/palabras.js): con récord y ranking; Ahorcado y Sopa también con retos (duelos de un juego con semilla y nivel).
+export const JUEGOS_PALABRAS = [
+  { id: 'palabra', nombre: 'Palabra del día', icono: '📅', seccion: 'palabras', unidad: 'días de racha', palabras: true },
+  { id: 'ahorcado', nombre: 'Ahorcado', icono: '🪢', seccion: 'palabras', unidad: 'pts', palabras: true },
+  { id: 'sopa', nombre: 'Sopa de letras', icono: '🔍', seccion: 'palabras', unidad: 'pts', palabras: true },
+];
+
+export const INFO_JUEGOS = Object.fromEntries([...JUEGOS, ...JUEGOS_ARCADE, ...JUEGOS_PALABRAS].map((j) => [j.id, j]));

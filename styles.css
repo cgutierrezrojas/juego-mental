@@ -1397,3 +1397,41 @@ button.seccion {
 #arcade-botones { flex-wrap: wrap; }
 .lienzo-arcade { display: block; width: 100%; max-width: 480px; border-radius: 12px; touch-action: none; user-select: none; -webkit-user-select: none; }
 .lienzo-autos { max-width: 340px; }
+
+/* 🔤 Palabras */
+#palabras-juego:not([hidden]) { display: flex; flex-direction: column; gap: 10px; }
+#palabras-aviso { margin: 0; min-height: 1.3em; font-weight: 800; text-align: center; }
+#palabras-tapete { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+#palabras-botones { flex-wrap: wrap; }
+:root { --gris-palabra: #8d8a84; }
+[data-tema="oscuro"] { --gris-palabra: #3a3f63; }
+.tablero-palabra { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; width: min(100%, 290px); }
+.letra-palabra { aspect-ratio: 1; display: grid; place-items: center; font-size: 1.6rem; font-weight: 900; border: 2px solid color-mix(in srgb, var(--texto) 25%, transparent); border-radius: 8px; }
+.letra-palabra.escrita { border-color: color-mix(in srgb, var(--texto) 60%, transparent); }
+.letra-palabra.v, .tecla.v { background: var(--verde); border-color: var(--verde); color: var(--fondo); }
+.letra-palabra.a, .tecla.a { background: var(--amarillo); border-color: var(--amarillo); color: var(--fondo); }
+.letra-palabra.g, .tecla.g { background: var(--gris-palabra); border-color: var(--gris-palabra); color: #fff; }
+.teclado { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 480px; }
+.fila-teclado { display: flex; gap: 4px; justify-content: center; }
+.tecla { flex: 1 1 0; min-width: 0; max-width: 44px; padding: 12px 0; font-size: 1rem; border-radius: 8px; box-shadow: none; border: 2px solid color-mix(in srgb, var(--texto) 25%, transparent); }
+.tecla.ancha { flex: 1.6 1 0; max-width: 70px; font-size: 0.8rem; }
+.tecla:disabled { opacity: 0.7; }
+[data-tema="oscuro"] .tecla.g { background: transparent; border-color: transparent; color: var(--texto); opacity: 0.35; }
+.barras-palabra { display: flex; flex-direction: column; gap: 3px; width: min(100%, 290px); }
+.barra-palabra { display: flex; gap: 6px; align-items: center; font-weight: 800; }
+.barra-palabra span:last-child { background: var(--gris-palabra); color: #fff; text-align: right; padding: 1px 6px; border-radius: 4px; }
+.barra-palabra span.hoy { background: var(--verde); color: var(--fondo); }
+.ahorcado { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+.tema-ahorcado { margin: 0; font-weight: 800; }
+.dibujo-ahorcado { width: 140px; height: 140px; stroke: var(--texto); stroke-width: 4; stroke-linecap: round; fill: none; }
+.palabra-ahorcado { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.palabra-ahorcado span { width: 1.6em; height: 1.9em; display: grid; place-items: center; font-size: 1.3rem; font-weight: 900; border-bottom: 3px solid var(--texto); }
+.palabra-ahorcado span.faltaba { color: var(--rojo); }
+.sopa { display: grid; grid-template-columns: repeat(var(--n), 1fr); width: min(100%, 420px); touch-action: none; user-select: none; -webkit-user-select: none; border-radius: 10px; overflow: hidden; border: 2px solid color-mix(in srgb, var(--texto) 25%, transparent); }
+.letra-sopa { aspect-ratio: 1; display: grid; place-items: center; font-weight: 800; font-size: clamp(0.8rem, 4vw, 1.2rem); }
+.letra-sopa.hallada { background: color-mix(in srgb, var(--verde) 35%, transparent); }
+.letra-sopa.faltaba { background: color-mix(in srgb, var(--rojo) 30%, transparent); }
+.letra-sopa.marcando { background: var(--amarillo); color: var(--fondo); }
+.lista-sopa { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 12px; font-weight: 800; }
+.lista-sopa .hallada { text-decoration: line-through; opacity: 0.5; }
+#palabras-marcador .urgente { color: var(--rojo); }

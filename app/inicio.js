@@ -3,10 +3,11 @@ import { JUEGOS_TRIVIA, abrirTrivia } from './trivia.js';
 import { JUEGOS_MESA, abrirMesa } from './mesa.js';
 import { JUEGOS_CARTAS, abrirCartas } from './cartas.js';
 import { abrirArcade } from './arcade.js';
+import { abrirPalabras } from './palabras.js';
 import { el } from '../games/comun.js';
 import { fechaLocal, jugadosEn, entrenoDelDia } from '../games/estadisticas.js';
 import { CONFIG } from '../firebase-config.js';
-import { SECCIONES, JUEGOS, JUEGOS_ARCADE, idsPorCategoria } from './juegos.js';
+import { SECCIONES, JUEGOS, JUEGOS_ARCADE, JUEGOS_PALABRAS, idsPorCategoria } from './juegos.js';
 import { historiales, retosPendientes } from './datos.js';
 import { misPuntosLiga } from './liga.js';
 import { $, mostrar } from './ui.js';
@@ -18,7 +19,7 @@ function abrirMentales(selector) {
 }
 
 // Cada sección abre su página (Palabras llega en S6).
-const ABRIR = { mentales: () => abrirMentales(), mesa: abrirMesa, trivia: abrirTrivia, cartas: abrirCartas, arcade: abrirArcade };
+const ABRIR = { mentales: () => abrirMentales(), mesa: abrirMesa, trivia: abrirTrivia, cartas: abrirCartas, arcade: abrirArcade, palabras: abrirPalabras };
 
 export function pintarInicio() {
   const hoy = fechaLocal();
@@ -38,7 +39,7 @@ export function pintarInicio() {
 
   $('aviso-inicio').textContent = '';
   $('secciones').replaceChildren(...SECCIONES.map((s) => {
-    const n = JUEGOS.filter((j) => j.seccion === s.id).length + ({ mesa: JUEGOS_MESA.length, trivia: JUEGOS_TRIVIA - 1, cartas: JUEGOS_CARTAS, arcade: JUEGOS_ARCADE.length }[s.id] ?? 0);
+    const n = JUEGOS.filter((j) => j.seccion === s.id).length + ({ mesa: JUEGOS_MESA.length, trivia: JUEGOS_TRIVIA - 1, cartas: JUEGOS_CARTAS, arcade: JUEGOS_ARCADE.length, palabras: JUEGOS_PALABRAS.length }[s.id] ?? 0);
     const b = el('button', n ? 'seccion color' : 'seccion color pronto');
     b.style.setProperty('--c', `var(--${s.color})`);
     b.append(el('span', 'icono-seccion', s.icono), el('strong', '', s.nombre), el('small', '', n ? `${n} juego${n > 1 ? 's' : ''}` : 'Próximamente'));
