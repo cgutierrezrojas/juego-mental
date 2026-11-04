@@ -76,4 +76,12 @@ export const CARA = { facil: '🙂', normal: '😐', dificil: '😈' };
 export const ICONO_HABILIDAD = { Memoria: '🧠', Cálculo: '➕', Atención: '👁', Lógica: '🧩', Reacción: '⚡' };
 
 // ⚔️ Duelos por turnos (reglas puras en games/duelos.js). Necesitan sesión en la nube y apodo.
-export const INFO_JUEGOS = Object.fromEntries(JUEGOS.map((j) => [j.id, j]));
+// 🏎️ Arcade (app/arcade.js): no son juegos mentales, pero tienen récord, ranking y retos (duelos de un juego con semilla).
+export const JUEGOS_ARCADE = [
+  { id: 'serpiente', nombre: 'Serpiente', icono: '🐍', seccion: 'arcade', unidad: 'pts', arcade: true },
+  { id: 'saltar', nombre: 'Saltar', icono: '🦘', seccion: 'arcade', unidad: 'pts', arcade: true },
+  { id: 'autos', nombre: 'Autos', icono: '🏎️', seccion: 'arcade', unidad: 'pts', arcade: true },
+  { id: 'ladrillos', nombre: 'Ladrillos', icono: '🧱', seccion: 'arcade', unidad: 'pts', arcade: true },
+];
+
+export const INFO_JUEGOS = Object.fromEntries([...JUEGOS, ...JUEGOS_ARCADE].map((j) => [j.id, j]));

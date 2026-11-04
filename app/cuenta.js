@@ -10,7 +10,7 @@ import { ponerEstado, actualizarPerfil, agregarAmigo } from './amigos.js';
 import { recibirInvitacion } from './vivo.js';
 import { pintarAvisoDuelos, abrirDuelo, asegurarDuelista, abrirNuevoDuelo } from './duelos.js';
 import { datosDelJuego, sustituirProgreso, conUnidad } from './datos.js';
-import { JUEGOS } from './juegos.js';
+import { JUEGOS, JUEGOS_ARCADE } from './juegos.js';
 
 // ☁️ Nube (Firebase): sesión con Google, progreso sincronizado y ranking. Sin CONFIG, no aparece nada de esto.
 
@@ -238,7 +238,7 @@ export function abrirRanking(tipo) {
       new Option('⭐ General (estrellas)', ''),
       new Option('🏅 Liga semanal', 'liga'),
       new Option('🏅 Liga de amigos', 'liga-amigos'),
-      ...JUEGOS.map((j) => new Option(`${j.icono} ${j.nombre}`, j.id)),
+      ...[...JUEGOS, ...JUEGOS_ARCADE].map((j) => new Option(`${j.icono} ${j.nombre}`, j.id)),
     );
     $('ranking-tipo').onchange = pintarRanking;
   }
@@ -254,7 +254,7 @@ export async function pintarRanking() {
     $('ranking-tu').textContent = '';
     return pintarRankingLiga(tipo === 'liga-amigos').catch(() => $('ranking-lista').replaceChildren(el('li', 'sin-datos', 'No se pudo cargar la liga (¿sin conexión?).')));
   }
-  const j = JUEGOS.find((x) => x.id === tipo);
+  const j = [...JUEGOS, ...JUEGOS_ARCADE].find((x) => x.id === tipo);
   const campo = j ? `records.${j.id}` : 'estrellas';
   const menor = Boolean(j?.menorEsMejor);
   const valorDe = (fila) => (j ? fila.records?.[j.id] : fila.estrellas);

@@ -98,12 +98,13 @@ service cloud.firestore {
     }
 
     function dueloNuevoValido(d) {
-      return d.keys().hasOnly(['anfitrion', 'jugadores', 'nombres', 'invitado', 'abierto', 'azar', 'juegos', 'dificultad', 'victoria', 'creado', 'caduca', 'resultados'])
+      return d.keys().hasOnly(['anfitrion', 'jugadores', 'nombres', 'invitado', 'abierto', 'azar', 'juegos', 'dificultad', 'victoria', 'creado', 'caduca', 'resultados', 'semilla'])
         && d.anfitrion == request.auth.uid && d.jugadores == [request.auth.uid]
         && d.nombres is map && d.nombres.keys().hasOnly([request.auth.uid])
         && d.juegos is list && d.juegos.size() >= 1 && d.juegos.size() <= 5
         && d.victoria in ['juegos', 'puntos'] && d.dificultad in ['facil', 'normal', 'dificil']
         && d.abierto is bool && d.azar is bool && d.resultados == {}
+        && (!('semilla' in d) || d.semilla is int)
         && d.caduca is int && d.caduca <= request.time.toMillis() + 172800000 + 600000;
     }
 
@@ -143,11 +144,12 @@ service cloud.firestore {
 
     // Mismos límites que LIMITES en games/sincro.js.
     function recordsValidos(r) {
-      return r.keys().hasOnly(['calculo', 'mayor', 'menos', 'verdad', 'cuenta', 'anagrama', 'distinto', 'series', 'sobra', 'balanza', 'atencion', 'topos', 'memoria', 'puzzle', 'rayo', 'parejas'])
+      return r.keys().hasOnly(['calculo', 'mayor', 'menos', 'verdad', 'cuenta', 'anagrama', 'distinto', 'series', 'sobra', 'balanza', 'atencion', 'topos', 'memoria', 'puzzle', 'rayo', 'parejas', 'serpiente', 'saltar', 'autos', 'ladrillos'])
         && enRango(r, 'calculo', 1, 300) && enRango(r, 'mayor', 1, 300) && enRango(r, 'menos', 1, 300) && enRango(r, 'verdad', 1, 300) && enRango(r, 'cuenta', 1, 300) && enRango(r, 'anagrama', 1, 300) && enRango(r, 'distinto', 1, 300)
         && enRango(r, 'series', 1, 300) && enRango(r, 'sobra', 1, 300) && enRango(r, 'balanza', 1, 300)
         && enRango(r, 'atencion', 1, 300) && enRango(r, 'topos', 1, 300) && enRango(r, 'memoria', 1, 100)
-        && enRango(r, 'puzzle', 1, 10000) && enRango(r, 'rayo', 80, 5000) && enRango(r, 'parejas', 6, 1000);
+        && enRango(r, 'puzzle', 1, 10000) && enRango(r, 'rayo', 80, 5000) && enRango(r, 'parejas', 6, 1000)
+        && enRango(r, 'serpiente', 1, 100000) && enRango(r, 'saltar', 1, 100000) && enRango(r, 'autos', 1, 100000) && enRango(r, 'ladrillos', 1, 100000);
     }
 
     function enRango(r, id, min, max) {

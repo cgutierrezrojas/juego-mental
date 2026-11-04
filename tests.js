@@ -1451,3 +1451,71 @@ probar('burako: escaleras, piernas, comodines, muerto, cierre y puntos', () => {
     assert(p.ganador !== null && max < 8000, `partida de ${n} ${nivel}`);
   }
 });
+
+import { generador, azar as azarDe } from './games/semilla.js';
+import * as sp from './games/serpiente.js';
+import * as sl from './games/saltar.js';
+import * as au from './games/autos.js';
+import * as ld from './games/ladrillos.js';
+
+probar('arcade: semilla, serpiente, saltar, autos y ladrillos', () => {
+  const g1 = generador(42), g2 = generador(42);
+  assert([1, 2, 3].every(() => azarDe(g1) === azarDe(g2)) && azarDe(generador(1)) !== azarDe(generador(2)), 'misma semilla, misma secuencia');
+  // Serpiente: avanza cada `cada` cuadros, come y crece, no da media vuelta, choca con el borde.
+  let e = sp.nuevo(5);
+  e.fruta = [4, 7];
+  for (let i = 0; i < e.cada; i++) sp.paso(e, null);
+  assert(e.cuerpo[0].join() === '4,7' && e.cuerpo.length === 4 && e.puntos === 1, 'come la fruta');
+  sp.paso(e, 'izquierda');
+  assert(!e.cola.length, 'no da media vuelta');
+  e = sp.nuevo(5);
+  e.fruta = [0, 0];
+  for (let i = 0; i < 200 && !e.fin; i++) sp.paso(e, null);
+  assert(e.fin && e.cuerpo[0][0] === sp.N - 1, 'choca con el borde');
+  // Saltar: salta, doble salto y vuelve al suelo; un cactus encima termina la partida.
+  let s = sl.nuevo(3);
+  sl.paso(s, true);
+  sl.paso(s, true);
+  assert(s.saltos === 2 && s.y > 0, 'doble salto');
+  sl.paso(s, true);
+  assert(s.saltos === 2, 'no hay triple salto');
+  for (let i = 0; i < 80; i++) sl.paso(s, false);
+  assert(s.y === 0 && s.saltos === 0 && s.puntos > 0);
+  s = sl.nuevo(3);
+  s.obstaculos.push({ x: sl.JUGADOR.x, y: 0, w: 18, h: 40, tipo: 'cactus' });
+  sl.paso(s, false);
+  assert(s.fin, 'choca con el cactus');
+  // Autos: cambia de pista (sin salirse) y choca con un auto en su pista.
+  let a = au.nuevo(9);
+  au.paso(a, 'izquierda');
+  au.paso(a, 'izquierda');
+  assert(a.carril === 0);
+  for (let i = 0; i < 20; i++) au.paso(a, null);
+  assert(a.x === au.centro(0) && !a.fin);
+  a.cosas.push({ carril: 0, y: au.Y_JUGADOR, tipo: 'auto', color: 0 });
+  au.paso(a, null);
+  assert(a.fin, 'choque');
+  a = au.nuevo(9);
+  a.cosas.push({ carril: 1, y: au.Y_JUGADOR + 10, tipo: 'moneda' });
+  au.paso(a, null);
+  assert(a.monedas === 1 && a.puntos >= 10, 'moneda');
+  // Ladrillos: rompe un ladrillo (y suma su valor) y pierde una vida si la pelota cae.
+  let l = ld.nuevo(4);
+  assert(l.ladrillos.length === ld.FILAS * ld.COLS);
+  l.bola = { x: 20, y: ld.LADRILLO.arriba + ld.FILAS * ld.LADRILLO.h + 4, vx: 0, vy: -4 };
+  ld.paso(l, null);
+  assert(l.ladrillos.length === ld.FILAS * ld.COLS - 1 && l.puntos === ld.valor(ld.FILAS - 1) && l.bola.vy > 0, 'rompe y rebota');
+  l.bola = { x: 20, y: ld.ALTO + 10, vx: 0, vy: 4 };
+  ld.paso(l, null);
+  assert(l.vidas === 2 && l.bola === null);
+  // Misma semilla y mismas jugadas = misma partida; las partidas sin jugar terminan.
+  for (const M of [sp, sl, au, ld]) {
+    const [x, y] = [M.nuevo(77), M.nuevo(77)];
+    let i = 0;
+    for (; i < 60 * 300 && !x.fin; i++) {
+      M.paso(x, null);
+      M.paso(y, null);
+    }
+    assert(x.fin && JSON.stringify(x) === JSON.stringify(y), 'misma partida');
+  }
+});

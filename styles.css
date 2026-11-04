@@ -1390,3 +1390,10 @@ button.seccion {
 .centro-burako .hueco-carta { width: 40px; aspect-ratio: 3 / 4; font-size: 0.7rem; }
 .titulo-burako { margin: 0; font-weight: 800; text-align: left; }
 #cartas-botones { flex-wrap: wrap; }
+/* S5: 🏎️ Arcade. El canvas ocupa el ancho (hasta 480 px) con la proporción del juego; el dedo no hace scroll sobre él. */
+#arcade-juego:not([hidden]) { display: flex; flex-direction: column; gap: 10px; }
+#arcade-aviso { margin: 0; min-height: 1.3em; font-weight: 800; }
+#arcade-tapete { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+#arcade-botones { flex-wrap: wrap; }
+.lienzo-arcade { display: block; width: 100%; max-width: 480px; border-radius: 12px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.lienzo-autos { max-width: 340px; }
