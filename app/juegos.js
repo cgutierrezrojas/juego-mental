@@ -89,6 +89,11 @@ export const JUEGOS_PALABRAS = [
   { id: 'palabra', nombre: 'Palabra del día', icono: '📅', seccion: 'palabras', unidad: 'días de racha', palabras: true },
   { id: 'ahorcado', nombre: 'Ahorcado', icono: '🪢', seccion: 'palabras', unidad: 'pts', palabras: true },
   { id: 'sopa', nombre: 'Sopa de letras', icono: '🔍', seccion: 'palabras', unidad: 'pts', palabras: true },
+  { id: 'escalera', nombre: 'Escalera de palabras', icono: '🪜', seccion: 'palabras', unidad: 'pts', palabras: true },
+  { id: 'charadas', nombre: 'Charadas', icono: '🎭', seccion: 'palabras', palabras: true, sinRanking: true },
 ];
 
-export const INFO_JUEGOS = Object.fromEntries([...JUEGOS, ...JUEGOS_ARCADE, ...JUEGOS_PALABRAS].map((j) => [j.id, j]));
+// 💰 La gran escalera (app/granescalera.js), en Trivia: récord, ranking y retos.
+export const GRAN_ESCALERA = { id: 'granescalera', nombre: 'La gran escalera', icono: '💰', seccion: 'trivia', unidad: 'pts', granEscalera: true };
+
+export const INFO_JUEGOS = Object.fromEntries([...JUEGOS, ...JUEGOS_ARCADE, ...JUEGOS_PALABRAS, GRAN_ESCALERA].map((j) => [j.id, j]));

@@ -1593,3 +1593,82 @@ probar('palabras: listas, palabra del día, ahorcado y sopa', () => {
   assert(e.puntos === 950, 'bonus por segundos');
   assert(so.linea([0, 0], [3, 3]).length === 4 && so.linea([0, 0], [2, 3]).length === 0 && so.linea([4, 1], [1, 1]).join() === '4,1,3,1,2,1,1,1');
 });
+
+import * as ch from './games/charadas.js';
+import * as ep from './games/escalera.js';
+import * as ge from './games/granescalera.js';
+import { DEFINICIONES } from './games/definiciones.js';
+import { PREGUNTAS as BANCO, BASE } from './games/preguntas.js';
+
+probar('palabras: charadas, escalera de palabras y la gran escalera', () => {
+  // Charadas: la inclinación (vertical u horizontal) y sin repetir las ya usadas.
+  assert(ch.inclinacion(0, 90) === 'recto' && ch.inclinacion(5, -88) === 'recto' && ch.inclinacion(90, 0) === 'recto', 'de pie');
+  assert(ch.inclinacion(0, 0) === 'arriba' && ch.inclinacion(180, 0) === 'abajo' && ch.inclinacion(-170, 20) === 'abajo');
+  assert(ch.inclinacion(0, 55) === null, 'a medio camino, nada');
+  const usadas = ch.palabrasDe('deportes').slice(0, 30);
+  const c = ch.nueva('deportes', usadas);
+  assert(!usadas.includes(ch.actual(c)) && c.palabras.length === ch.palabrasDe('deportes').length, 'primero las no usadas');
+  ch.marcar(c, 'acierto');
+  ch.marcar(c, 'paso');
+  assert(c.aciertos === 1 && c.jugadas.length === 2 && !c.jugadas[1].acierto);
+  assert(ch.palabrasDe('acciones').includes('SALTAR LA CUERDA') && ch.palabrasDe('animales').includes('RATÓN'));
+  // Definiciones: sin tildes, sin repetir y al menos 20 por largo.
+  assert(DEFINICIONES.every((d) => /^[A-ZÑ]+$/.test(d.palabra) && d.definicion.length > 5 && [...d.tilde].length === [...d.palabra].length));
+  assert(new Set(DEFINICIONES.map((d) => d.palabra)).size === DEFINICIONES.length);
+  for (let l = 4; l <= 11; l++) assert(DEFINICIONES.filter((d) => d.palabra.length === l).length >= 20, `largo ${l}`);
+  // Escalera: largos crecientes, destapar, puntos por las ocultas, fallo y vidas, misma semilla.
+  let e = ep.nueva(11);
+  assert(e.palabras.map((w) => w.palabra.length).join() === ep.LARGOS.join() && new Set(e.palabras.map((w) => w.palabra)).size === 10);
+  assert(JSON.stringify(ep.nueva(11)) === JSON.stringify(e), 'misma semilla');
+  ep.destapar(e);
+  ep.destapar(e);
+  assert(ep.visibles(e).length === 2);
+  ep.responder(e, ep.actual(e).palabra);
+  assert(e.estado === 'acertada' && e.puntos === 10 * (4 - 2));
+  ep.siguiente(e);
+  ep.responder(e, 'XXXXX');
+  assert(e.estado === 'fallada' && e.vidas === 2 && !e.fin);
+  ep.siguiente(e);
+  for (let k = 0; k < 6; k++) ep.destapar(e);
+  assert(e.estado === 'fallada' && e.vidas === 1, 'se destaparon todas');
+  ep.siguiente(e);
+  ep.responder(e, 'NO');
+  assert(e.fin && e.vidas === 0);
+  e = ep.nueva(2);
+  for (let k = 0; k < 10; k++) {
+    ep.responder(e, ep.actual(e).palabra);
+    ep.siguiente(e);
+  }
+  assert(e.fin && e.puntos === 10 * ep.LARGOS.reduce((a, b) => a + b, 0), 'las 10 sin letras destapadas');
+  // Gran escalera: 5 + 5 + 5 por dificultad, escalones, seguros, plantarse, sin tiempo, ayudas y misma semilla.
+  const banco = BANCO.slice(0, BASE);
+  let g = ge.nueva(8, banco);
+  assert(g.preguntas.map((q) => q.d).join('') === '111112222233333' && new Set(g.preguntas.map((q) => q.p)).size === 15);
+  assert(JSON.stringify(ge.nueva(8, banco)) === JSON.stringify(g), 'misma semilla');
+  assert(g.preguntas.every((q) => q.publico.reduce((a, b) => a + b, 0) === 100 && !q.quita.includes(q.correcta) && q.opciones[q.correcta] === banco.find((x) => x.p === q.p).o[0]));
+  for (let k = 0; k < 6; k++) ge.responder(g, ge.actual(g).correcta);
+  assert(g.nivel === 6 && g.ganado === 2000);
+  ge.ayuda(g, 'mitad');
+  assert(g.quitadas.length === 2 && !g.quitadas.includes(ge.actual(g).correcta) && !g.ayudas.mitad);
+  ge.responder(g, g.quitadas[0]);
+  assert(!g.fin, 'una quitada no se puede elegir');
+  const antes = ge.actual(g).p;
+  ge.ayuda(g, 'cambiar');
+  assert(ge.actual(g).p !== antes && ge.actual(g).d === 2 && !g.quitadas.length);
+  ge.ayuda(g, 'publico');
+  assert(g.votos && g.votos.reduce((a, b) => a + b, 0) === 100);
+  ge.responder(g, (ge.actual(g).correcta + 1) % 4);
+  assert(g.fin && g.resultado === 'fallo' && g.ganado === 1000, 'cae al seguro de 1000');
+  g = ge.nueva(9, banco);
+  ge.responder(g, ge.actual(g).correcta);
+  ge.sinTiempo(g);
+  assert(g.resultado === 'tiempo' && g.ganado === 0);
+  g = ge.nueva(9, banco);
+  for (let k = 0; k < 3; k++) ge.responder(g, ge.actual(g).correcta);
+  ge.plantarse(g);
+  assert(g.resultado === 'plantado' && g.ganado === 300);
+  g = ge.nueva(9, banco);
+  for (let k = 0; k < 15; k++) ge.responder(g, ge.actual(g).correcta);
+  assert(g.resultado === 'gano' && g.ganado === 1000000);
+  assert(ge.seguro(4) === 0 && ge.seguro(5) === 1000 && ge.seguro(10) === 32000);
+});

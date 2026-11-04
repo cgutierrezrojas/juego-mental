@@ -180,3 +180,16 @@ const MAS = lista(`
 `).filter((p) => !p.endsWith('?'));
 
 export const VALIDAS = new Set([...SOLUCIONES, ...OTRAS, ...MAS, ...TEMAS.flatMap((t) => t.palabras)].filter((p) => p.length === 5));
+
+// Temas que solo usan las 🎭 Charadas (se muestran tal cual: pueden llevar tildes y espacios).
+export const TEMAS_CHARADAS = [
+  { id: 'acciones', nombre: 'Acciones', icono: '🤸', palabras: lista(`
+    Bailar Nadar Cocinar Dormir Correr Saltar_la_cuerda Cepillarse_los_dientes Pescar Manejar Andar_en_bicicleta Pintar Cantar
+    Aplaudir Llorar Reír Bostezar Estornudar Escribir Leer Barrer Planchar Tejer Escalar Esquiar Patinar Boxear Tocar_la_guitarra
+    Tocar_el_piano Tomar_una_foto Hablar_por_teléfono Pasear_al_perro Lavar_los_platos Afeitarse Peinarse Maquillarse Volar
+    Remar Surfear Jugar_al_fútbol Hacer_malabares`).map((x) => x.replaceAll('_', ' ')) },
+  { id: 'objetos', nombre: 'Objetos', icono: '🧸', palabras: lista(`
+    Paraguas Tijeras Teléfono Reloj Lápiz Llave Escoba Martillo Cuchara Bicicleta Guitarra Lámpara Espejo Mochila Cámara Sombrero
+    Gafas Peine Cepillo_de_dientes Almohada Vela Globo Pelota Libro Computador Control_remoto Plancha Secador_de_pelo Tetera Sartén
+    Ventilador Billetera Linterna Brújula Ancla Corona Trompeta Tambor Patineta Imán`).map((x) => x.replaceAll('_', ' ')) },
+];

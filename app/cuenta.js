@@ -10,7 +10,10 @@ import { ponerEstado, actualizarPerfil, agregarAmigo } from './amigos.js';
 import { recibirInvitacion } from './vivo.js';
 import { pintarAvisoDuelos, abrirDuelo, asegurarDuelista, abrirNuevoDuelo } from './duelos.js';
 import { datosDelJuego, sustituirProgreso, conUnidad } from './datos.js';
-import { JUEGOS, JUEGOS_ARCADE, JUEGOS_PALABRAS } from './juegos.js';
+import { JUEGOS, JUEGOS_ARCADE, JUEGOS_PALABRAS, GRAN_ESCALERA } from './juegos.js';
+
+// Los juegos con récord en el ranking.
+const CON_RANKING = [...JUEGOS, ...JUEGOS_ARCADE, ...JUEGOS_PALABRAS, GRAN_ESCALERA].filter((j) => !j.sinRanking);
 
 // ☁️ Nube (Firebase): sesión con Google, progreso sincronizado y ranking. Sin CONFIG, no aparece nada de esto.
 
@@ -238,7 +241,7 @@ export function abrirRanking(tipo) {
       new Option('⭐ General (estrellas)', ''),
       new Option('🏅 Liga semanal', 'liga'),
       new Option('🏅 Liga de amigos', 'liga-amigos'),
-      ...[...JUEGOS, ...JUEGOS_ARCADE, ...JUEGOS_PALABRAS].map((j) => new Option(`${j.icono} ${j.nombre}`, j.id)),
+      ...CON_RANKING.map((j) => new Option(`${j.icono} ${j.nombre}`, j.id)),
     );
     $('ranking-tipo').onchange = pintarRanking;
   }
@@ -254,7 +257,7 @@ export async function pintarRanking() {
     $('ranking-tu').textContent = '';
     return pintarRankingLiga(tipo === 'liga-amigos').catch(() => $('ranking-lista').replaceChildren(el('li', 'sin-datos', 'No se pudo cargar la liga (¿sin conexión?).')));
   }
-  const j = [...JUEGOS, ...JUEGOS_ARCADE, ...JUEGOS_PALABRAS].find((x) => x.id === tipo);
+  const j = CON_RANKING.find((x) => x.id === tipo);
   const campo = j ? `records.${j.id}` : 'estrellas';
   const menor = Boolean(j?.menorEsMejor);
   const valorDe = (fila) => (j ? fila.records?.[j.id] : fila.estrellas);

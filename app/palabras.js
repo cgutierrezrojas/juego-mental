@@ -1,13 +1,15 @@
-// 🔤 Palabras: página de la sección y las pantallas de 📅 Palabra del día, 🪢 Ahorcado y 🔍 Sopa de letras.
-// La lógica es pura (games/palabra.js, ahorcado.js, sopa.js); aquí se dibuja, se teclea y se termina.
+// 🔤 Palabras: página de la sección y las pantallas de 📅 Palabra del día, 🪢 Ahorcado, 🔍 Sopa de letras, 🪜 Escalera y 🎭 Charadas.
+// La lógica es pura (games/palabra.js, ahorcado.js, sopa.js, escalera.js, charadas.js); aquí se dibuja, se teclea y se termina.
 // Récord en `record:<id>` (ranking), partidas en `palabra:partidas`, el día en `palabra:hoy` y `palabra:stats`.
 import { el, leer, guardar, esRecord } from '../games/comun.js';
-import { sonar } from '../games/efectos.js';
+import { sonar, vibrar } from '../games/efectos.js';
 import { semillaNueva } from '../games/semilla.js';
 import { TEMAS, VALIDAS, mostrar as conTilde } from '../games/diccionario.js';
 import * as P from '../games/palabra.js';
 import * as H from '../games/ahorcado.js';
 import * as S from '../games/sopa.js';
+import * as Es from '../games/escalera.js';
+import * as C from '../games/charadas.js';
 import { E } from './estado.js';
 import { leerJSON } from './datos.js';
 import { $, mostrar, confeti, compartirTexto } from './ui.js';
@@ -20,6 +22,8 @@ const NIVELES = [['facil', '🙂 Fácil'], ['normal', '😐 Normal'], ['dificil'
 const AYUDA = {
   palabra: 'Adivina la palabra de 5 letras en 6 intentos. 🟩 la letra está en su lugar, 🟨 está en otra posición, ⬛ no está. Es la misma para todos y cambia cada día.',
   ahorcado: 'Adivina la palabra letra por letra; tienes 6 fallos. Te damos el tema como pista. Cada palabra vale 10 puntos más los fallos que te sobren, y sigues hasta perder una.',
+  escalera: 'Diez definiciones, cada palabra más larga. Cada 2,5 segundos se destapa una letra: escribe la palabra cuanto antes (10 puntos por cada letra que siga oculta). Fallar, o que se destapen todas, cuesta una de tus 3 ❤️.',
+  charadas: 'Para jugar en grupo. Pon el celular en horizontal sobre tu frente: los demás te dan pistas. Inclina la pantalla hacia abajo si aciertas y hacia arriba para pasar (o toca la mitad derecha o izquierda). 60 segundos por jugador.',
   sopa: 'Encuentra las 8 palabras del tema arrastrando el dedo de la primera a la última letra. Tienes 3 minutos: 100 puntos por palabra y, si las encuentras todas, 5 más por cada segundo que sobre.',
 };
 const FILAS_TECLADO = ['QWERTYUIOP', 'ASDFGHJKLÑ', 'ZXCVBNM'];
@@ -49,7 +53,7 @@ export function abrirPalabras() {
   const partidas = leerJSON('palabra:partidas');
   const filas = [
     ...(stats.jugadas ? [`📅 Palabra del día: racha ${P.rachaActual(stats, P.numeroDia())} · mejor ${stats.mejor}`] : []),
-    ...['ahorcado', 'sopa'].filter((id) => partidas[id]).map((id) => {
+    ...['ahorcado', 'sopa', 'escalera'].filter((id) => partidas[id]).map((id) => {
       const j = JUEGOS_PALABRAS.find((x) => x.id === id);
       return `${j.icono} ${j.nombre}: récord ${Number(leer(`record:${id}`)) || 0} · ${partidas[id]} partida${partidas[id] > 1 ? 's' : ''}`;
     }),
@@ -67,6 +71,8 @@ export function pararPalabras() {
   clearInterval(p.reloj);
   clearTimeout(p.espera);
   window.removeEventListener('keydown', p.alTeclear);
+  window.removeEventListener('deviceorientation', p.alInclinar);
+  document.getElementById('charadas-pantalla')?.remove();
   p = null;
 }
 
@@ -83,6 +89,7 @@ export function abrirJuegoPalabras(id, duelo = null) {
     $('palabras-tapete').replaceChildren(el('p', 'sin-datos', AYUDA.palabra));
     return $('palabras-botones').replaceChildren(boton(hoy.intentos.length ? '▶ Seguir' : '▶ Jugar', 'color', jugarDia), boton('Volver', '', abrirPalabras));
   }
+  if (id === 'charadas') return previaCharadas();
   const record = Number(leer(`record:${id}`)) || 0;
   $('palabras-marcador').replaceChildren(el('span', '', `${info.icono} ${info.nombre}`), el('span', '', duelo ? '⚔️ Reto' : `🏆 ${record}`));
   let nivel = duelo?.dificultad ?? (leer(`palabra:nivel-${id}`) || 'normal');
@@ -99,7 +106,9 @@ export function abrirJuegoPalabras(id, duelo = null) {
   pintarNiveles();
   $('palabras-tapete').replaceChildren(
     el('p', 'sin-datos', AYUDA[id]),
-    ...(duelo ? [el('p', 'sin-datos', `⚔️ Juegas la misma partida que ${E.enDuelo?.rival ?? 'tu rival'} en ${nombreNivel(nivel)}: gana quien hace más puntos.`)] : [niveles]),
+    ...(duelo
+      ? [el('p', 'sin-datos', `⚔️ Juegas la misma partida que ${E.enDuelo?.rival ?? 'tu rival'}${id === 'escalera' ? '' : ` en ${nombreNivel(nivel)}`}: gana quien hace más puntos.`)]
+      : id === 'escalera' ? [] : [niveles]),
   );
   $('palabras-botones').replaceChildren(
     boton('▶ Jugar', 'color', () => jugar(id, duelo?.semilla ?? semillaNueva(), nivel, duelo)),
@@ -111,6 +120,7 @@ function jugar(id, semilla, nivel, duelo) {
   pararPalabras();
   $('palabras-aviso').textContent = '';
   if (id === 'ahorcado') jugarAhorcado(semilla, nivel, duelo);
+  else if (id === 'escalera') jugarEscalera(semilla, duelo);
   else jugarSopa(semilla, nivel, duelo);
 }
 
@@ -389,7 +399,7 @@ function terminarSopa() {
   terminar();
 }
 
-// --- Fin (Ahorcado y Sopa) ---
+// --- Fin (Ahorcado, Sopa y Escalera) ---
 
 function terminar() {
   const { id, e, duelo, semilla, nivel } = p;
@@ -406,7 +416,9 @@ function terminar() {
   if (nuevo) confeti();
   pararPalabras();
   for (const b of document.querySelectorAll('#palabras-tapete .tecla')) b.disabled = true;
-  const extra = id === 'sopa' ? ` (${e.palabras.filter((w) => w.hallada).length} de ${e.palabras.length} palabras)` : ` (${e.palabras} palabra${e.palabras === 1 ? '' : 's'})`;
+  const extra = id === 'sopa' ? ` (${e.palabras.filter((w) => w.hallada).length} de ${e.palabras.length} palabras)`
+    : id === 'escalera' ? ` (llegaste a la ${e.i + 1}.ª de ${e.palabras.length})`
+    : ` (${e.palabras} palabra${e.palabras === 1 ? '' : 's'})`;
   $('palabras-aviso').textContent = duelo ? `⚔️ ${puntos} puntos anotados en el reto.` : nuevo ? `🏆 ¡Nuevo récord: ${puntos}!${extra}` : `${puntos} puntos${extra} · récord ${record}`;
   if (id === 'sopa') revelarSopa(e);
   if (duelo) return $('palabras-botones').replaceChildren(boton('⚔️ Volver al duelo', 'color', volverAlDuelo));
@@ -426,4 +438,192 @@ function revelarSopa(e) {
     for (let i = 0; i < w.palabra.length; i++) rejilla.children[(w.y + w.dy * i) * e.n + w.x + w.dx * i].classList.add('faltaba');
   }
   rejilla.onpointerdown = rejilla.onpointermove = rejilla.onpointerup = null;
+}
+
+// --- 🪜 Escalera de palabras ---
+
+// tipeo: { posición: letra } en las casillas ocultas; pila: el orden en que se escribieron (para ⌫).
+function jugarEscalera(semilla, duelo) {
+  p = { id: 'escalera', e: Es.nueva(semilla), semilla, nivel: 'normal', duelo, tipeo: {}, pila: [] };
+  $('palabras-tapete').replaceChildren(el('div', 'escalera'), teclado(pulsarEscalera, true));
+  $('palabras-botones').replaceChildren(boton('Salir', '', () => (duelo ? terminar() : abrirPalabras())));
+  empezarPalabraEscalera();
+}
+
+function empezarPalabraEscalera() {
+  p.tipeo = {};
+  p.pila = [];
+  pintarEscalera();
+  p.reloj = setInterval(() => {
+    Es.destapar(p.e);
+    for (const k of Es.visibles(p.e)) delete p.tipeo[k];
+    p.pila = p.pila.filter((k) => k in p.tipeo);
+    if (p.e.estado === 'fallada') return finPalabraEscalera();
+    sonar('tic');
+    pintarEscalera();
+  }, Es.CADA);
+}
+
+function pintarEscalera() {
+  const { e } = p;
+  const w = Es.actual(e);
+  const vistas = Es.visibles(e);
+  const terminada = e.estado !== 'jugando';
+  const letras = [...(terminada ? w.tilde : w.palabra)];
+  const casillas = el('div', 'palabra-ahorcado');
+  letras.forEach((l, k) => {
+    const clase = terminada ? (e.estado === 'acertada' ? 'acertada' : vistas.includes(k) ? '' : 'faltaba') : vistas.includes(k) ? 'destapada' : p.tipeo[k] ? 'escrita' : '';
+    casillas.append(el('span', clase, terminada || vistas.includes(k) ? l : p.tipeo[k] ?? ''));
+  });
+  const vale = 10 * (w.palabra.length - e.destapadas);
+  $('palabras-tapete').firstChild.replaceChildren(
+    el('p', 'definicion-escalera', w.definicion),
+    casillas,
+    el('p', 'tema-ahorcado', terminada ? '' : `${w.palabra.length} letras · vale ${vale}`),
+  );
+  const record = Number(leer('record:escalera')) || 0;
+  $('palabras-marcador').replaceChildren(el('span', '', `🪜 ${e.i + 1}/${e.palabras.length} · ${e.puntos} pts`), el('span', '', `${'❤️'.repeat(e.vidas)}${p.duelo ? ' · ⚔️' : ` · 🏆 ${Math.max(record, e.puntos)}`}`));
+}
+
+function pulsarEscalera(k) {
+  const { e } = p;
+  if (e.estado !== 'jugando') return;
+  const w = Es.actual(e);
+  const ocultas = [...w.palabra].map((_, i) => i).filter((i) => !Es.visibles(e).includes(i));
+  $('palabras-aviso').textContent = '';
+  if (k === '⌫') delete p.tipeo[p.pila.pop()];
+  else if (k === 'ENVIAR') {
+    if (ocultas.some((i) => !p.tipeo[i])) return ($('palabras-aviso').textContent = 'Faltan letras');
+    Es.responder(e, [...w.palabra].map((l, i) => p.tipeo[i] ?? l).join(''));
+    return finPalabraEscalera();
+  } else {
+    const libre = ocultas.find((i) => !p.tipeo[i]);
+    if (libre === undefined) return;
+    p.tipeo[libre] = k;
+    p.pila.push(libre);
+  }
+  pintarEscalera();
+}
+
+function finPalabraEscalera() {
+  const { e } = p;
+  clearInterval(p.reloj);
+  const w = Es.actual(e);
+  const acerto = e.estado === 'acertada';
+  sonar(acerto ? 'acierto' : 'fallo');
+  $('palabras-aviso').textContent = acerto ? `✅ ¡${w.tilde}! +${10 * (w.palabra.length - e.destapadas)}` : `❌ Era ${w.tilde}.`;
+  pintarEscalera();
+  p.espera = setTimeout(() => {
+    $('palabras-aviso').textContent = '';
+    if (!e.fin) Es.siguiente(e);
+    if (e.fin) return terminar();
+    empezarPalabraEscalera();
+  }, 1600);
+}
+
+// --- 🎭 Charadas ---
+
+// Palabras que ya salieron en esta visita (para no repetirlas entre jugadores).
+const usadasCharadas = [];
+
+function previaCharadas() {
+  $('palabras-marcador').replaceChildren(el('span', '', '🎭 Charadas'), el('span', '', ''));
+  let tema = leer('palabra:tema-charadas') || 'mezcla';
+  const temas = el('div', 'opciones-duelo');
+  const pintarTemas = () => temas.replaceChildren(...[...C.TEMAS_FIESTA, { id: 'mezcla', nombre: 'Mezcla', icono: '🎲' }].map((t) => {
+    const b = boton(`${t.icono} ${t.nombre}`, '', () => {
+      tema = t.id;
+      guardar('palabra:tema-charadas', t.id);
+      pintarTemas();
+    });
+    b.setAttribute('aria-pressed', String(t.id === tema));
+    return b;
+  }));
+  pintarTemas();
+  $('palabras-tapete').replaceChildren(el('p', 'sin-datos', AYUDA.charadas), temas);
+  $('palabras-botones').replaceChildren(boton('▶ Empezar', 'color', () => empezarCharadas(tema)), boton('Volver', '', abrirPalabras));
+}
+
+async function empezarCharadas(tema) {
+  // En iPhone el sensor pide permiso (tiene que ser al tocar un botón).
+  let sensor = 'DeviceOrientationEvent' in window;
+  if (typeof window.DeviceOrientationEvent?.requestPermission === 'function') {
+    sensor = await DeviceOrientationEvent.requestPermission().then((r) => r === 'granted').catch(() => false);
+  }
+  pararPalabras();
+  p = { id: 'charadas', tema, e: C.nueva(tema, usadasCharadas), restantes: C.SEGUNDOS, listo: false, jugando: false };
+  const pantalla = el('div', '');
+  pantalla.id = 'charadas-pantalla';
+  const izquierda = el('button', 'lado-charadas paso', '⏭ Paso');
+  const derecha = el('button', 'lado-charadas acierto', '✅ Acierto');
+  izquierda.onclick = () => marcarCharada('paso');
+  derecha.onclick = () => marcarCharada('acierto');
+  const cerrar = el('button', 'cerrar-charadas', '✕');
+  cerrar.setAttribute('aria-label', 'Terminar la ronda');
+  cerrar.onclick = finCharadas;
+  pantalla.append(izquierda, derecha, el('div', 'reloj-charadas', ''), el('div', 'palabra-charadas', ''), cerrar);
+  document.body.append(pantalla);
+  p.alInclinar = (ev) => {
+    if (ev.beta === null) return;
+    const d = C.inclinacion(ev.beta, ev.gamma);
+    if (d === 'recto') p.listo = true;
+    else if (d && p.listo && p.jugando) {
+      p.listo = false;
+      marcarCharada(d === 'abajo' ? 'acierto' : 'paso');
+    }
+  };
+  if (sensor) window.addEventListener('deviceorientation', p.alInclinar);
+  // Cuenta 3-2-1 y empieza.
+  let cuenta = 3;
+  const contar = () => {
+    if (!p || p.id !== 'charadas') return;
+    pantalla.querySelector('.palabra-charadas').textContent = cuenta ? String(cuenta) : '';
+    pantalla.querySelector('.reloj-charadas').textContent = 'Pon el celular en tu frente';
+    if (cuenta--) {
+      sonar('tic');
+      p.espera = setTimeout(contar, 1000);
+      return;
+    }
+    p.jugando = true;
+    pintarCharada();
+    p.reloj = setInterval(() => {
+      p.restantes--;
+      pintarCharada();
+      if (p.restantes <= 5 && p.restantes > 0) sonar('tic');
+      if (p.restantes <= 0) finCharadas();
+    }, 1000);
+  };
+  contar();
+}
+
+function pintarCharada() {
+  const pantalla = document.getElementById('charadas-pantalla');
+  pantalla.querySelector('.palabra-charadas').textContent = C.actual(p.e);
+  pantalla.querySelector('.reloj-charadas').textContent = `⏱ ${p.restantes} · ✅ ${p.e.aciertos}`;
+}
+
+function marcarCharada(resultado) {
+  if (!p?.jugando) return;
+  usadasCharadas.push(C.actual(p.e));
+  C.marcar(p.e, resultado);
+  const acierto = resultado === 'acierto';
+  sonar(acierto ? 'acierto' : 'fallo');
+  vibrar(acierto ? [60] : [30, 40, 30]);
+  const pantalla = document.getElementById('charadas-pantalla');
+  pantalla.className = acierto ? 'destello-acierto' : 'destello-paso';
+  setTimeout(() => (pantalla.className = ''), 350);
+  pintarCharada();
+}
+
+function finCharadas() {
+  const { e, tema } = p;
+  sonar('record');
+  ligaAnotar('partida');
+  pararPalabras();
+  $('palabras-marcador').replaceChildren(el('span', '', '🎭 Charadas'), el('span', '', `✅ ${e.aciertos}`));
+  $('palabras-aviso').textContent = `⏱ ¡Tiempo! ${e.aciertos} acierto${e.aciertos === 1 ? '' : 's'}.`;
+  const lista = el('ul', 'lista-charadas');
+  for (const j of e.jugadas) lista.append(el('li', j.acierto ? 'acierto' : 'paso', `${j.acierto ? '✅' : '⏭'} ${j.palabra}`));
+  $('palabras-tapete').replaceChildren(e.jugadas.length ? lista : el('p', 'sin-datos', 'No salió ninguna palabra.'));
+  $('palabras-botones').replaceChildren(boton('🔄 Siguiente jugador', 'color', () => empezarCharadas(tema)), boton('Volver', '', abrirPalabras));
 }

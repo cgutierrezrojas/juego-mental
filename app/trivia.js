@@ -15,8 +15,9 @@ import { $, mostrar, confeti, preguntar } from './ui.js';
 import { ligaAnotar } from './liga.js';
 import { asegurarDuelista } from './duelos.js';
 import { misPartidas, resultadoMesa, apuntarResultadoAmigo } from './mesa.js';
+import { abrirGranEscalera } from './granescalera.js';
 
-export const JUEGOS_TRIVIA = 3; // Ruleta, Fiesta y Trivia rápida (para la cuenta del inicio)
+export const JUEGOS_TRIVIA = 4; // Ruleta, Fiesta, Trivia rápida y La gran escalera (para la cuenta del inicio)
 const MAS_TIEMPO = 15;
 const IDS = CATEGORIAS_TRIVIA.map((c) => c.id);
 const categoria = (id) => CATEGORIAS_TRIVIA.find((c) => c.id === id);
@@ -125,6 +126,7 @@ export function abrirTrivia() {
     tarjeta('🎉', 'Fiesta', pintarFiesta),
     tarjeta('👥', 'Contra un amigo', pintarAmigos),
     tarjeta(INFO_JUEGOS.trivia.icono, INFO_JUEGOS.trivia.nombre, () => abrirPrevia(INFO_JUEGOS.trivia)),
+    tarjeta('💰', 'La gran escalera', () => abrirGranEscalera()),
     tarjeta('✍️', 'Proponer pregunta', () => pintarProponer()),
   );
   pintarPartidas();

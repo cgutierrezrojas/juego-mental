@@ -353,6 +353,9 @@ export const PREGUNTAS = [
   { c: 'animales', d: 3, p: '¿En qué región de Chile está el Parque Nacional Torres del Paine?', o: ['Magallanes', 'Aysén', 'Los Lagos', 'Atacama'] },
 ];
 
+// Las del banco propio (sin las de los jugadores): la 💰 Gran escalera usa solo estas, para que un reto dé las mismas preguntas.
+export const BASE = PREGUNTAS.length;
+
 // Las aprobadas que ya se descargaron (ver app/trivia.js): `trivia-extra` no lleva el prefijo `trivia:`, así no se sincroniza.
 try {
   agregarPreguntas(JSON.parse(leer('trivia-extra')));

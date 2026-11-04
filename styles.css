@@ -1435,3 +1435,38 @@ button.seccion {
 .lista-sopa { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 12px; font-weight: 800; }
 .lista-sopa .hallada { text-decoration: line-through; opacity: 0.5; }
 #palabras-marcador .urgente { color: var(--rojo); }
+.escalera { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+.definicion-escalera { margin: 0; font-size: 1.15rem; font-weight: 800; text-align: center; min-height: 2.6em; }
+.palabra-ahorcado span.destapada { color: var(--azul); }
+.palabra-ahorcado span.escrita { color: var(--amarillo); }
+.palabra-ahorcado span.acertada { color: var(--verde); }
+.lista-charadas { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; font-weight: 800; width: min(100%, 360px); }
+.lista-charadas .paso { opacity: 0.6; }
+#charadas-pantalla { position: fixed; inset: 0; z-index: 50; background: var(--fondo); display: grid; grid-template-columns: 1fr 1fr; transition: background 0.2s; }
+#charadas-pantalla.destello-acierto { background: var(--verde); }
+#charadas-pantalla.destello-paso { background: var(--acento); }
+.lado-charadas { border: 0; border-radius: 0; box-shadow: none; background: transparent; font-size: 1rem; opacity: 0.55; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 24px; }
+.lado-charadas.paso { border-right: 2px dashed color-mix(in srgb, var(--texto) 25%, transparent); }
+.palabra-charadas, .reloj-charadas { position: absolute; left: 0; right: 0; text-align: center; pointer-events: none; padding: 0 16px; }
+.palabra-charadas { top: 50%; transform: translateY(-50%); font-size: clamp(2.2rem, 10vw, 4.5rem); font-weight: 900; line-height: 1.1; }
+.reloj-charadas { top: 18px; font-size: 1.2rem; font-weight: 800; }
+.cerrar-charadas { position: absolute; top: 10px; right: 10px; padding: 6px 12px; font-size: 1rem; box-shadow: none; }
+#granescalera:not([hidden]) { display: flex; flex-direction: column; gap: 10px; }
+#granescalera-contenido { display: flex; flex-direction: column; gap: 10px; }
+#granescalera-aviso { margin: 0; min-height: 1.3em; font-weight: 800; text-align: center; }
+#granescalera-botones { flex-wrap: wrap; }
+#granescalera-marcador .urgente { color: var(--rojo); }
+.escalones { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; font-size: 0.72rem; font-weight: 800; text-align: center; }
+.escalones li { padding: 3px 0; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--texto) 20%, transparent); }
+.escalones li.seguro { border-color: var(--amarillo); color: var(--amarillo); }
+.escalones li.pasado { background: color-mix(in srgb, var(--verde) 25%, transparent); }
+.escalones li.actual { background: var(--azul); border-color: var(--azul); color: var(--fondo); }
+.pregunta-escalera { margin: 0; font-size: 1.2rem; font-weight: 800; text-align: center; }
+.opciones-escalera { display: grid; gap: 8px; }
+.opcion-escalera { text-align: left; font-size: 1.05rem; }
+.opcion-escalera.quitada { opacity: 0.25; }
+.opcion-escalera.ok { background: var(--verde); color: var(--fondo); border-color: var(--verde); }
+.opcion-escalera.mal { background: var(--rojo); color: #fff; border-color: var(--rojo); }
+.publico-escalera { display: flex; flex-direction: column; gap: 3px; }
+.publico-escalera .barra-palabra span:last-child { background: var(--azul); color: var(--fondo); }
+#granescalera-contenido .opciones-duelo button:disabled { opacity: 0.35; text-decoration: line-through; }

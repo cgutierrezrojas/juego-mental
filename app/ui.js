@@ -4,6 +4,7 @@ import { pararMesa } from './mesa.js';
 import { pararCartas } from './cartas.js';
 import { pararArcade } from './arcade.js';
 import { pararPalabras } from './palabras.js';
+import { pararGranEscalera } from './granescalera.js';
 import { pintarInicio } from './inicio.js';
 import { pintarLigaMenu } from './liga.js';
 import { leer, el, guardar } from '../games/comun.js';
@@ -81,7 +82,7 @@ export function mostrar(id) {
   // Barra inferior: oculta en la partida; resalta el botón de la pantalla actual.
   $('navegacion').hidden = id === 'juego';
   const pestana = {
-    inicio: 'nav-inicio', menu: 'nav-inicio', mesa: 'nav-inicio', 'mesa-modo': 'nav-inicio', 'mesa-tablero': 'nav-inicio', trivia: 'nav-inicio', 'trivia-partida': 'nav-inicio', cartas: 'nav-inicio', 'cartas-juego': 'nav-inicio', arcade: 'nav-inicio', 'arcade-juego': 'nav-inicio', palabras: 'nav-inicio', 'palabras-juego': 'nav-inicio', duelos: 'btn-duelos', 'nuevo-duelo': 'btn-duelos', duelo: 'btn-duelos', vivo: 'btn-duelos',
+    inicio: 'nav-inicio', menu: 'nav-inicio', mesa: 'nav-inicio', 'mesa-modo': 'nav-inicio', 'mesa-tablero': 'nav-inicio', trivia: 'nav-inicio', 'trivia-partida': 'nav-inicio', cartas: 'nav-inicio', 'cartas-juego': 'nav-inicio', arcade: 'nav-inicio', 'arcade-juego': 'nav-inicio', palabras: 'nav-inicio', 'palabras-juego': 'nav-inicio', granescalera: 'nav-inicio', duelos: 'btn-duelos', 'nuevo-duelo': 'btn-duelos', duelo: 'btn-duelos', vivo: 'btn-duelos',
     amigos: 'btn-amigos', chat: 'btn-amigos', ranking: 'btn-ranking', estadisticas: 'btn-estadisticas',
   }[id];
   for (const b of document.querySelectorAll('#navegacion button')) b.setAttribute('aria-current', b.id === pestana ? 'page' : 'false');
@@ -103,6 +104,7 @@ export function mostrar(id) {
   if (id !== 'cartas-juego') pararCartas();
   if (id !== 'arcade-juego') pararArcade();
   if (id !== 'palabras-juego') pararPalabras();
+  if (id !== 'granescalera') pararGranEscalera();
   if (id !== 'juego') revisarInvitacionPendiente();
   if (id !== 'juego' && E.estadoApp !== 'conectado') ponerEstado('conectado');
   if (id === 'inicio' || id === 'menu' || id === 'final') subir().catch(() => {}); // sin conexión: se reintenta la próxima vez

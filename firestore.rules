@@ -144,13 +144,14 @@ service cloud.firestore {
 
     // Mismos límites que LIMITES en games/sincro.js.
     function recordsValidos(r) {
-      return r.keys().hasOnly(['calculo', 'mayor', 'menos', 'verdad', 'cuenta', 'anagrama', 'distinto', 'series', 'sobra', 'balanza', 'atencion', 'topos', 'memoria', 'puzzle', 'rayo', 'parejas', 'serpiente', 'saltar', 'autos', 'ladrillos', 'palabra', 'ahorcado', 'sopa'])
+      return r.keys().hasOnly(['calculo', 'mayor', 'menos', 'verdad', 'cuenta', 'anagrama', 'distinto', 'series', 'sobra', 'balanza', 'atencion', 'topos', 'memoria', 'puzzle', 'rayo', 'parejas', 'serpiente', 'saltar', 'autos', 'ladrillos', 'palabra', 'ahorcado', 'sopa', 'escalera', 'granescalera'])
         && enRango(r, 'calculo', 1, 300) && enRango(r, 'mayor', 1, 300) && enRango(r, 'menos', 1, 300) && enRango(r, 'verdad', 1, 300) && enRango(r, 'cuenta', 1, 300) && enRango(r, 'anagrama', 1, 300) && enRango(r, 'distinto', 1, 300)
         && enRango(r, 'series', 1, 300) && enRango(r, 'sobra', 1, 300) && enRango(r, 'balanza', 1, 300)
         && enRango(r, 'atencion', 1, 300) && enRango(r, 'topos', 1, 300) && enRango(r, 'memoria', 1, 100)
         && enRango(r, 'puzzle', 1, 10000) && enRango(r, 'rayo', 80, 5000) && enRango(r, 'parejas', 6, 1000)
         && enRango(r, 'serpiente', 1, 100000) && enRango(r, 'saltar', 1, 100000) && enRango(r, 'autos', 1, 100000) && enRango(r, 'ladrillos', 1, 100000)
-        && enRango(r, 'palabra', 1, 10000) && enRango(r, 'ahorcado', 1, 100000) && enRango(r, 'sopa', 1, 100000);
+        && enRango(r, 'palabra', 1, 10000) && enRango(r, 'ahorcado', 1, 100000) && enRango(r, 'sopa', 1, 100000)
+        && enRango(r, 'escalera', 1, 10000) && enRango(r, 'granescalera', 1, 1000000);
     }
 
     function enRango(r, id, min, max) {
