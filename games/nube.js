@@ -1,5 +1,6 @@
 // Nube con Firebase: sesión con Google, progreso en `usuarios/{uid}` y ranking en `ranking/{uid}`.
 import { semanaDe } from './liga.js';
+import { idChat } from './chat.js';
 // El SDK se carga desde gstatic solo cuando hay configuración; si falla (sin conexión), la app sigue sin nube.
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
@@ -61,6 +62,7 @@ export async function vincularGoogle() {
     if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return 'cancelada';
     if (e.code !== 'auth/credential-already-in-use') throw e;
     await borrarTodo(auth.currentUser.uid).catch(() => {});
+    await au.deleteUser(auth.currentUser).catch(() => {}); // el invitado ya no sirve
     await au.signInWithCredential(auth, au.GoogleAuthProvider.credentialFromError(e));
     return 'otra';
   }
@@ -77,17 +79,56 @@ export async function leerProgreso(uid) {
 export const guardarProgreso = (uid, datos, actualizado) => fs.setDoc(documento('usuarios', uid), { datos, actualizado });
 export const guardarRanking = (uid, fila) => fs.setDoc(documento('ranking', uid), fila);
 export const quitarRanking = (uid) => fs.deleteDoc(documento('ranking', uid));
-// Borra todo lo de esta persona en la nube: progreso, ranking, perfil, solicitudes de amistad y propuestas de preguntas.
+// Borra todo lo de esta persona en la nube: progreso, ranking, perfil, ligas, solicitudes, propuestas, duelos
+// y, en la Realtime Database, estado, amigos, bloqueos, leídos, invitaciones, mesas y conversaciones.
+// Quedan solo las denuncias (se revisan y borran a mano) y las salas en vivo a medias (se borran al terminar).
 export async function borrarTodo(uid) {
-  const solicitudes = await misSolicitudes(uid).catch(() => []);
+  const [solicitudes, propuestas, duelos, invitado] = await Promise.all([
+    misSolicitudes(uid), misPropuestas(uid), misDuelos(uid), invitaciones(uid),
+  ]);
+  // Todas las semanas desde que existe la liga (octubre de 2026).
+  const semanas = new Set();
+  for (let f = Date.now(); f > Date.UTC(2026, 9, 18); f -= 7 * 86400000) semanas.add(semanaDe(new Date(f).toISOString().slice(0, 10)));
+  const otros = solicitudes.map((s) => (s.de === uid ? s.para : s.de));
+  if (rt) await borrarTiempoReal(uid, otros);
   await Promise.all([
     fs.deleteDoc(documento('usuarios', uid)),
     quitarRanking(uid),
     fs.deleteDoc(documento('perfiles', uid)),
-    fs.deleteDoc(fs.doc(db, 'liga', semanaDe(new Date().toISOString().slice(0, 10)), 'jugadores', uid)),
+    ...[...semanas].map((s) => fs.deleteDoc(jugadorLiga(s, uid))),
     ...solicitudes.map((s) => borrarSolicitud(s.id)),
-    ...(await misPropuestas(uid).catch(() => [])).map((p) => fs.deleteDoc(fs.doc(db, 'propuestas', p.id))),
+    ...propuestas.map((p) => fs.deleteDoc(fs.doc(db, 'propuestas', p.id))),
+    ...[...duelos, ...invitado].map((d) => borrarDuelo(d.id)),
   ]);
+}
+
+async function borrarTiempoReal(uid, otros) {
+  const hijos = async (ruta) => Object.keys((await rt.get(rt.ref(base, ruta))).val() ?? {});
+  const [amigos, mesas, salas] = await Promise.all([hijos(`amigos/${uid}`), hijos(`misMesas/${uid}`), hijos(`invitaciones/${uid}`)]);
+  await pararEstados();
+  await rt.onDisconnect(rt.ref(base, `estado/${uid}`)).cancel();
+  const quitar = (ruta) => rt.remove(rt.ref(base, ruta));
+  await Promise.all([
+    ...['estado', 'amigos', 'leidos', 'bloqueos'].map((n) => quitar(`${n}/${uid}`)),
+    ...mesas.map((id) => quitar(`misMesas/${uid}/${id}`)),
+    ...salas.map((id) => quitar(`invitaciones/${uid}/${id}`)),
+    ...[...new Set([...amigos, ...otros])].map((o) => quitar(`chats/${idChat(uid, o)}`)),
+    // la mesa puede haberla borrado ya el rival
+    ...mesas.map((id) => quitar(`mesas/${id}`).catch(() => {})),
+  ]);
+}
+
+// Borra los datos y la cuenta. Si Google pide haber entrado hace poco, vuelve a preguntar la cuenta y reintenta.
+export async function borrarCuenta() {
+  const u = auth.currentUser;
+  await borrarTodo(u.uid);
+  try {
+    await au.deleteUser(u);
+  } catch (e) {
+    if (e.code !== 'auth/requires-recent-login') throw e;
+    await au.reauthenticateWithPopup(u, new au.GoogleAuthProvider());
+    await au.deleteUser(u);
+  }
 }
 
 // Mejores filas del ranking por `campo` ('estrellas' o 'records.<id>'); en "menos es mejor", de menor a mayor.

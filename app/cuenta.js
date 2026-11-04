@@ -66,7 +66,7 @@ export function pintarNube() {
         E.nube.salir();
       }));
     }
-    partes.push(boton('Borrar mis datos de la nube', borrarNube));
+    partes.push(boton('🗑️ Borrar mi cuenta', borrarNube));
   }
   partes.push(privacidad);
   caja.replaceChildren(...partes);
@@ -218,19 +218,17 @@ export async function vincular() {
 
 export async function borrarNube() {
   const seguro = await preguntar({
-    titulo: 'Borrar mis datos de la nube',
-    texto: 'Se borrarán tu progreso guardado en la nube y tu fila del ranking. El progreso de este celular se queda.',
+    titulo: 'Borrar mi cuenta',
+    texto: 'Se borrarán tu cuenta y todo lo tuyo en la nube: progreso, ranking, ligas, amigos, mensajes y duelos. No se puede deshacer. El progreso guardado en este celular se queda.',
     boton: 'Borrar',
   });
   if (!seguro) return;
   try {
-    await E.nube.borrarTodo(E.usuario.uid);
+    await E.nube.borrarCuenta();
     for (const clave of ['nube:uid', 'nube:subido', 'nube:apodo', 'nube:preguntado']) guardar(clave, '');
-    await E.nube.pararEstados();
-    await E.nube.salir();
-    avisarNube('✓ Tus datos de la nube se han borrado.');
+    avisarNube('✓ Tu cuenta y tus datos de la nube se han borrado.');
   } catch {
-    avisarNube('No se pudieron borrar (¿sin conexión?). Inténtalo de nuevo.');
+    avisarNube('No se pudo borrar todo (¿sin conexión?). Inténtalo de nuevo.');
   }
 }
 

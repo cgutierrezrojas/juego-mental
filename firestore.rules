@@ -21,7 +21,8 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create: if request.auth != null && dueloNuevoValido(request.resource.data);
       allow update: if request.auth != null && (unirse() || anotar());
-      allow delete: if request.auth != null && resource.data.anfitrion == request.auth.uid && resource.data.jugadores.size() == 1;
+      // Cualquiera de los dos (o el invitado) puede borrarlo; la app lo hace al borrar la cuenta.
+      allow delete: if request.auth != null && (request.auth.uid in resource.data.jugadores || resource.data.invitado == request.auth.uid);
     }
 
     // Perfil público (apodo y código de amigo), para encontrar a alguien por su código.
