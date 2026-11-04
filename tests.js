@@ -717,6 +717,10 @@ probar('duelos: marcador juego a juego y por suma', () => {
   const caducado = duelo({ resultados: { a: { calculo: 5 }, b: {} } });
   assert(marcador(caducado, 'a', INFO).mio === 0, 'sin terminar, lo no jugado no cuenta');
   assert(marcador(caducado, 'a', INFO, true).mio === 1 && resultadoPara(caducado, 'b', INFO) === 'd', 'al terminar, gana quien jugó');
+  // Reto del Arcade: sin `referencia`, cuentan los puntos tal cual.
+  const reto = duelo({ juegos: ['saltar'], victoria: 'puntos', resultados: { a: { saltar: 62 }, b: { saltar: 7 } } });
+  const r = marcador(reto, 'a', { saltar: { nombre: 'Saltar' } }, true);
+  assert(r.mio === 62 && r.suyo === 7 && resultadoPara(reto, 'b', { saltar: {} }) === 'd', `${r.mio} ${r.suyo}`);
 });
 
 probar('duelos: estados', () => {

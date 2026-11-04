@@ -27,7 +27,9 @@ export function marcador(duelo, uid, juegos, final = false) {
     return { id, mio, suyo, gana };
   });
   if (duelo.victoria === 'puntos') {
-    const suma = (r) => duelo.juegos.reduce((s, id) => (r[id] === undefined ? s : s + nivel(r[id], juegos[id].referencia, juegos[id].menorEsMejor)), 0);
+    // Sin `referencia` (Arcade): se suman los puntos tal cual.
+    const valor = (id, x) => (juegos[id]?.referencia ? nivel(x, juegos[id].referencia, juegos[id].menorEsMejor) : x);
+    const suma = (r) => duelo.juegos.reduce((s, id) => (r[id] === undefined ? s : s + valor(id, r[id])), 0);
     return { porJuego, mio: suma(mios), suyo: suma(suyos) };
   }
   const ganados = (quien) => porJuego.filter((p) => p.gana === quien).length;
