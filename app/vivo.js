@@ -215,6 +215,9 @@ export async function recibirInvitacion(id, invitacion) {
     E.nube.borrarInvitacion(id); // reto viejo: ya no vale
     return;
   }
+  // Firestore no ve los bloqueos (están en Realtime Database): el reto de alguien bloqueado se descarta aquí.
+  const bloqueos = await E.nube.bloqueados(E.usuario.uid).catch(() => ({}));
+  if (bloqueos[invitacion.de]) return E.nube.borrarInvitacion(id);
   if (!$('juego').hidden || $('dialogo-vivo').open) {
     E.invitacionPendiente = { id, invitacion };
     return;

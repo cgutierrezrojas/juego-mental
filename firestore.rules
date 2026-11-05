@@ -42,6 +42,12 @@ service cloud.firestore {
       allow create, update: if request.auth != null && request.auth.uid == uid && estadoValido(request.resource.data);
     }
 
+    // Reto en vivo: lo crea quien reta a un amigo; lo leen y borran los dos. La sala está en Realtime Database.
+    match /invitacionesVivo/{sala} {
+      allow read, delete: if request.auth != null && (resource.data.de == request.auth.uid || resource.data.para == request.auth.uid);
+      allow create: if request.auth != null && invitacionValida(request.resource.data);
+    }
+
     // Solicitudes de amistad: las ven y borran sus dos personas; solo quien la recibe puede aceptarla.
     match /solicitudes/{id} {
       allow read: if request.auth != null && (resource.data.de == request.auth.uid || resource.data.para == request.auth.uid);
