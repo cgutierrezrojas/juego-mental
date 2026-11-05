@@ -36,3 +36,7 @@ export function amigosDe(solicitudes, uid) {
   resultado.amigos.sort((a, b) => a.apodo.localeCompare(b.apodo));
   return resultado;
 }
+
+// Estado que se muestra de un amigo: el último publicado, salvo que tenga más de `limite` ms (la app se cerró sin avisar).
+export const enLinea = (dato, ahora, limite = 5 * 60000) =>
+  !dato?.cuando || ahora - dato.cuando > limite ? 'desconectado' : dato.estado;

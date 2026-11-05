@@ -741,7 +741,7 @@ probar('duelos: estados', () => {
 });
 
 // --- amigos.js ---
-import { codigoAmigo, normalizarCodigo, amigosDe } from './games/amigos.js';
+import { codigoAmigo, normalizarCodigo, amigosDe, enLinea } from './games/amigos.js';
 
 probar('amigos: código de amigo y solicitudes', () => {
   const c = codigoAmigo('uidDePrueba123');
@@ -759,6 +759,15 @@ probar('amigos: código de amigo y solicitudes', () => {
   ];
   const r = amigosDe(s, 'yo');
   assert(r.amigos.map((a) => a.apodo).join() === 'Ana,Bea' && r.recibidas[0].uid === 'leo' && r.enviadas[0].uid === 'sol', JSON.stringify(r));
+});
+
+probar('enLinea: el estado vale 5 minutos; después, desconectado', () => {
+  const ahora = 10_000_000;
+  assert(enLinea({ estado: 'jugando', cuando: ahora - 60000 }, ahora) === 'jugando');
+  assert(enLinea({ estado: 'ausente', cuando: ahora - 299000 }, ahora) === 'ausente');
+  assert(enLinea({ estado: 'conectado', cuando: ahora - 301000 }, ahora) === 'desconectado');
+  assert(enLinea({ estado: 'conectado' }, ahora) === 'desconectado');
+  assert(enLinea(null, ahora) === 'desconectado');
 });
 
 // --- vivo.js ---
