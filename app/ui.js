@@ -13,7 +13,7 @@ import { pintarEntreno, pintarProgreso, pintarSugerencia } from './menu.js';
 import { pintarAvisoDuelos } from './duelos.js';
 import { dejarDeEscuchar, ponerEstado } from './amigos.js';
 import { pararChat } from './chat.js';
-import { revisarInvitacionPendiente } from './vivo.js';
+import { revisarInvitacionPendiente, salirDeSala } from './vivo.js';
 import { subir } from './cuenta.js';
 import { E } from './estado.js';
 
@@ -144,6 +144,7 @@ export function mostrar(id) {
   if (id !== 'previa') mostrarAyuda(AYUDA_DE_PANTALLA[id]);
   if (id !== 'amigos') dejarDeEscuchar();
   if (id !== 'chat') pararChat();
+  if (!['vivo', 'juego', 'final'].includes(id)) salirDeSala();
   if (id !== 'mesa-tablero') pararMesa();
   if (id !== 'trivia-partida') pararTrivia();
   if (id !== 'cartas-juego') pararCartas();

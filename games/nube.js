@@ -114,7 +114,7 @@ export const guardarProgreso = (uid, datos, actualizado) => fs.setDoc(documento(
 export const guardarRanking = (uid, fila) => fs.setDoc(documento('ranking', uid), fila);
 export const quitarRanking = (uid) => fs.deleteDoc(documento('ranking', uid));
 // Borra todo lo de esta persona en la nube: progreso, ranking, perfil, ligas, solicitudes, propuestas, duelos
-// y, en la Realtime Database, amigos, bloqueos, leídos, invitaciones, mesas y conversaciones.
+// y, en la Realtime Database, amigos, bloqueos, leídos, mesas y conversaciones.
 // Quedan solo las denuncias (se revisan y borran a mano) y las salas en vivo a medias (se borran al terminar).
 export async function borrarTodo(uid) {
   const [solicitudes, propuestas, duelos, invitado] = await Promise.all([
@@ -265,8 +265,8 @@ let latido;
 
 export const hayEstados = () => Boolean(rt);
 
-const escribirEstado = (extra = {}) =>
-  miEstado && fs.setDoc(documento('estados', miEstado.uid), { estado: miEstado.estado, cuando: fs.serverTimestamp(), ...extra }, { merge: true }).catch(() => {});
+const escribirEstado = () =>
+  miEstado && fs.setDoc(documento('estados', miEstado.uid), { estado: miEstado.estado, cuando: fs.serverTimestamp() }, { merge: true }).catch(() => {});
 
 // Publica el estado y lo repite cada 3 min mientras la app está a la vista (si no, a los 5 min se ve desconectado).
 export function iniciarEstados(uid) {
@@ -293,7 +293,7 @@ export async function pararEstados() {
 }
 
 // Avisa con alCambiar(estado) al cambiar el de un amigo, y cada minuto (para notar que se le pasó el tiempo).
-// Si aún no hay permiso (el amigo no ha abierto Amigos desde que lo son), se reintenta cada 20 s.
+// Si aún no se puede leer (el documento puede no existir aún si el amigo no ha abierto la app desde entonces), se reintenta cada 20 s.
 export function verEstado(uid, alCambiar) {
   if (!rt) return () => {};
   let dato = null;
@@ -319,10 +319,9 @@ export function verEstado(uid, alCambiar) {
   };
 }
 
-// Quiénes pueden ver mi estado (Firestore) y escribirme o retarme (Realtime Database, por sus reglas).
+// Quiénes pueden escribirme o retarme (Realtime Database, por sus reglas); el estado (Firestore) se lee por amistad.
 export function guardarAmigosEstados(uid, uids) {
   if (!rt) return Promise.resolve();
-  escribirEstado({ amigos: uids });
   return conRed(() => rt.set(rt.ref(base, `amigos/${uid}`), Object.fromEntries(uids.map((u) => [u, true])))).catch(() => {});
 }
 
@@ -339,6 +338,9 @@ export async function crearSalaVivo(sala) {
   });
   await fs.setDoc(fs.doc(db, 'invitacionesVivo', id), {
     de: sala.anfitrion, para: sala.invitado, nombre: sala.nombres[sala.anfitrion], juegos: sala.juegos, dificultad: sala.dificultad, cuando: fs.serverTimestamp(),
+  }).catch(async (e) => {
+    await borrarSala(id);
+    throw e;
   });
   return id;
 }

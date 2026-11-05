@@ -10,12 +10,12 @@ Orden: **A** (conexiones) → **B** (Capacitor) → **C** (anuncios y compras) �
 
 **Diseño.**
 
-1. **Estado en Firestore:** `estados/{uid}` = `{ estado, cuando, amigos }`.
-   - `estado`: conectado | jugando | ausente | desconectado. `cuando`: hora del servidor. `amigos`: lista de uids que pueden leerlo (la escribe el dueño en `cargarAmigos`, como hoy `amigos/{uid}` en Realtime Database).
+1. **Estado en Firestore:** `estados/{uid}` = `{ estado, cuando }`, legible por el dueño y sus amigos (se comprueba con `sonAmigos`).
+   - `estado`: conectado | jugando | ausente | desconectado. `cuando`: hora del servidor.
    - Se escribe al cambiar de estado y cada **3 min** mientras la app está a la vista (latido). Al ocultarse: «ausente» (como hoy). Al cerrar sesión: «desconectado».
    - Quien lo mira lo da por **desconectado si `cuando` tiene más de 5 min**; se recalcula cada minuto mientras la pantalla de Amigos está abierta.
    - Modo invisible: igual que hoy (se publica «desconectado»).
-   - Reglas: lee el dueño o quien esté en `amigos`; escribe solo el dueño; campos exactos; `estado` de la lista; `cuando == request.time`; `amigos` lista de hasta 500.
+   - Reglas: lee el dueño o un amigo (`sonAmigos`); escribe solo el dueño; campos exactos; `estado` de la lista; `cuando == request.time`.
 2. **Invitaciones en vivo en Firestore:** `invitacionesVivo/{sala}` = `{ de, para, nombre, juegos, dificultad, cuando }`.
    - Se crea después de la sala (como hoy). El invitado escucha `where('para', '==', uid)` con `onSnapshot`; las de más de 2 min se borran sin mostrarse (como hoy).
    - Reglas: crear si `de == auth.uid`, `sonAmigos(de, para)`, nombre 1–20, juegos lista de 1–5, `cuando == request.time`, campos exactos; leer y borrar `de` o `para`; no se actualizan.

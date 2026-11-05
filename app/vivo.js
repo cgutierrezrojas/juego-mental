@@ -211,13 +211,14 @@ export function pintarResultadoVivo(sala, resultado, titulo, rival, boton) {
 
 // Reto recibido: se muestra al momento (o al terminar la partida en curso).
 export async function recibirInvitacion(id, invitacion) {
+  // Firestore no ve los bloqueos (están en Realtime Database): el reto de alguien bloqueado se descarta aquí.
+  // Se mira antes de la edad: así Realtime Database ya está conectada y el desfase del servidor al día.
+  const bloqueos = await E.nube.bloqueados(E.usuario.uid).catch(() => ({}));
+  if (invitacion && bloqueos[invitacion.de]) return E.nube.borrarInvitacion(id);
   if (!invitacion || E.nube.ahoraServidor() - (invitacion.cuando ?? 0) > 120000) {
     E.nube.borrarInvitacion(id); // reto viejo: ya no vale
     return;
   }
-  // Firestore no ve los bloqueos (están en Realtime Database): el reto de alguien bloqueado se descarta aquí.
-  const bloqueos = await E.nube.bloqueados(E.usuario.uid).catch(() => ({}));
-  if (bloqueos[invitacion.de]) return E.nube.borrarInvitacion(id);
   if (!$('juego').hidden || $('dialogo-vivo').open) {
     E.invitacionPendiente = { id, invitacion };
     return;

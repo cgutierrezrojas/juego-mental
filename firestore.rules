@@ -35,9 +35,9 @@ service cloud.firestore {
         && request.resource.data.codigo is string && request.resource.data.codigo.size() == 7;
     }
 
-    // Estado en línea: lo escribe su dueño; lo leen él y los amigos que él lista.
+    // Estado en línea: lo escribe su dueño; lo leen él y sus amigos (sonAmigos).
     match /estados/{uid} {
-      allow read: if request.auth != null && (request.auth.uid == uid || request.auth.uid in resource.data.get('amigos', []));
+      allow read: if request.auth != null && (request.auth.uid == uid || sonAmigos(uid, request.auth.uid));
       allow delete: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null && request.auth.uid == uid && estadoValido(request.resource.data);
     }
@@ -170,10 +170,9 @@ service cloud.firestore {
     }
 
     function estadoValido(d) {
-      return d.keys().hasOnly(['estado', 'cuando', 'amigos']) && d.keys().hasAll(['estado', 'cuando'])
+      return d.keys().hasOnly(['estado', 'cuando']) && d.keys().hasAll(['estado', 'cuando'])
         && d.estado in ['conectado', 'jugando', 'ausente', 'desconectado']
-        && d.cuando == request.time
-        && (!('amigos' in d) || (d.amigos is list && d.amigos.size() <= 500));
+        && d.cuando == request.time;
     }
 
     function invitacionValida(d) {

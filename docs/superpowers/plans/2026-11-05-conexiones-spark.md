@@ -165,15 +165,15 @@ export const borrarMesa = (id) => conRed(() => rt.remove(rt.ref(base, `mesas/${i
 - [ ] **Step 2:** reemplaza el bloque de estados (desde `let refEstado = null;` hasta el final de `guardarAmigosEstados`) por:
 
 ```js
-// --- Estados en línea (`estados/{uid}` en Firestore: { estado, cuando, amigos }; solo lo leen los de `amigos`) ---
+// --- Estados en línea (`estados/{uid}` en Firestore: { estado, cuando }; lo leen el dueño y sus amigos, por `sonAmigos`) ---
 
 let miEstado = null; // { uid, estado } mientras hay sesión
 let latido;
 
 export const hayEstados = () => Boolean(rt);
 
-const escribirEstado = (extra = {}) =>
-  miEstado && fs.setDoc(documento('estados', miEstado.uid), { estado: miEstado.estado, cuando: fs.serverTimestamp(), ...extra }, { merge: true }).catch(() => {});
+const escribirEstado = () =>
+  miEstado && fs.setDoc(documento('estados', miEstado.uid), { estado: miEstado.estado, cuando: fs.serverTimestamp() }, { merge: true }).catch(() => {});
 
 // Publica el estado y lo repite cada 3 min mientras la app está a la vista (si no, a los 5 min se ve desconectado).
 export function iniciarEstados(uid) {
@@ -229,7 +229,6 @@ export function verEstado(uid, alCambiar) {
 // Quiénes pueden ver mi estado (Firestore) y escribirme o retarme (Realtime Database, por sus reglas).
 export function guardarAmigosEstados(uid, uids) {
   if (!rt) return Promise.resolve();
-  escribirEstado({ amigos: uids });
   return conRed(() => rt.set(rt.ref(base, `amigos/${uid}`), Object.fromEntries(uids.map((u) => [u, true])))).catch(() => {});
 }
 ```
@@ -242,9 +241,9 @@ export function guardarAmigosEstados(uid, uids) {
 - [ ] **Step 4: Reglas de Firestore.** En `firestore.rules`, después de `match /perfiles/{uid} { … }`:
 
 ```
-    // Estado en línea: lo escribe su dueño; lo leen él y los amigos que él lista.
+    // Estado en línea: lo escribe su dueño; lo leen él y sus amigos (sonAmigos).
     match /estados/{uid} {
-      allow read: if request.auth != null && (request.auth.uid == uid || request.auth.uid in resource.data.get('amigos', []));
+      allow read: if request.auth != null && (request.auth.uid == uid || sonAmigos(uid, request.auth.uid));
       allow delete: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null && request.auth.uid == uid && estadoValido(request.resource.data);
     }
@@ -254,10 +253,9 @@ export function guardarAmigosEstados(uid, uids) {
 
 ```
     function estadoValido(d) {
-      return d.keys().hasOnly(['estado', 'cuando', 'amigos']) && d.keys().hasAll(['estado', 'cuando'])
+      return d.keys().hasOnly(['estado', 'cuando']) && d.keys().hasAll(['estado', 'cuando'])
         && d.estado in ['conectado', 'jugando', 'ausente', 'desconectado']
-        && d.cuando == request.time
-        && (!('amigos' in d) || (d.amigos is list && d.amigos.size() <= 500));
+        && d.cuando == request.time;
     }
 ```
 
