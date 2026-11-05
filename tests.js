@@ -1319,7 +1319,15 @@ probar('rummy: tríos, escalas con vuelta, comodines, agregar, cambiar y bajar',
   assert(b.usados.map((i) => i).includes(9), 'usa el comodín para el trío de K');
   assert(!rm.mejorBajada(cs('7♥ 7♠ 7♦ 4♠ 5♠ 6♠ 8♠ 2♥ 9♦ 10♣ J♣ Q♦'), ['T', 'E']), 'un solo 7♠ no alcanza para los dos');
   b = rm.mejorBajada(cs('7♥ 7♠ 7♦ 4♠ 5♠ 6♠ 8♠ 7♠ 9♦ 10♣ J♣ Q♦'), ['T', 'E']);
-  assert(b && nombres(b.juegos[1]) === '4♠ 5♠ 6♠ 7♠ 8♠' && b.juegos[0].cartas.length === 3, 'un 7♠ en el trío y el otro en la escala');
+  assert(b && nombres(b.juegos[1]) === '5♠ 6♠ 7♠ 8♠' && b.juegos[0].cartas.length === 3, 'un 7♠ en el trío y el otro en la escala (de 4 justas)');
+  // Al bajar: tríos de 3 y escalas de 4 justas; se puede elegir entre las formas, sin comodín primero.
+  let fs = rm.bajadas(cs('7♥ 7♠ 7♦ 7♣ K♣ K♥ * 9♦'), ['T', 'T']);
+  assert(fs.every((f) => f.juegos.every((x) => x.cartas.length === 3)), 'tríos de 3');
+  assert(fs[0].juegos.some((x) => x.cartas.some(rm.esComodin)) && fs.length > 1, 'el de K necesita el comodín; hay varias formas para los 7');
+  fs = rm.bajadas(cs('3♥ 4♥ 5♥ 6♥ 7♥ 8♥ 9♦ 9♣ 9♠ 2♣ 2♦ K♠'), ['T', 'E']);
+  const escalas = fs.map((f) => nombres(f.juegos[1]));
+  assert(escalas.includes('3♥ 4♥ 5♥ 6♥') && escalas.includes('5♥ 6♥ 7♥ 8♥') && escalas[0] === '5♥ 6♥ 7♥ 8♥', 'puede elegir qué escala de 4 baja; la mejor deja menos puntos');
+  assert(new Set(fs.map((f) => f.juegos.map(nombres).join('|'))).size === fs.length, 'sin formas repetidas');
   assert(!rm.mejorBajada(cs('7♥ 7♠ 7♦ 4♠ 5♠ 6♠ 2♥ 9♦ 10♣ J♣ Q♦ K♦'), ['T', 'T']));
   b = rm.mejorBajada(cs('3♥ 4♥ 5♥ 6♥ 9♥ 10♥ J♥ Q♥ 2♣ 2♦ 2♠ K♠'), ['E', 'E']);
   assert(b && b.usados.length === 8, 'dos escalas del mismo palo');
@@ -1346,6 +1354,11 @@ probar('carioca: robar, bajar, agregar, comprar, cambiar comodín y puntos', () 
   assert(t.bajados[0] && t.mesa.length === 2 && t.manos[0].length === 3 && t.bajoAhora);
   t = car.botar(t, 0);
   assert(t.turno === 1 && t.fase === 'robar' && !t.bajoAhora);
+  // Elegir otra forma de bajar: tres 7 y dos K con 4 sietes → el trío de 7 sin el 7♣ también vale.
+  s = base(['7♥ 7♠ 7♦ 7♣ K♣ K♥ K♠ 2♦', 'A♠ A♥'], { fase: 'jugar' });
+  const formas = car.formasDeBajar(s);
+  assert(formas.length > 1 && car.bajar(s, Math.random, 1).mesa.map((x) => x.cartas.length).join() === '3,3', 'baja la forma elegida, con tríos de 3');
+  assert(car.accion(s, { bajar: true, forma: 1 }).manos[0].length === 2 && car.bajar(s, Math.random, 99) === null);
   s = base(['7♣ 2♦', 'A♠'], { fase: 'jugar', bajados: [true, false], bajoAhora: true, mesa: [{ ...rm.armar('T', cs('7♥ 7♠ 7♦')), dueno: 0 }] });
   assert(car.agregar(s, 0, 0) === null, 'en el turno de bajar no se agrega');
   t = car.agregar({ ...s, bajoAhora: false }, 0, 0);

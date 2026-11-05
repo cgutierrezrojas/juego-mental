@@ -124,10 +124,13 @@ const enJuego = (e) => e.ganador === null && e.fase === 'jugar';
 export const puedeBajar = (e) => enJuego(e) && !e.bajados[e.turno] && !!R.mejorBajada(e.manos[e.turno], contrato(e).juegos, true);
 const puedeTocarMesa = (e) => enJuego(e) && e.bajados[e.turno] && !e.bajoAhora;
 
-// Bajar el contrato con la mejor forma (la que deja menos puntos en la mano).
-export function bajar(e, rnd = Math.random) {
+// Formas de bajar el contrato ahora (la primera es la mejor); tríos de 3 y escalas de 4, el resto se agrega después.
+export const formasDeBajar = (e) => (enJuego(e) && !e.bajados[e.turno] ? R.bajadas(e.manos[e.turno], contrato(e).juegos) : []);
+
+// Bajar el contrato con la forma `forma` de formasDeBajar (0: la mejor).
+export function bajar(e, rnd = Math.random, forma = 0) {
   if (!enJuego(e) || e.bajados[e.turno]) return null;
-  const b = R.mejorBajada(e.manos[e.turno], contrato(e).juegos);
+  const b = formasDeBajar(e)[forma];
   if (!b) return null;
   const s = copia(e);
   const j = s.turno;
@@ -223,7 +226,7 @@ function utilidad(e, c, mano) {
 }
 const entraEnMesa = (e, c) => e.mesa.some((juego) => R.agregar(juego, c));
 
-// { robar: 'mazo' | 'pozo' } | { comprar: bool } | { bajar: true } | { agregar: i, juego: k } | { cambiar: i, juego: k } | { botar: i }
+// { robar: 'mazo' | 'pozo' } | { comprar: bool } | { bajar: true, forma? } | { agregar: i, juego: k } | { cambiar: i, juego: k } | { botar: i }
 export function maquina(e, nivel = 'normal') {
   if (nivel === 'dificil') {
     const a = maquinaDificil(e);
@@ -285,7 +288,7 @@ function maquinaDificil(e) {
 export function accion(e, a, rnd = Math.random) {
   if (a.robar) return robar(e, a.robar, rnd);
   if (a.comprar !== undefined) return comprar(e, a.comprar, rnd);
-  if (a.bajar) return bajar(e, rnd);
+  if (a.bajar) return bajar(e, rnd, a.forma ?? 0);
   if (a.agregar !== undefined) return agregar(e, a.agregar, a.juego, rnd);
   if (a.cambiar !== undefined) return cambiar(e, a.cambiar, a.juego);
   return botar(e, a.botar, rnd);

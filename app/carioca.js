@@ -78,7 +78,7 @@ function opciones() {
 // --- La mesa ---
 
 let elegida = null; // índice en la mano de la carta tocada
-let previa = false; // mostrando cómo quedaría la bajada
+let previa = null; // índice de la forma de bajar que se está mostrando (null: ninguna)
 let porNumero = false;
 let visto = null; // el estado que se dibujó la última vez (al cambiar, se olvida lo elegido)
 
@@ -98,7 +98,7 @@ const filaJuego = (juego, chica = true) => {
 function pintar(e, quien, miTurno, actuar, { nombres, repintar }) {
   if (e !== visto) {
     elegida = null;
-    previa = false;
+    previa = null;
     visto = e;
   }
   const mano = e.manos[quien];
@@ -152,7 +152,7 @@ function pintar(e, quien, miTurno, actuar, { nombres, repintar }) {
     n.onclick = () => {
       if (!miTurno || e.fase !== 'jugar') return temblar(n);
       elegida = elegida === i ? null : i;
-      previa = false;
+      previa = null;
       repintar();
     };
     manoCaja.append(n);
@@ -176,16 +176,23 @@ function pintar(e, quien, miTurno, actuar, { nombres, repintar }) {
   }
   if (miTurno && e.fase === 'comprar') botones.push(boton(`🛒 Comprar ${C.nombre(arriba)}`, 'color', () => actuar(C.comprar(e, true))), boton('No compro', '', () => actuar(C.comprar(e, false))));
   if (miTurno && e.fase === 'jugar') {
-    const b = !e.bajados[quien] && C.puedeBajar(e) ? R.mejorBajada(mano, contrato.juegos) : null;
-    if (b && previa) {
-      tapete.splice(tapete.length - 1, 0, el('p', 'turno-trivia', 'Así bajarías:'), ...b.juegos.map((j) => filaJuego(j, false)));
-      botones.push(boton('✅ Bajar', 'color', () => actuar(C.bajar(e))), boton('Cancelar', '', () => {
-        previa = false;
+    const formas = previa !== null ? C.formasDeBajar(e) : [];
+    const puede = !e.bajados[quien] && C.puedeBajar(e);
+    if (puede && formas[previa]) {
+      const titulo = formas.length > 1 ? `Así bajarías (forma ${previa + 1} de ${formas.length}):` : 'Así bajarías:';
+      tapete.splice(tapete.length - 1, 0, el('p', 'turno-trivia', titulo), ...formas[previa].juegos.map((j) => filaJuego(j, false)));
+      botones.push(boton('✅ Bajar', 'color', () => actuar(C.bajar(e, Math.random, previa))));
+      if (formas.length > 1) botones.push(boton('🔄 Otra forma', '', () => {
+        previa = (previa + 1) % formas.length;
+        repintar();
+      }));
+      botones.push(boton('Cancelar', '', () => {
+        previa = null;
         repintar();
       }));
     } else {
-      if (b) botones.push(boton(`⬇️ Bajar ${contrato.nombre.toLowerCase()}`, 'color', () => {
-        previa = true;
+      if (puede) botones.push(boton(`⬇️ Bajar ${contrato.nombre.toLowerCase()}`, 'color', () => {
+        previa = 0;
         repintar();
       }));
       const botar = boton(elegida !== null ? `🗑️ Botar ${C.nombre(mano[elegida])}` : '🗑️ Botar (elige una carta)', '', () => actuar(C.botar(e, elegida)));
@@ -222,7 +229,7 @@ export const CARIOCA = {
   id: 'carioca', nombre: 'Carioca', icono: '♦️', maxMaquinas: 3, menosGana: true, pausa: 500,
   meta: (e) => e.contratos.length,
   metaTexto: (e) => `${e.contratos.length} rondas`,
-  reglas: 'Dos barajas y 4 comodines, 12 cartas. En tu turno robas (del mazo o la del pozo), bajas el contrato de la ronda cuando lo tienes (tríos: 3 del mismo número; escalas: 4 seguidas del mismo palo, pueden dar la vuelta por el As), después agregas a los juegos de la mesa y botas una. Gana la ronda quien se queda sin cartas; los demás suman lo que tienen (As 20, figuras 10, comodín 30). Gana quien termina con menos puntos.',
+  reglas: 'Dos barajas y 4 comodines, 12 cartas. En tu turno robas (del mazo o la del pozo), bajas el contrato de la ronda cuando lo tienes (tríos: justo 3 del mismo número; escalas: justo 4 seguidas del mismo palo, pueden dar la vuelta por el As; con «🔄 Otra forma» eliges cuáles), desde el turno siguiente agregas a los juegos de la mesa (tuyos o de otros) y botas una. Gana la ronda quien se queda sin cartas; los demás suman lo que tienen (As 20, figuras 10, comodín 30). Gana quien termina con menos puntos.',
   nueva: (n) => C.nueva(n, tipo === 'clasica' ? {} : tipo === 'corta' ? { contratos: C.CORTA } : ajustes()),
   maquina: (e, nv) => C.accion(e, C.maquina(e, nv)),
   opciones,

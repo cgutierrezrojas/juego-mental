@@ -109,7 +109,9 @@ function candidatos(mano, libres, tipo) {
         const clave = elegidas.map((i) => mano[i].p).sort().join();
         if (elegidas.length < 2 || vistos.has(clave)) continue;
         vistos.add(clave);
-        for (let c = 0; c <= Math.min(comodines.length, elegidas.length - 1); c++) if (elegidas.length + c >= 3) salida.push([...elegidas, ...comodines.slice(0, c)]);
+        // Al bajar, el trío va justo de 3: lo demás se agrega desde el turno siguiente.
+        if (elegidas.length === 3) salida.push(elegidas);
+        if (elegidas.length === 2 && comodines.length) salida.push([...elegidas, comodines[0]]);
       }
     }
   } else if (tipo === 'E') {
@@ -118,7 +120,7 @@ function candidatos(mano, libres, tipo) {
       for (const i of reales) if (mano[i].p === palo) deValor[mano[i].v] ??= i;
       if (Object.keys(deValor).length < 2) continue;
       for (let inicio = 1; inicio <= 13; inicio++) {
-        for (let largo = 4; largo <= 13; largo++) {
+        for (const largo of [4]) { // al bajar, la escala va justa de 4
           const indices = Array.from({ length: largo }, (_, k) => deValor[valorEn(inicio, k)]);
           const huecos = indices.filter((i) => i === undefined).length;
           if (huecos > comodines.length || huecos >= largo - huecos || indices[0] === undefined) continue; // sin comodín en la punta de abajo: no se repite
@@ -139,18 +141,21 @@ function candidatos(mano, libres, tipo) {
   return salida;
 }
 
-// La forma de bajar `tipos` (p. ej. ['T', 'T', 'E']) que deja menos puntos en la mano, o null.
-// Devuelve { juegos, usados (índices de la mano) }. Con `primera`, la primera que encuentra (para saber si se puede).
+// Las formas distintas de bajar `tipos` (p. ej. ['T', 'T', 'E']), de la mejor a la peor: menos comodines y,
+// entre esas, menos puntos en la mano. Cada una: { juegos, usados (índices de la mano) }.
+// Con `primera`, se queda con la primera que encuentra (para saber si se puede).
 // ponytail: búsqueda exhaustiva con tope de nodos; con manos de 12–16 cartas sobra.
-export function mejorBajada(mano, tipos, primera = false) {
-  let mejor = null;
+export function bajadas(mano, tipos, cuantas = 12, primera = false) {
+  const formas = new Map();
   let nodos = 0;
   const buscar = (k, libres, elegidos) => {
-    if (++nodos > 60000 || (primera && mejor)) return;
+    if (++nodos > 60000 || (primera && formas.size)) return;
     if (k === tipos.length) {
+      const juegos = elegidos.map((ix, x) => armar(tipos[x], ix.map((i) => mano[i])));
+      // Cartas iguales (doble baraja) y el orden de los juegos dan la misma forma.
+      const clave = juegos.map((j) => j.cartas.map((c) => c.v + c.p).join()).sort().join('|');
       const usados = elegidos.flat();
-      const valor = puntos(usados.map((i) => mano[i]));
-      if (!mejor || valor > mejor.valor) mejor = { valor, elegidos };
+      if (!formas.has(clave)) formas.set(clave, { juegos, usados, comodines: usados.filter((i) => esComodin(mano[i])).length, valor: puntos(usados.map((i) => mano[i])) });
       return;
     }
     for (const juego of candidatos(mano, libres, tipos[k])) {
@@ -158,6 +163,8 @@ export function mejorBajada(mano, tipos, primera = false) {
     }
   };
   buscar(0, mano.map((_, i) => i), []);
-  if (!mejor) return null;
-  return { juegos: mejor.elegidos.map((ix, k) => armar(tipos[k], ix.map((i) => mano[i]))), usados: mejor.elegidos.flat() };
+  return [...formas.values()].sort((a, b) => a.comodines - b.comodines || b.valor - a.valor).slice(0, cuantas)
+    .map(({ juegos, usados }) => ({ juegos, usados }));
 }
+
+export const mejorBajada = (mano, tipos, primera = false) => bajadas(mano, tipos, 1, primera)[0] ?? null;
