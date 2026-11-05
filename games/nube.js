@@ -1,7 +1,7 @@
 // Nube con Firebase: sesión con Google, progreso en `usuarios/{uid}` y ranking en `ranking/{uid}`.
 import { semanaDe } from './liga.js';
 import { idChat } from './chat.js';
-import { codigoAmigo } from './amigos.js';
+import { codigoAmigo, enLinea } from './amigos.js';
 // El SDK se carga desde gstatic solo cuando hay configuración; si falla (sin conexión), la app sigue sin nube.
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
@@ -114,7 +114,7 @@ export const guardarProgreso = (uid, datos, actualizado) => fs.setDoc(documento(
 export const guardarRanking = (uid, fila) => fs.setDoc(documento('ranking', uid), fila);
 export const quitarRanking = (uid) => fs.deleteDoc(documento('ranking', uid));
 // Borra todo lo de esta persona en la nube: progreso, ranking, perfil, ligas, solicitudes, propuestas, duelos
-// y, en la Realtime Database, estado, amigos, bloqueos, leídos, invitaciones, mesas y conversaciones.
+// y, en la Realtime Database, amigos, bloqueos, leídos, invitaciones, mesas y conversaciones.
 // Quedan solo las denuncias (se revisan y borran a mano) y las salas en vivo a medias (se borran al terminar).
 export async function borrarTodo(uid) {
   const [solicitudes, propuestas, duelos, invitado] = await Promise.all([
@@ -129,6 +129,7 @@ export async function borrarTodo(uid) {
     fs.deleteDoc(documento('usuarios', uid)),
     quitarRanking(uid),
     fs.deleteDoc(documento('perfiles', uid)),
+    fs.deleteDoc(documento('estados', uid)),
     ...[...semanas].map((s) => fs.deleteDoc(jugadorLiga(s, uid))),
     ...solicitudes.map((s) => borrarSolicitud(s.id)),
     ...propuestas.map((p) => fs.deleteDoc(fs.doc(db, 'propuestas', p.id))),
@@ -137,19 +138,20 @@ export async function borrarTodo(uid) {
 }
 
 async function borrarTiempoReal(uid, otros) {
-  const hijos = async (ruta) => Object.keys((await rt.get(rt.ref(base, ruta))).val() ?? {});
-  const [amigos, mesas, salas] = await Promise.all([hijos(`amigos/${uid}`), hijos(`misMesas/${uid}`), hijos(`invitaciones/${uid}`)]);
-  await pararEstados();
-  await rt.onDisconnect(rt.ref(base, `estado/${uid}`)).cancel();
-  const quitar = (ruta) => rt.remove(rt.ref(base, ruta));
-  await Promise.all([
-    ...['estado', 'amigos', 'leidos', 'bloqueos'].map((n) => quitar(`${n}/${uid}`)),
-    ...mesas.map((id) => quitar(`misMesas/${uid}/${id}`)),
-    ...salas.map((id) => quitar(`invitaciones/${uid}/${id}`)),
-    ...[...new Set([...amigos, ...otros])].map((o) => quitar(`chats/${idChat(uid, o)}`)),
-    // la mesa puede haberla borrado ya el rival
-    ...mesas.map((id) => quitar(`mesas/${id}`).catch(() => {})),
-  ]);
+  return conRed(async () => {
+    const hijos = async (ruta) => Object.keys((await rt.get(rt.ref(base, ruta))).val() ?? {});
+    const [amigos, mesas, salas] = await Promise.all([hijos(`amigos/${uid}`), hijos(`misMesas/${uid}`), hijos(`invitaciones/${uid}`)]);
+    await pararEstados();
+    const quitar = (ruta) => rt.remove(rt.ref(base, ruta));
+    await Promise.all([
+      ...['amigos', 'leidos', 'bloqueos'].map((n) => quitar(`${n}/${uid}`)),
+      ...mesas.map((id) => quitar(`misMesas/${uid}/${id}`)),
+      ...salas.map((id) => quitar(`invitaciones/${uid}/${id}`)),
+      ...[...new Set([...amigos, ...otros])].map((o) => quitar(`chats/${idChat(uid, o)}`)),
+      // la mesa puede haberla borrado ya el rival
+      ...mesas.map((id) => quitar(`mesas/${id}`).catch(() => {})),
+    ]);
+  });
 }
 
 // Borra los datos y la cuenta. Si Google pide haber entrado hace poco, vuelve a preguntar la cuenta y reintenta.
@@ -254,63 +256,72 @@ export const enviarSolicitud = (de, para, nombreDe, nombrePara) =>
 export const aceptarSolicitud = (id) => fs.updateDoc(fs.doc(db, 'solicitudes', id), { estado: 'aceptada' });
 export const borrarSolicitud = (id) => fs.deleteDoc(fs.doc(db, 'solicitudes', id));
 
-// --- Estados en línea (Realtime Database: `estado/{uid}` y `amigos/{uid}`, que dice quién puede verlo) ---
+// --- Estados en línea (`estados/{uid}` en Firestore: { estado, cuando, amigos }; solo lo leen los de `amigos`) ---
 
-let refEstado = null;
-let estadoDeseado = 'conectado';
-let dejarDeEscuchar = null;
+let miEstado = null; // { uid, estado } mientras hay sesión
+let latido;
 
 export const hayEstados = () => Boolean(rt);
 
-// Al conectarse, deja preparado "desconectado" para cuando se cierre la app o se pierda la conexión.
+const escribirEstado = (extra = {}) =>
+  miEstado && fs.setDoc(documento('estados', miEstado.uid), { estado: miEstado.estado, cuando: fs.serverTimestamp(), ...extra }, { merge: true }).catch(() => {});
+
+// Publica el estado y lo repite cada 3 min mientras la app está a la vista (si no, a los 5 min se ve desconectado).
 export function iniciarEstados(uid) {
   if (!rt) return;
-  dejarDeEscuchar?.();
-  refEstado = rt.ref(base, `estado/${uid}`);
-  dejarDeEscuchar = rt.onValue(rt.ref(base, '.info/connected'), (conectado) => {
-    if (!conectado.val()) return;
-    rt.onDisconnect(refEstado).set({ estado: 'desconectado', cuando: rt.serverTimestamp() })
-      .then(() => ponerEstado(estadoDeseado))
-      .catch(() => {});
-  });
+  miEstado = { uid, estado: 'conectado' };
+  clearInterval(latido);
+  latido = setInterval(() => !document.hidden && escribirEstado(), 3 * 60000);
 }
 
 export function ponerEstado(estado) {
-  estadoDeseado = estado;
-  if (refEstado) rt.set(refEstado, { estado, cuando: rt.serverTimestamp() }).catch(() => {});
+  if (!miEstado) return;
+  miEstado.estado = estado;
+  escribirEstado();
 }
 
 // Antes de cerrar sesión (después ya no se puede escribir).
 export async function pararEstados() {
-  dejarDeEscuchar?.();
-  dejarDeEscuchar = null;
-  if (refEstado) await rt.set(refEstado, { estado: 'desconectado', cuando: rt.serverTimestamp() }).catch(() => {});
-  refEstado = null;
+  clearInterval(latido);
+  if (miEstado) {
+    miEstado.estado = 'desconectado';
+    await escribirEstado();
+  }
+  miEstado = null;
 }
 
-// Avisa con alCambiar(estado) cada vez que cambia el estado de un amigo. Devuelve la función para dejar de escuchar.
-// Si aún no hay permiso (el amigo no ha abierto la app desde que sois amigos), se reintenta cada 20 s.
+// Avisa con alCambiar(estado) al cambiar el de un amigo, y cada minuto (para notar que se le pasó el tiempo).
+// Si aún no hay permiso (el amigo no ha abierto Amigos desde que lo son), se reintenta cada 20 s.
 export function verEstado(uid, alCambiar) {
   if (!rt) return () => {};
+  let dato = null;
   let parar = () => {};
   let espera;
+  const avisar = () => alCambiar(enLinea(dato, Date.now()));
   const escuchar = () => {
-    parar = rt.onValue(rt.ref(base, `estado/${uid}`), (d) => alCambiar(d.val()?.estado ?? 'desconectado'), () => {
-      alCambiar('desconectado');
+    parar = fs.onSnapshot(documento('estados', uid), (d) => {
+      dato = d.exists() ? { estado: d.data().estado, cuando: d.data().cuando?.toMillis() } : null;
+      avisar();
+    }, () => {
+      dato = null;
+      avisar();
       espera = setTimeout(escuchar, 20000);
     });
   };
   escuchar();
+  const reloj = setInterval(avisar, 60000);
   return () => {
     clearTimeout(espera);
+    clearInterval(reloj);
     parar();
   };
 }
 
-// Lista de amigos que pueden ver mi estado.
+// Quiénes pueden ver mi estado (Firestore) y escribirme o retarme (Realtime Database, por sus reglas).
 export function guardarAmigosEstados(uid, uids) {
   if (!rt) return Promise.resolve();
-  return rt.set(rt.ref(base, `amigos/${uid}`), Object.fromEntries(uids.map((u) => [u, true]))).catch(() => {});
+  escribirEstado({ amigos: uids });
+  return conRed(() => rt.set(rt.ref(base, `amigos/${uid}`), Object.fromEntries(uids.map((u) => [u, true])))).catch(() => {});
 }
 
 // --- Duelos en vivo (`vivo/{sala}` e `invitaciones/{uid}/{sala}`; ver games/vivo.js y database.rules.json) ---
