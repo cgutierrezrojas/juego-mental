@@ -1699,3 +1699,17 @@ probar('palabras: charadas, escalera de palabras y la gran escalera', () => {
   assert(g.resultado === 'gano' && g.ganado === 1000000);
   assert(ge.seguro(4) === 0 && ge.seguro(5) === 1000 && ge.seguro(10) === 32000);
 });
+
+// --- sw.js: VERSION es la huella de los archivos; si alguno cambia, hay que ponerla al día para que llegue a todos ---
+if (globalThis.process?.versions?.node) {
+  const { readFileSync } = await import('node:fs');
+  const { createHash } = await import('node:crypto');
+  probar('sw.js: versión al día con los archivos', () => {
+    const sw = readFileSync('sw.js', 'utf8');
+    const archivos = sw.match(/const ARCHIVOS = \[([\s\S]*?)\];/)[1].match(/'[^']+'/g).map((a) => a.slice(1, -1));
+    const h = createHash('sha256');
+    for (const a of archivos) if (a !== './') h.update(a).update(readFileSync(a).toString('latin1').replace(/\r/g, ''));
+    const huella = h.digest('hex').slice(0, 10);
+    assert(sw.includes(`const VERSION = '${huella}';`), `pon const VERSION = '${huella}'; en sw.js`);
+  });
+}

@@ -3,7 +3,7 @@ import { abrirTrivia } from './app/trivia.js';
 import { abrirMesa } from './app/mesa.js';
 import { asegurarDuelista } from './app/duelos.js';
 import { pintarLigaMenu } from './app/liga.js';
-import { guardar, el } from './games/comun.js';
+import { guardar, el, alCompetir } from './games/comun.js';
 import { alternar, puedeVibrar, callar } from './games/efectos.js';
 import { siguienteNivel } from './games/niveles.js';
 import { fechaLocal } from './games/estadisticas.js';
@@ -188,6 +188,7 @@ navigator.storage?.persist?.().catch(() => {});
 $('btn-ranking').onclick = async () => {
   if (await asegurarDuelista()) abrirRanking();
 };
+alCompetir(() => Boolean(E.enDuelo || E.enVivo)); // en duelos el reloj no se para al minimizar
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) subir().catch(() => {});
   ponerEstado(document.hidden ? 'ausente' : $('juego').hidden ? 'conectado' : 'jugando');
@@ -271,7 +272,7 @@ $('chat-denunciar').onclick = async () => {
 $('chat-volver').onclick = () => abrirAmigos();
 
 // Funcionamiento sin conexión. Solo va en localhost o HTTPS; si falla, la app sigue igual.
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 
 $('btn-liga').onclick = async () => {
   if (await asegurarDuelista()) abrirRanking('liga');

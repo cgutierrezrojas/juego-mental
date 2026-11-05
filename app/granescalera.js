@@ -1,7 +1,7 @@
 // 💰 La gran escalera (en ❓ Trivia): 15 preguntas, premios que suben, seguros, plantarse y 4 ayudas.
 // La lógica es pura (games/granescalera.js); aquí se dibuja, se cuenta el tiempo y se termina.
 // Usa solo el banco propio de preguntas (`BASE`), para que un reto dé las mismas a los dos.
-import { el, leer, guardar, esRecord } from '../games/comun.js';
+import { el, leer, guardar, esRecord, enPausa } from '../games/comun.js';
 import { sonar } from '../games/efectos.js';
 import { semillaNueva } from '../games/semilla.js';
 import { PREGUNTAS, BASE } from '../games/preguntas.js';
@@ -59,7 +59,7 @@ function jugar(semilla, duelo) {
   $('granescalera-aviso').textContent = '';
   pintar();
   p.reloj = setInterval(() => {
-    if (p.bloqueado) return;
+    if (p.bloqueado || enPausa()) return;
     p.restantes--;
     marcador();
     if (p.restantes <= 5 && p.restantes > 0) sonar('tic');

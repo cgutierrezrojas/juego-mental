@@ -1,6 +1,6 @@
 // 🃏 Cartas: la página de la sección, el 🂡 Solitario, el 🃏 21 y el 🎴 Bacará (reglas en games/solitario.js, veintiuno.js y bacara.js).
 // El 21 y el Bacará comparten las fichas (`cartas:fichas`). Récords en `cartas:` (se copian a la nube); la partida de solitario a medias, solo en este celular (`solitario-partida`).
-import { el, leer, guardar } from '../games/comun.js';
+import { el, leer, guardar, enPausa } from '../games/comun.js';
 import { sonar } from '../games/efectos.js';
 import { esRoja, VALORES, PALOS } from '../games/cartas.js';
 import * as S from '../games/solitario.js';
@@ -145,7 +145,7 @@ async function otraSolitario() {
 function jugarSolitario() {
   pararCartas();
   const tic = setInterval(() => {
-    if (S.ganado(sol.e)) return;
+    if (S.ganado(sol.e) || enPausa()) return;
     sol.segundos++;
     const t = document.getElementById('sol-tiempo');
     if (t) t.textContent = `⏱ ${reloj(sol.segundos)}`;

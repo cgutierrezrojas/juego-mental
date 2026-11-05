@@ -1,5 +1,7 @@
 // Service worker: guarda los archivos para poder jugar sin conexión.
-const CACHE = 'juego-mental';
+// VERSION es una huella de todos los archivos: tests.js avisa si cambió algo y no se actualizó.
+const VERSION = '4ed451d640';
+const CACHE = 'pal-rato-' + VERSION;
 const ARCHIVOS = [
   './', 'index.html', 'styles.css', 'main.js', 'manifest.json', 'icon.svg', 'apple-touch-icon.png',
   'icon-192.png', 'icon-512.png', 'icon-maskable-512.png',
@@ -14,21 +16,18 @@ const ARCHIVOS = [
 self.addEventListener('install', (e) => {
   // el service worker nuevo toma el control sin esperar a cerrar todas las pestañas
   self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARCHIVOS)));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARCHIVOS.map((a) => new Request(a, { cache: 'reload' })))));
 });
 
-// Primero la red, preguntando siempre al servidor si hay versión nueva (cache: 'no-cache'),
-// para que nunca se mezclen archivos viejos y nuevos; sin conexión, la copia guardada.
-// Solo las peticiones GET de esta web: las de Firebase (y cualquier otra) van directas a la red.
+// Al activarse una versión nueva se borran las copias viejas.
+self.addEventListener('activate', (e) => {
+  e.waitUntil(caches.keys().then((nombres) => Promise.all(nombres.filter((n) => n !== CACHE).map((n) => caches.delete(n)))).then(() => self.clients.claim()));
+});
+
+// Primero la copia guardada de esta versión (arranca al instante, con o sin señal); lo que no esté, de la red.
+// Una versión nueva se descarga entera en segundo plano (install) y se usa al volver a abrir la app,
+// así nunca se mezclan archivos viejos y nuevos. Las peticiones a Firebase (y cualquier otra) van directas a la red.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
-  e.respondWith(
-    fetch(e.request, { cache: 'no-cache' })
-      .then((respuesta) => {
-        const copia = respuesta.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copia));
-        return respuesta;
-      })
-      .catch(() => caches.match(e.request)),
-  );
+  e.respondWith(caches.open(CACHE).then((c) => c.match(e.request, { ignoreSearch: true }).then((guardada) => guardada ?? fetch(e.request))));
 });

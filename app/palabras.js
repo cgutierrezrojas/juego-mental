@@ -1,7 +1,7 @@
 // 🔤 Palabras: página de la sección y las pantallas de 📅 Palabra del día, 🪢 Ahorcado, 🔍 Sopa de letras, 🪜 Escalera y 🎭 Charadas.
 // La lógica es pura (games/palabra.js, ahorcado.js, sopa.js, escalera.js, charadas.js); aquí se dibuja, se teclea y se termina.
 // Récord en `record:<id>` (ranking), partidas en `palabra:partidas`, el día en `palabra:hoy` y `palabra:stats`.
-import { el, leer, guardar, esRecord } from '../games/comun.js';
+import { el, leer, guardar, esRecord, enPausa } from '../games/comun.js';
 import { sonar, vibrar } from '../games/efectos.js';
 import { semillaNueva } from '../games/semilla.js';
 import { TEMAS, VALIDAS, mostrar as conTilde } from '../games/diccionario.js';
@@ -337,6 +337,7 @@ function jugarSopa(semilla, nivel, duelo) {
   pintarSopa();
   $('palabras-botones').replaceChildren(boton('Terminar', '', terminarSopa));
   p.reloj = setInterval(() => {
+    if (enPausa()) return;
     p.restantes--;
     marcadorSopa();
     if (p.restantes <= 0) terminarSopa();
@@ -455,6 +456,7 @@ function empezarPalabraEscalera() {
   p.pila = [];
   pintarEscalera();
   p.reloj = setInterval(() => {
+    if (enPausa()) return;
     Es.destapar(p.e);
     for (const k of Es.visibles(p.e)) delete p.tipeo[k];
     p.pila = p.pila.filter((k) => k in p.tipeo);
@@ -587,6 +589,7 @@ async function empezarCharadas(tema) {
     p.jugando = true;
     pintarCharada();
     p.reloj = setInterval(() => {
+      if (enPausa()) return;
       p.restantes--;
       pintarCharada();
       if (p.restantes <= 5 && p.restantes > 0) sonar('tic');

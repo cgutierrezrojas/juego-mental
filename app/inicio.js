@@ -19,7 +19,7 @@ function abrirMentales(selector) {
 }
 
 // Cada sección abre su página (Palabras llega en S6).
-const ABRIR = { mentales: () => abrirMentales(), mesa: abrirMesa, trivia: abrirTrivia, cartas: abrirCartas, arcade: abrirArcade, palabras: abrirPalabras };
+export const ABRIR = { mentales: () => abrirMentales(), mesa: abrirMesa, trivia: abrirTrivia, cartas: abrirCartas, arcade: abrirArcade, palabras: abrirPalabras };
 
 export function pintarInicio() {
   const hoy = fechaLocal();

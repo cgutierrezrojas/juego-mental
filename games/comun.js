@@ -46,9 +46,15 @@ export function guardar(clave, valor) {
 
 // Cuenta atrás. Llama a alCambiar(restantes) en cada cambio y a alFin() una sola vez al llegar a 0.
 // parar() la detiene sin llamar a alFin.
+// Con la app minimizada los relojes se paran, salvo en duelos y partidas en vivo (ahí sigue corriendo,
+// para que no se pueda salir a buscar la respuesta). La app dice cuándo se compite con alCompetir.
+let enCompeticion = () => false;
+export const alCompetir = (f) => (enCompeticion = f);
+export const enPausa = () => Boolean(globalThis.document?.hidden) && !enCompeticion();
+
 export function temporizador(segundos, alCambiar, alFin) {
   let restantes = segundos;
-  const id = setInterval(() => cambiar(-1), 1000);
+  const id = setInterval(() => !enPausa() && cambiar(-1), 1000);
 
   function cambiar(delta) {
     if (restantes <= 0) return;

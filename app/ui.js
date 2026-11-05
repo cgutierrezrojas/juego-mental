@@ -5,7 +5,7 @@ import { pararCartas } from './cartas.js';
 import { pararArcade } from './arcade.js';
 import { pararPalabras } from './palabras.js';
 import { pararGranEscalera } from './granescalera.js';
-import { pintarInicio } from './inicio.js';
+import { pintarInicio, ABRIR } from './inicio.js';
 import { pintarLigaMenu } from './liga.js';
 import { leer, el, guardar } from '../games/comun.js';
 import { activo } from '../games/efectos.js';
@@ -71,7 +71,52 @@ export function mostrarAyuda(sitio) {
   objetivo.classList.add('resaltado');
 }
 
+// ◀ Botón atrás del celular: fuera del inicio hay una entrada de historial de más; al pulsarlo se hace lo
+// mismo que el botón de volver de la pantalla (o se va al inicio). En el inicio, atrás cierra la app.
+let enHistorial = false;
+let ignorarAtras = false;
+
+function atras() {
+  const abierto = document.querySelector('dialog[open]');
+  if (abierto) return abierto.close();
+  const visible = [...document.querySelectorAll('main > section')].find((s) => !s.hidden);
+  if (!visible || visible.id === 'inicio') return;
+  if (visible.id === 'juego') return $('btn-salir').click();
+  const botones = [...visible.querySelectorAll('button')].filter((b) => b.getClientRects().length > 0);
+  const volver = botones.find((b) => /^Volver/.test(b.getAttribute('aria-label') ?? ''))
+    ?? botones.find((b) => /^(⚔️ )?(Volver|Salir|Cancelar)/.test(b.textContent.trim()))
+    ?? botones.find((b) => b.classList.contains('btn-menu'));
+  // Sin botón de volver (p. ej. en plena partida): a su sección.
+  const seccion = { granescalera: 'trivia', 'trivia-partida': 'trivia', 'palabras-juego': 'palabras', 'arcade-juego': 'arcade', 'cartas-juego': 'cartas', 'mesa-tablero': 'mesa', 'mesa-modo': 'mesa' }[visible.id];
+  if (volver) volver.click();
+  else if (seccion) ABRIR[seccion]();
+  else $('nav-inicio').click();
+}
+
+addEventListener('popstate', () => {
+  enHistorial = false;
+  if (ignorarAtras) {
+    ignorarAtras = false;
+    return;
+  }
+  atras();
+  // Si la pantalla no cambió (p. ej. se cerró una ventana), se vuelve a poner la entrada de historial.
+  const visible = [...document.querySelectorAll('main > section')].find((s) => !s.hidden);
+  if (visible && visible.id !== 'inicio' && !enHistorial) {
+    history.pushState(null, '');
+    enHistorial = true;
+  }
+});
+
 export function mostrar(id) {
+  if (id !== 'inicio' && !enHistorial) {
+    history.pushState(null, '');
+    enHistorial = true;
+  } else if (id === 'inicio' && enHistorial) {
+    enHistorial = false;
+    ignorarAtras = true;
+    history.back();
+  }
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== id;
   $('btn-salir').hidden = id !== 'juego';
   $('btn-ayuda').hidden = id === 'juego';
