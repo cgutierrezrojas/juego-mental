@@ -258,7 +258,7 @@ export const enviarSolicitud = (de, para, nombreDe, nombrePara) =>
 export const aceptarSolicitud = (id) => fs.updateDoc(fs.doc(db, 'solicitudes', id), { estado: 'aceptada' });
 export const borrarSolicitud = (id) => fs.deleteDoc(fs.doc(db, 'solicitudes', id));
 
-// --- Estados en línea (`estados/{uid}` en Firestore: { estado, cuando, amigos }; solo lo leen los de `amigos`) ---
+// --- Estados en línea (`estados/{uid}` en Firestore: { estado, cuando }; lo leen su dueño y sus amigos) ---
 
 let miEstado = null; // { uid, estado } mientras hay sesión
 let latido;
