@@ -13,6 +13,38 @@ let rt; // módulo firebase-database (estados en línea), solo si la configuraci
 let base; // la Realtime Database
 let desfase = 0; // diferencia entre el reloj del servidor y el de este celular (ms)
 
+// Realtime Database solo conectada mientras algo la usa (el plan gratis admite 100 conexiones a la vez).
+// El SDK no cierra solo la conexión: al quedar sin uso, se desconecta a los 30 s.
+let enUso = 0;
+let apagar;
+function usar() {
+  clearTimeout(apagar);
+  if (enUso++ === 0) rt.goOnline(base);
+  let suelto = false;
+  return () => {
+    if (suelto) return;
+    suelto = true;
+    if (--enUso === 0) apagar = setTimeout(() => enUso === 0 && rt.goOffline(base), 30000);
+  };
+}
+// Una lectura o escritura suelta: conectada hasta que termina.
+async function conRed(f) {
+  const soltar = usar();
+  try {
+    return await f();
+  } finally {
+    soltar();
+  }
+}
+// Una escucha: conectada hasta que se deja de escuchar.
+function escuchando(deshacer) {
+  const soltar = usar();
+  return () => {
+    deshacer();
+    soltar();
+  };
+}
+
 // Arranca Firebase y avisa con alCambiar(usuario | null) cada vez que se entra o se sale.
 export async function iniciar(config, alCambiar) {
   const [app, modAuth, modFirestore] = await Promise.all([
@@ -28,6 +60,7 @@ export async function iniciar(config, alCambiar) {
   if (config.databaseURL) {
     rt = await import(SDK + 'firebase-database.js');
     base = rt.getDatabase(firebase);
+    rt.goOffline(base);
     rt.onValue(rt.ref(base, '.info/serverTimeOffset'), (d) => (desfase = d.val() ?? 0));
   }
   au.getRedirectResult(auth).catch(() => {}); // por si se entró con redirección
@@ -294,12 +327,12 @@ export async function crearSalaVivo(sala) {
   return ref.key;
 }
 
-export const verSala = (id, alCambiar) => rt.onValue(rt.ref(base, `vivo/${id}`), (d) => alCambiar(d.val()), () => alCambiar(null));
-export const cambiarSala = (id, cambios) => rt.update(rt.ref(base, `vivo/${id}`), cambios);
-export const borrarSala = (id) => rt.remove(rt.ref(base, `vivo/${id}`)).catch(() => {});
+export const verSala = (id, alCambiar) => escuchando(rt.onValue(rt.ref(base, `vivo/${id}`), (d) => alCambiar(d.val()), () => alCambiar(null)));
+export const cambiarSala = (id, cambios) => conRed(() => rt.update(rt.ref(base, `vivo/${id}`), cambios));
+export const borrarSala = (id) => conRed(() => rt.remove(rt.ref(base, `vivo/${id}`))).catch(() => {});
 // Si se cierra la app o se pierde la conexión en mitad de la partida, consta como que se fue.
-export const prepararAbandono = (id, uid) => rt.onDisconnect(rt.ref(base, `vivo/${id}/fuera/${uid}`)).set(true).catch(() => {});
-export const cancelarAbandono = (id, uid) => rt.onDisconnect(rt.ref(base, `vivo/${id}/fuera/${uid}`)).cancel().catch(() => {});
+export const prepararAbandono = (id, uid) => conRed(() => rt.onDisconnect(rt.ref(base, `vivo/${id}/fuera/${uid}`)).set(true)).catch(() => {});
+export const cancelarAbandono = (id, uid) => conRed(() => rt.onDisconnect(rt.ref(base, `vivo/${id}/fuera/${uid}`)).cancel()).catch(() => {});
 
 export const escucharInvitaciones = (uid, alLlegar) =>
   rt.onChildAdded(rt.ref(base, `invitaciones/${uid}`), (d) => alLlegar(d.key, d.val()), () => {});
@@ -310,29 +343,29 @@ export const borrarInvitacion = (uid, sala) => rt.remove(rt.ref(base, `invitacio
 // Avisa de los últimos 50 mensajes y de cada uno nuevo. Devuelve la función para dejar de escuchar.
 export function escucharChat(id, alLlegar, alFallar) {
   const consulta = rt.query(rt.ref(base, `chats/${id}/mensajes`), rt.limitToLast(50));
-  return rt.onChildAdded(consulta, (d) => alLlegar({ id: d.key, ...d.val() }), alFallar);
+  return escuchando(rt.onChildAdded(consulta, (d) => alLlegar({ id: d.key, ...d.val() }), alFallar));
 }
 
-export const enviarMensaje = (id, de, texto) => rt.push(rt.ref(base, `chats/${id}/mensajes`), { de, texto, cuando: rt.serverTimestamp() });
+export const enviarMensaje = (id, de, texto) => conRed(() => rt.push(rt.ref(base, `chats/${id}/mensajes`), { de, texto, cuando: rt.serverTimestamp() }));
 
 export async function ultimoMensaje(id) {
   let ultimo = null;
-  (await rt.get(rt.query(rt.ref(base, `chats/${id}/mensajes`), rt.limitToLast(1)))).forEach((d) => {
+  (await conRed(() => rt.get(rt.query(rt.ref(base, `chats/${id}/mensajes`), rt.limitToLast(1))))).forEach((d) => {
     ultimo = d.val();
   });
   return ultimo;
 }
 
-export const marcarLeido = (uid, id) => rt.set(rt.ref(base, `leidos/${uid}/${id}`), rt.serverTimestamp()).catch(() => {});
-export const leidoHasta = async (uid, id) => (await rt.get(rt.ref(base, `leidos/${uid}/${id}`))).val() ?? 0;
+export const marcarLeido = (uid, id) => conRed(() => rt.set(rt.ref(base, `leidos/${uid}/${id}`), rt.serverTimestamp())).catch(() => {});
+export const leidoHasta = async (uid, id) => (await conRed(() => rt.get(rt.ref(base, `leidos/${uid}/${id}`)))).val() ?? 0;
 
 // Bloqueos: `bloqueos/{uid}/{otro}` = apodo del bloqueado (para poder desbloquearlo desde la lista).
-export const bloquear = (uid, otro, apodo) => rt.set(rt.ref(base, `bloqueos/${uid}/${otro}`), apodo);
-export const desbloquear = (uid, otro) => rt.remove(rt.ref(base, `bloqueos/${uid}/${otro}`));
-export const bloqueados = async (uid) => (rt ? (await rt.get(rt.ref(base, `bloqueos/${uid}`))).val() ?? {} : {});
+export const bloquear = (uid, otro, apodo) => conRed(() => rt.set(rt.ref(base, `bloqueos/${uid}/${otro}`), apodo));
+export const desbloquear = (uid, otro) => conRed(() => rt.remove(rt.ref(base, `bloqueos/${uid}/${otro}`)));
+export const bloqueados = async (uid) => (rt ? (await conRed(() => rt.get(rt.ref(base, `bloqueos/${uid}`)))).val() ?? {} : {});
 
 // Denuncia: solo se puede escribir; se revisa desde la consola de Firebase.
-export const denunciar = (datos) => rt.push(rt.ref(base, 'denuncias'), { ...datos, cuando: rt.serverTimestamp() });
+export const denunciar = (datos) => conRed(() => rt.push(rt.ref(base, 'denuncias'), { ...datos, cuando: rt.serverTimestamp() }));
 
 // --- Liga semanal (`liga/{semana}/jugadores/{uid}`: { apodo, puntos, actualizado }) ---
 
@@ -359,19 +392,19 @@ export const filasLiga = (semana, uids) =>
 
 // --- 🎲 Mesa con amigos (`mesas/{id}` y el índice `misMesas/{uid}/{id}`; ver app/mesa.js y database.rules.json) ---
 
-export async function crearMesa(mesa) {
+export const crearMesa = (mesa) => conRed(async () => {
   const ref = rt.push(rt.ref(base, 'mesas'));
   await rt.set(ref, { ...mesa, creada: rt.serverTimestamp(), actualizada: rt.serverTimestamp() });
   const { x, o } = mesa.jugadores;
   await rt.set(rt.ref(base, `misMesas/${x}/${ref.key}`), { juego: mesa.juego, rival: o, nombreRival: mesa.nombres[o] });
   await rt.set(rt.ref(base, `misMesas/${o}/${ref.key}`), { juego: mesa.juego, rival: x, nombreRival: mesa.nombres[x] });
   return ref.key;
-}
+});
 
-export const verMesa = (id, alCambiar) => rt.onValue(rt.ref(base, `mesas/${id}`), (d) => alCambiar(d.val()), () => alCambiar(null));
-export const leerMesa = async (id) => (await rt.get(rt.ref(base, `mesas/${id}`))).val();
-export const jugarMesa = (id, estado, ganador) => rt.update(rt.ref(base, `mesas/${id}`), { estado, ...(ganador ? { ganador } : {}), actualizada: rt.serverTimestamp() });
-export const rendirseMesa = (id, uid, ganador) => rt.update(rt.ref(base, `mesas/${id}`), { [`rendido/${uid}`]: true, ganador, actualizada: rt.serverTimestamp() });
-export const misMesasDe = async (uid) => (rt ? (await rt.get(rt.ref(base, `misMesas/${uid}`))).val() ?? {} : {});
-export const quitarDeMisMesas = (uid, id) => rt.remove(rt.ref(base, `misMesas/${uid}/${id}`)).catch(() => {});
-export const borrarMesa = (id) => rt.remove(rt.ref(base, `mesas/${id}`)).catch(() => {});
+export const verMesa = (id, alCambiar) => escuchando(rt.onValue(rt.ref(base, `mesas/${id}`), (d) => alCambiar(d.val()), () => alCambiar(null)));
+export const leerMesa = async (id) => (await conRed(() => rt.get(rt.ref(base, `mesas/${id}`)))).val();
+export const jugarMesa = (id, estado, ganador) => conRed(() => rt.update(rt.ref(base, `mesas/${id}`), { estado, ...(ganador ? { ganador } : {}), actualizada: rt.serverTimestamp() }));
+export const rendirseMesa = (id, uid, ganador) => conRed(() => rt.update(rt.ref(base, `mesas/${id}`), { [`rendido/${uid}`]: true, ganador, actualizada: rt.serverTimestamp() }));
+export const misMesasDe = async (uid) => (rt ? (await conRed(() => rt.get(rt.ref(base, `misMesas/${uid}`)))).val() ?? {} : {});
+export const quitarDeMisMesas = (uid, id) => conRed(() => rt.remove(rt.ref(base, `misMesas/${uid}/${id}`))).catch(() => {});
+export const borrarMesa = (id) => conRed(() => rt.remove(rt.ref(base, `mesas/${id}`))).catch(() => {});
