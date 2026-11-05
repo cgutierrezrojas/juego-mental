@@ -27,7 +27,7 @@ export function pintarNube() {
     b.onclick = alPulsar;
     return b;
   };
-  const privacidad = el('a', '', 'Política de privacidad');
+  const privacidad = el('a', '', 'Privacidad y créditos');
   privacidad.href = 'privacidad.html';
   const partes = [el('h3', 'categoria', '☁️ Nube')];
   if (!E.nube) {

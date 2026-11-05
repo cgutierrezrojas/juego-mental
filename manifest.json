@@ -10,11 +10,67 @@
   "orientation": "portrait",
   "background_color": "#fff7ec",
   "theme_color": "#fff7ec",
-  "categories": ["games", "education"],
+  "categories": [
+    "games"
+  ],
   "icons": [
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" },
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "img/capturas/inicio.png",
+      "sizes": "1170x2340",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Seis secciones de juegos para pasar el rato"
+    },
+    {
+      "src": "img/capturas/mentales.png",
+      "sizes": "1170x2340",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Juegos mentales con niveles, estrellas y récords"
+    },
+    {
+      "src": "img/capturas/palabra.png",
+      "sizes": "1170x2340",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "La palabra del día, con racha"
+    },
+    {
+      "src": "img/capturas/carioca.png",
+      "sizes": "1170x2340",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Carioca y otros juegos de cartas contra la máquina o con amigos"
+    },
+    {
+      "src": "img/capturas/granescalera.png",
+      "sizes": "1170x2340",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "La gran escalera: 15 preguntas hasta el millón"
+    }
   ]
 }

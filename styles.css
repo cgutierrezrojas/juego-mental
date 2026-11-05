@@ -698,7 +698,7 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 .retos-hoy button.hecho { background: var(--azul); color: #fff; }
 [data-tema="oscuro"] .retos-hoy button.hecho { background: transparent; color: var(--azul); box-shadow: 0 0 8px var(--azul); }
 .retos-hoy small,
-.camino small { font-size: 0.6rem; letter-spacing: -1px; }
+.camino small { font-size: 0.7rem; letter-spacing: -1px; }
 
 .cartel {
   display: flex;
@@ -863,7 +863,7 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   background: linear-gradient(currentColor, currentColor) center / 2px 22px no-repeat; /* raya de la marca */
 }
 
-#final-barra.metas .marca > span { font-size: 0.6rem; letter-spacing: -2px; } /* metas juntas: las estrellas no se pisan */
+#final-barra.metas .marca > span { font-size: 0.7rem; letter-spacing: -2px; } /* metas juntas: las estrellas no se pisan */
 
 .fila-botones { display: flex; gap: 8px; }
 .fila-botones button { flex: 1; padding: 12px 4px; font-size: 0.9rem; white-space: nowrap; }
@@ -1013,7 +1013,7 @@ button.tarjeta { position: relative; }
 [data-tema="oscuro"] .logro.conseguido { box-shadow: 0 0 8px var(--amarillo); }
 .icono-logro { font-size: 1.8rem; }
 .logro strong { font-size: 0.8rem; }
-.logro small { font-size: 0.65rem; line-height: 1.2; }
+.logro small { font-size: 0.75rem; line-height: 1.2; }
 .logro .progreso-logro { font-weight: 800; }
 #final-logros { margin: 0; font-weight: 900; color: var(--amarillo); white-space: pre-line; }
 
@@ -1113,7 +1113,7 @@ button.tarjeta { position: relative; }
 [data-tema="oscuro"] .burbuja { border: 1px solid rgba(255, 255, 255, 0.25); }
 .burbuja.mia { align-self: flex-end; border-radius: 14px 14px 4px 14px; background: var(--acento); color: #fff; }
 [data-tema="oscuro"] .burbuja.mia { background: transparent; color: var(--acento); border-color: var(--acento); }
-.burbuja small { display: block; margin-top: 2px; font-size: 0.65rem; opacity: 0.7; text-align: right; }
+.burbuja small { display: block; margin-top: 2px; font-size: 0.75rem; opacity: 0.8; text-align: right; }
 #chat-form { display: flex; gap: 8px; }
 #chat-texto { flex: 1; min-width: 0; font: inherit; padding: 12px; border: 2px solid var(--acento); border-radius: 12px; background: var(--superficie); color: var(--texto); }
 #chat-form button { padding: 12px 14px; font-size: 1rem; }
@@ -1409,7 +1409,9 @@ button.seccion {
 .letra-palabra { aspect-ratio: 1; display: grid; place-items: center; font-size: 1.6rem; font-weight: 900; border: 2px solid color-mix(in srgb, var(--texto) 25%, transparent); border-radius: 8px; }
 .letra-palabra.escrita { border-color: color-mix(in srgb, var(--texto) 60%, transparent); }
 .letra-palabra.v, .tecla.v { background: var(--verde); border-color: var(--verde); color: var(--fondo); }
-.letra-palabra.a, .tecla.a { background: var(--amarillo); border-color: var(--amarillo); color: var(--fondo); }
+.letra-palabra.a, .tecla.a { background: var(--amarillo); border-color: var(--amarillo); color: #1d1d1d; } /* texto oscuro: el claro no contrasta con el ámbar */
+/* Para quien no distingue bien verde y ámbar: la letra en su sitio lleva además una raya abajo. */
+.letra-palabra.v { box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.35); }
 .letra-palabra.g, .tecla.g { background: var(--gris-palabra); border-color: var(--gris-palabra); color: #fff; }
 .teclado { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 480px; }
 .fila-teclado { display: flex; gap: 4px; justify-content: center; }
