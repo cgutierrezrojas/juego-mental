@@ -80,7 +80,7 @@ export function avisarNube(texto) {
 export async function alCambiarUsuario(u) {
   E.usuario = u;
   E.sesionLista = true;
-  E.estadoNube = '';
+  if (u) E.estadoNube = ''; // al salir se mantiene el aviso (p. ej. «cuenta borrada»)
   pintarSugerencia();
   pintarNube();
   if (u) {

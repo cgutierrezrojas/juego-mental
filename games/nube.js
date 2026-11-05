@@ -98,7 +98,7 @@ export async function borrarTodo(uid) {
     ...[...semanas].map((s) => fs.deleteDoc(jugadorLiga(s, uid))),
     ...solicitudes.map((s) => borrarSolicitud(s.id)),
     ...propuestas.map((p) => fs.deleteDoc(fs.doc(db, 'propuestas', p.id))),
-    ...[...duelos, ...invitado].map((d) => borrarDuelo(d.id)),
+    ...[...new Set([...duelos, ...invitado].map((d) => d.id))].map((id) => borrarDuelo(id)), // sin repetir: borrar dos veces falla
   ]);
 }
 
