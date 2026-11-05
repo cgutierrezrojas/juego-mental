@@ -7,7 +7,10 @@ import * as S from '../games/solitario.js';
 import * as V from '../games/veintiuno.js';
 import * as B from '../games/bacara.js';
 import { leerJSON } from './datos.js';
-import { leerFichas } from './premios.js';
+import { leerFichas, cobrarBono, desafiosDeHoy } from './premios.js';
+import { TOPE, MONTOS, TOPE_DIARIOS, BONO } from '../games/premios.js';
+import { abrirMentales } from './inicio.js';
+import { abrirJuegoPalabras } from './palabras.js';
 import { $, mostrar, confeti, preguntar } from './ui.js';
 import { ligaAnotar } from './liga.js';
 import { abrirJuegoMesa, pintarPartidasCartas, claveRecord } from './cartas-mesa.js';
@@ -335,15 +338,26 @@ function pintarApuesta(j, cabeza, repartir, guardarJ, repintar) {
   const apuesta = Math.min(j.apuesta, j.fichas - (j.fichas % 5)) || 0;
   j.apuesta = apuesta;
   if (j.fichas < 5) {
-    return pantalla(marcadorFichas(j), [cabeza[0], el('p', '', 'Te quedaste sin fichas.')], [
-      boton('🏦 La casa te presta 100', 'color', () => {
-        j.fichas += 100;
-        j.apuesta = 10;
-        guardarJ();
-        repintar();
-      }),
-      boton('Salir', '', abrirCartas),
-    ]);
+    const hoy = desafiosDeHoy();
+    const bonoBtn = boton(hoy.bonoUsado ? '🎁 Bono del día: vuelve mañana' : `🎁 Bono del día +${BONO}`, 'color', () => {
+      j.fichas += cobrarBono();
+      j.max = Math.max(j.max, j.fichas);
+      j.apuesta = 10;
+      guardarJ();
+      repintar();
+    });
+    bonoBtn.disabled = hoy.bonoUsado;
+    // Cada desafío: hecho (✓) o un botón para ir a jugarlo.
+    const desafio = (hecho, texto, ir) => (hecho ? el('p', 'sin-datos', `✓ ${texto}`) : boton(`🎯 ${texto}`, '', ir));
+    return pantalla(marcadorFichas(j), [
+      cabeza[0],
+      el('p', '', 'Te quedaste sin fichas. Gana más:'),
+      el('h3', 'categoria', '🎯 Desafíos de hoy'),
+      desafio(hoy.tudia, `☀️ Tu día completo: +${MONTOS.tudia}`, () => abrirMentales('#entreno')),
+      desafio(hoy.palabra, `🔤 Palabra del día: +${MONTOS.palabra}`, () => abrirJuegoPalabras('palabra')),
+      desafio(hoy.diarios >= TOPE_DIARIOS, `📅 Niveles diarios (${hoy.diarios}/${TOPE_DIARIOS}): +${MONTOS.diario} cada uno`, () => abrirMentales()),
+      el('p', 'sin-datos', `Hoy llevas ${hoy.ganadas} de ${TOPE} fichas por desafíos.`),
+    ], [bonoBtn, boton('Salir', '', abrirCartas)]);
   }
   const fichas = el('div', 'fichas-21');
   for (const f of [5, 10, 25, 50]) {

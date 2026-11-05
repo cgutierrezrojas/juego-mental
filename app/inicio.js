@@ -13,7 +13,7 @@ import { misPuntosLiga } from './liga.js';
 import { $, mostrar } from './ui.js';
 
 // Abre Mentales (la página con los juegos de ahora) y, si se pide, la lleva hasta una parte.
-function abrirMentales(selector) {
+export function abrirMentales(selector) {
   mostrar('menu');
   if (selector) document.querySelector(selector)?.scrollIntoView({ block: 'start' });
 }
