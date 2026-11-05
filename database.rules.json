@@ -70,6 +70,7 @@
           "$mensaje": {
             ".write": "auth != null && !data.exists() && ($chat.beginsWith(auth.uid + '_') || $chat.endsWith('_' + auth.uid)) && newData.child('de').val() === auth.uid && root.child('amigos').child($chat.replace(auth.uid, '').replace('_', '')).child(auth.uid).exists() && !root.child('bloqueos').child($chat.replace(auth.uid, '').replace('_', '')).child(auth.uid).exists()",
             ".validate": "newData.hasChildren(['de', 'texto', 'cuando']) && newData.child('texto').isString() && newData.child('texto').val().length > 0 && newData.child('texto').val().length <= 300 && newData.child('cuando').val() === now",
+            "de": { ".validate": true }, "texto": { ".validate": true }, "cuando": { ".validate": true },
             "$otro": { ".validate": false }
           }
         }

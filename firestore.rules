@@ -136,7 +136,7 @@ service cloud.firestore {
         && n.resultados.diff(d.resultados).affectedKeys().hasOnly([request.auth.uid])
         && cambio.changedKeys().size() == 0 && cambio.removedKeys().size() == 0 && cambio.addedKeys().size() == 1
         && cambio.addedKeys().hasOnly(d.juegos)
-        && puntoValido(cambio.addedKeys().toList()[0], despues[cambio.addedKeys().toList()[0]]);
+        && puntoValido(despues.keys().removeAll(antes.keys())[0], despues[despues.keys().removeAll(antes.keys())[0]]);
     }
 
     // Puntuación posible de cada juego en un duelo (0 = no terminó). Un juego que no está aquí no puede ir en un duelo.
