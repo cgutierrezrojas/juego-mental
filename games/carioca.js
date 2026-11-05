@@ -145,9 +145,11 @@ export function bajar(e, rnd = Math.random, forma = 0) {
 }
 
 // Agregar la carta `i` de la mano al juego `k` de la mesa (desde el turno siguiente al de bajar).
-export function agregar(e, i, k, rnd = Math.random) {
+// `lado` ('abajo' | 'arriba'): en qué punta de la escala, si cabe en las dos (p. ej. un comodín).
+export function agregar(e, i, k, rnd = Math.random, lado = null) {
   const c = e.manos[e.turno]?.[i];
-  const juego = puedeTocarMesa(e) && c && e.mesa[k] ? R.agregar(e.mesa[k], c) : null;
+  const opciones = puedeTocarMesa(e) && c && e.mesa[k] ? R.opcionesAgregar(e.mesa[k], c) : [];
+  const juego = (opciones.find((o) => o.lado === lado) ?? opciones[0])?.juego;
   if (!juego) return null;
   const s = copia(e);
   const j = s.turno;
@@ -289,7 +291,7 @@ export function accion(e, a, rnd = Math.random) {
   if (a.robar) return robar(e, a.robar, rnd);
   if (a.comprar !== undefined) return comprar(e, a.comprar, rnd);
   if (a.bajar) return bajar(e, rnd, a.forma ?? 0);
-  if (a.agregar !== undefined) return agregar(e, a.agregar, a.juego, rnd);
+  if (a.agregar !== undefined) return agregar(e, a.agregar, a.juego, rnd, a.lado);
   if (a.cambiar !== undefined) return cambiar(e, a.cambiar, a.juego);
   return botar(e, a.botar, rnd);
 }

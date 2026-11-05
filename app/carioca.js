@@ -78,6 +78,7 @@ function opciones() {
 // --- La mesa ---
 
 let elegida = null; // índice en la mano de la carta tocada
+let punta = null; // { k, opciones }: la carta cabe en las dos puntas de la escala `k` y hay que elegir
 let previa = null; // índice de la forma de bajar que se está mostrando (null: ninguna)
 let porNumero = false;
 let visto = null; // el estado que se dibujó la última vez (al cambiar, se olvida lo elegido)
@@ -99,6 +100,7 @@ function pintar(e, quien, miTurno, actuar, { nombres, repintar }) {
   if (e !== visto) {
     elegida = null;
     previa = null;
+    punta = null;
     visto = e;
   }
   const mano = e.manos[quien];
@@ -118,12 +120,17 @@ function pintar(e, quien, miTurno, actuar, { nombres, repintar }) {
   if (!e.mesa.length) mesa.append(el('span', 'sin-datos', 'Todavía nadie bajó.'));
   e.mesa.forEach((juego, k) => {
     const c = elegida !== null ? mano[elegida] : null;
-    const entra = tocarMesa && c && R.agregar(juego, c);
+    const opciones = tocarMesa && c ? R.opcionesAgregar(juego, c) : [];
+    const entra = opciones.length > 0;
     const cambia = tocarMesa && c && e.extras.comodin && R.cambiar(juego, c);
     const b = el('button', `juego-carioca${entra || cambia ? ' sirve' : ''}`);
     b.append(el('small', '', `${nombres[juego.dueno]} · ${R.NOMBRE_JUEGO[juego.tipo]}`), filaJuego(juego));
     b.setAttribute('aria-label', `${R.NOMBRE_JUEGO[juego.tipo]} de ${nombres[juego.dueno]}`);
     b.onclick = () => {
+      if (opciones.length > 1) {
+        punta = { k, opciones };
+        return repintar();
+      }
       if (entra) return actuar(C.agregar(e, elegida, k));
       if (cambia) return actuar(C.cambiar(e, elegida, k));
       temblar(b);
@@ -153,6 +160,7 @@ function pintar(e, quien, miTurno, actuar, { nombres, repintar }) {
       if (!miTurno || e.fase !== 'jugar') return temblar(n);
       elegida = elegida === i ? null : i;
       previa = null;
+      punta = null;
       repintar();
     };
     manoCaja.append(n);
@@ -175,7 +183,21 @@ function pintar(e, quien, miTurno, actuar, { nombres, repintar }) {
     if (arriba) botones.push(boton(`Tomar ${C.nombre(arriba)}`, '', () => actuar(C.robar(e, 'pozo'))));
   }
   if (miTurno && e.fase === 'comprar') botones.push(boton(`🛒 Comprar ${C.nombre(arriba)}`, 'color', () => actuar(C.comprar(e, true))), boton('No compro', '', () => actuar(C.comprar(e, false))));
-  if (miTurno && e.fase === 'jugar') {
+  if (miTurno && e.fase === 'jugar' && punta) {
+    // La carta (un comodín) cabe en las dos puntas: se elige dónde y ahí se queda.
+    const { k, opciones } = punta;
+    const juego = e.mesa[k];
+    const valor = (o) => {
+      const v = o.lado === 'abajo' ? o.juego.inicio : R.valorEn(juego.inicio, juego.cartas.length);
+      return C.nombre({ v, p: juego.cartas.find((x) => !R.esComodin(x)).p });
+    };
+    tapete.splice(tapete.length - 1, 0, el('p', 'turno-trivia', `¿Dónde pones ${C.nombre(mano[elegida])}?`));
+    for (const o of opciones) botones.push(boton(`${o.lado === 'abajo' ? '⬅️' : '➡️'} ${C.nombre(mano[elegida])} como ${valor(o)}`, 'color', () => actuar(C.agregar(e, elegida, k, Math.random, o.lado))));
+    botones.push(boton('Cancelar', '', () => {
+      punta = null;
+      repintar();
+    }));
+  } else if (miTurno && e.fase === 'jugar') {
     const formas = previa !== null ? C.formasDeBajar(e) : [];
     const puede = !e.bajados[quien] && C.puedeBajar(e);
     if (puede && formas[previa]) {
@@ -229,7 +251,7 @@ export const CARIOCA = {
   id: 'carioca', nombre: 'Carioca', icono: '♦️', maxMaquinas: 3, menosGana: true, pausa: 500,
   meta: (e) => e.contratos.length,
   metaTexto: (e) => `${e.contratos.length} rondas`,
-  reglas: 'Dos barajas y 4 comodines, 12 cartas. En tu turno robas (del mazo o la del pozo), bajas el contrato de la ronda cuando lo tienes (tríos: justo 3 del mismo número; escalas: justo 4 seguidas del mismo palo, pueden dar la vuelta por el As; con «🔄 Otra forma» eliges cuáles), desde el turno siguiente agregas a los juegos de la mesa (tuyos o de otros) y botas una. Gana la ronda quien se queda sin cartas; los demás suman lo que tienen (As 20, figuras 10, comodín 30). Gana quien termina con menos puntos.',
+  reglas: 'Dos barajas y 4 comodines, 12 cartas. En tu turno robas (del mazo o la del pozo), bajas el contrato de la ronda cuando lo tienes (tríos: justo 3 del mismo número; escalas: justo 4 seguidas del mismo palo, pueden dar la vuelta por el As; con «🔄 Otra forma» eliges cuáles y dónde va el comodín), desde el turno siguiente agregas a los juegos de la mesa (tuyos o de otros; las escalas crecen por las puntas) y botas una. El comodín se queda donde lo pones. Gana la ronda quien se queda sin cartas; los demás suman lo que tienen (As 20, figuras 10, comodín 30). Gana quien termina con menos puntos.',
   nueva: (n) => C.nueva(n, tipo === 'clasica' ? {} : tipo === 'corta' ? { contratos: C.CORTA } : ajustes()),
   maquina: (e, nv) => C.accion(e, C.maquina(e, nv)),
   opciones,

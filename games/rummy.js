@@ -78,9 +78,30 @@ function escalera(cartas) {
 // ¿Forman estas cartas un juego de ese tipo? Devuelve el juego ordenado o null.
 export const armar = (tipo, cartas) => (tipo === 'T' ? trio(cartas) : tipo === 'P' ? pierna(cartas) : tipo === 'L' ? escalera(cartas) : escala(cartas, tipo));
 
-// Agregar una carta a un juego de la mesa (las escalas de 13 ya están llenas).
-// ponytail: en una escala se vuelve a acomodar entera, así que un comodín puede correrse a una punta.
-export const agregar = (juego, carta) => (['T', 'E', 'P', 'L'].includes(juego.tipo) ? armar(juego.tipo, [...juego.cartas, carta]) : null);
+const anterior = (v) => (v === 1 ? 13 : v - 1);
+
+// Formas de agregar `carta` a un juego de la mesa: [{ juego, lado: 'abajo' | 'arriba' | null }].
+// Las escalas de la Carioca solo crecen por las puntas y no se reacomodan: un comodín queda donde se puso.
+export function opcionesAgregar(juego, carta) {
+  if (juego.tipo !== 'E') {
+    const j = ['T', 'P', 'L'].includes(juego.tipo) ? armar(juego.tipo, [...juego.cartas, carta]) : null;
+    return j ? [{ juego: j, lado: null }] : [];
+  }
+  const { cartas, inicio } = juego;
+  const reales = cartas.filter((c) => !esComodin(c));
+  if (cartas.length >= 13) return [];
+  const abajo = { lado: 'abajo', juego: { ...juego, cartas: [carta, ...cartas], inicio: anterior(inicio) } };
+  const arriba = { lado: 'arriba', juego: { ...juego, cartas: [...cartas, carta] } };
+  if (esComodin(carta)) {
+    if (cartas.length + 1 - reales.length >= reales.length) return []; // siempre menos comodines que cartas
+    return [...(esComodin(cartas[0]) ? [] : [abajo]), ...(esComodin(cartas.at(-1)) ? [] : [arriba])]; // dos seguidos no
+  }
+  if (carta.p !== reales[0].p) return [];
+  return [...(carta.v === anterior(inicio) ? [abajo] : []), ...(carta.v === valorEn(inicio, cartas.length) ? [arriba] : [])];
+}
+
+// La primera forma de agregar `carta` (o null).
+export const agregar = (juego, carta) => opcionesAgregar(juego, carta)[0]?.juego ?? null;
 
 // Cambiar el comodín: la carta que reemplaza ocupa su lugar y el comodín vuelve a la mano. { juego, comodin } o null.
 export function cambiar(juego, carta) {
@@ -123,9 +144,13 @@ function candidatos(mano, libres, tipo) {
         for (const largo of [4]) { // al bajar, la escala va justa de 4
           const indices = Array.from({ length: largo }, (_, k) => deValor[valorEn(inicio, k)]);
           const huecos = indices.filter((i) => i === undefined).length;
-          if (huecos > comodines.length || huecos >= largo - huecos || indices[0] === undefined) continue; // sin comodín en la punta de abajo: no se repite
+          if (huecos > comodines.length || huecos >= largo - huecos) continue;
           if (indices.some((i, k) => i === undefined && indices[k + 1] === undefined && k + 1 < largo)) continue;
-          salida.push([...indices.filter((i) => i !== undefined), ...comodines.slice(0, huecos)]);
+          // El comodín queda en su hueco (o punta) elegido: la escala ya va armada en `.juego`.
+          let h = 0;
+          const ix = indices.map((i) => i ?? comodines[h++]);
+          ix.juego = { tipo, cartas: ix.map((i) => mano[i]), inicio };
+          salida.push(ix);
         }
       }
     }
@@ -151,7 +176,7 @@ export function bajadas(mano, tipos, cuantas = 12, primera = false) {
   const buscar = (k, libres, elegidos) => {
     if (++nodos > 60000 || (primera && formas.size)) return;
     if (k === tipos.length) {
-      const juegos = elegidos.map((ix, x) => armar(tipos[x], ix.map((i) => mano[i])));
+      const juegos = elegidos.map((ix, x) => ix.juego ?? armar(tipos[x], ix.map((i) => mano[i])));
       // Cartas iguales (doble baraja) y el orden de los juegos dan la misma forma.
       const clave = juegos.map((j) => j.cartas.map((c) => c.v + c.p).join()).sort().join('|');
       const usados = elegidos.flat();

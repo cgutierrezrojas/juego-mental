@@ -1323,6 +1323,17 @@ probar('rummy: tríos, escalas con vuelta, comodines, agregar, cambiar y bajar',
   assert(!rm.mejorBajada(cs('7♥ 7♠ 7♦ 4♠ 5♠ 6♠ 8♠ 2♥ 9♦ 10♣ J♣ Q♦'), ['T', 'E']), 'un solo 7♠ no alcanza para los dos');
   b = rm.mejorBajada(cs('7♥ 7♠ 7♦ 4♠ 5♠ 6♠ 8♠ 7♠ 9♦ 10♣ J♣ Q♦'), ['T', 'E']);
   assert(b && nombres(b.juegos[1]) === '5♠ 6♠ 7♠ 8♠' && b.juegos[0].cartas.length === 3, 'un 7♠ en el trío y el otro en la escala (de 4 justas)');
+  // El comodín se queda donde se puso: la escala crece por las puntas sin reacomodarse.
+  j = { ...rm.armar('E', cs('5♥ 6♥ 7♥ 8♥')) };
+  let op = rm.opcionesAgregar(j, { ...rm.COMODIN });
+  assert(op.map((o) => o.lado).join() === 'abajo,arriba' && nombres(op[0].juego) === '* 5♥ 6♥ 7♥ 8♥' && op[0].juego.inicio === 4, 'comodín: elige la punta');
+  const conComodin = op[1].juego; // 5 6 7 8 *(9)
+  assert(nombres(rm.agregar(conComodin, carta('10♥'))) === '5♥ 6♥ 7♥ 8♥ * 10♥' && !rm.agregar(conComodin, carta('9♥')), 'el comodín no se corre');
+  assert(rm.opcionesAgregar(conComodin, { ...rm.COMODIN }).map((o) => o.lado).join() === 'abajo', 'dos comodines seguidos no');
+  assert(nombres(rm.agregar(rm.armar('E', cs('Q♥ K♥ A♥ 2♥')), carta('J♥'))) === 'J♥ Q♥ K♥ A♥ 2♥', 'crece por abajo dando la vuelta');
+  // Al bajar, cada lugar del comodín es una forma distinta.
+  const lugares = rm.bajadas(cs('5♥ 6♥ 7♥ * 2♣ 9♦ J♠'), ['E']).map((f) => nombres(f.juegos[0]));
+  assert(lugares.includes('* 5♥ 6♥ 7♥') && lugares.includes('5♥ 6♥ 7♥ *'), lugares.join(' / '));
   // Al bajar: tríos de 3 y escalas de 4 justas; se puede elegir entre las formas, sin comodín primero.
   let fs = rm.bajadas(cs('7♥ 7♠ 7♦ 7♣ K♣ K♥ * 9♦'), ['T', 'T']);
   assert(fs.every((f) => f.juegos.every((x) => x.cartas.length === 3)), 'tríos de 3');
