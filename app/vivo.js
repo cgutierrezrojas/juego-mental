@@ -158,7 +158,7 @@ export function pintarSalaVivo() {
   }
   if (sala.estado === 'invitando') {
     return caja.replaceChildren(titulo, el('p', 'aviso-duelo', `⏳ Esperando a que ${rival} acepte…`), boton('Cancelar reto', '', () => {
-      E.nube.borrarInvitacion(sala.invitado, id);
+      E.nube.borrarInvitacion(id);
       E.nube.borrarSala(id);
       salirDeSala();
       abrirAmigos();
@@ -210,9 +210,9 @@ export function pintarResultadoVivo(sala, resultado, titulo, rival, boton) {
 }
 
 // Reto recibido: se muestra al momento (o al terminar la partida en curso).
-export function recibirInvitacion(id, invitacion) {
+export async function recibirInvitacion(id, invitacion) {
   if (!invitacion || E.nube.ahoraServidor() - (invitacion.cuando ?? 0) > 120000) {
-    E.nube.borrarInvitacion(E.usuario.uid, id); // reto viejo: ya no vale
+    E.nube.borrarInvitacion(id); // reto viejo: ya no vale
     return;
   }
   if (!$('juego').hidden || $('dialogo-vivo').open) {
@@ -224,7 +224,7 @@ export function recibirInvitacion(id, invitacion) {
   $('vivo-texto').textContent = `${invitacion.nombre} te reta en vivo: ${rondas} ronda${rondas > 1 ? 's' : ''} (${juegos}) en ${DIFICULTADES[invitacion.dificultad]}.`;
   $('vivo-aceptar').onclick = async () => {
     $('dialogo-vivo').close();
-    E.nube.borrarInvitacion(E.usuario.uid, id);
+    E.nube.borrarInvitacion(id);
     try {
       await E.nube.cambiarSala(id, { estado: 'aceptada', 'inicios/0': E.nube.ahoraServidor() + 6000 });
       entrarEnSala(id);
@@ -234,7 +234,7 @@ export function recibirInvitacion(id, invitacion) {
   };
   $('vivo-rechazar').onclick = () => {
     $('dialogo-vivo').close();
-    E.nube.borrarInvitacion(E.usuario.uid, id);
+    E.nube.borrarInvitacion(id);
     E.nube.cambiarSala(id, { estado: 'rechazada' }).catch(() => {});
   };
   $('dialogo-vivo').showModal();

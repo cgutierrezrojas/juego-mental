@@ -170,6 +170,15 @@ service cloud.firestore {
         && (!('amigos' in d) || (d.amigos is list && d.amigos.size() <= 500));
     }
 
+    function invitacionValida(d) {
+      return d.keys().hasOnly(['de', 'para', 'nombre', 'juegos', 'dificultad', 'cuando'])
+        && d.de == request.auth.uid && d.para is string && nombre(d.nombre)
+        && d.juegos is list && d.juegos.size() >= 1 && d.juegos.size() <= 5
+        && d.dificultad is string && d.dificultad.size() <= 20
+        && d.cuando == request.time
+        && sonAmigos(d.de, d.para);
+    }
+
     // Amigos: hay una solicitud aceptada entre los dos (en cualquier sentido).
     function sonAmigos(a, b) {
       let ida = /databases/$(database)/documents/solicitudes/$(a + '_' + b);

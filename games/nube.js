@@ -123,6 +123,8 @@ export async function borrarTodo(uid) {
   // Todas las semanas desde que existe la liga (octubre de 2026).
   const semanas = new Set();
   for (let f = Date.now(); f > Date.UTC(2026, 9, 18); f -= 7 * 86400000) semanas.add(semanaDe(new Date(f).toISOString().slice(0, 10)));
+  const misInvitaciones = async (campo) => (await fs.getDocs(fs.query(fs.collection(db, 'invitacionesVivo'), fs.where(campo, '==', uid)))).docs.map((d) => d.id);
+  const invitacionesVivo = rt ? [...await misInvitaciones('de'), ...await misInvitaciones('para')] : [];
   const otros = solicitudes.map((s) => (s.de === uid ? s.para : s.de));
   if (rt) await borrarTiempoReal(uid, otros);
   await Promise.all([
@@ -130,6 +132,7 @@ export async function borrarTodo(uid) {
     quitarRanking(uid),
     fs.deleteDoc(documento('perfiles', uid)),
     fs.deleteDoc(documento('estados', uid)),
+    ...invitacionesVivo.map((id) => borrarInvitacion(id)),
     ...[...semanas].map((s) => fs.deleteDoc(jugadorLiga(s, uid))),
     ...solicitudes.map((s) => borrarSolicitud(s.id)),
     ...propuestas.map((p) => fs.deleteDoc(fs.doc(db, 'propuestas', p.id))),
@@ -140,13 +143,12 @@ export async function borrarTodo(uid) {
 async function borrarTiempoReal(uid, otros) {
   return conRed(async () => {
     const hijos = async (ruta) => Object.keys((await rt.get(rt.ref(base, ruta))).val() ?? {});
-    const [amigos, mesas, salas] = await Promise.all([hijos(`amigos/${uid}`), hijos(`misMesas/${uid}`), hijos(`invitaciones/${uid}`)]);
+    const [amigos, mesas] = await Promise.all([hijos(`amigos/${uid}`), hijos(`misMesas/${uid}`)]);
     await pararEstados();
     const quitar = (ruta) => rt.remove(rt.ref(base, ruta));
     await Promise.all([
       ...['amigos', 'leidos', 'bloqueos'].map((n) => quitar(`${n}/${uid}`)),
       ...mesas.map((id) => quitar(`misMesas/${uid}/${id}`)),
-      ...salas.map((id) => quitar(`invitaciones/${uid}/${id}`)),
       ...[...new Set([...amigos, ...otros])].map((o) => quitar(`chats/${idChat(uid, o)}`)),
       // la mesa puede haberla borrado ya el rival
       ...mesas.map((id) => quitar(`mesas/${id}`).catch(() => {})),
@@ -324,18 +326,21 @@ export function guardarAmigosEstados(uid, uids) {
   return conRed(() => rt.set(rt.ref(base, `amigos/${uid}`), Object.fromEntries(uids.map((u) => [u, true])))).catch(() => {});
 }
 
-// --- Duelos en vivo (`vivo/{sala}` e `invitaciones/{uid}/{sala}`; ver games/vivo.js y database.rules.json) ---
+// --- Duelos en vivo (sala en `vivo/{sala}` de Realtime Database, invitación en `invitacionesVivo/{sala}` de Firestore; ver games/vivo.js, database.rules.json y firestore.rules) ---
 
 export const ahoraServidor = () => Date.now() + desfase;
 
-// Crea la sala y avisa al amigo. Devuelve el id de la sala.
+// Crea la sala y avisa al amigo (`invitacionesVivo/{sala}` en Firestore). Devuelve el id de la sala.
 export async function crearSalaVivo(sala) {
-  const ref = rt.push(rt.ref(base, 'vivo'));
-  await rt.set(ref, sala);
-  await rt.set(rt.ref(base, `invitaciones/${sala.invitado}/${ref.key}`), {
-    de: sala.anfitrion, nombre: sala.nombres[sala.anfitrion], juegos: sala.juegos, dificultad: sala.dificultad, cuando: rt.serverTimestamp(),
+  const id = await conRed(async () => {
+    const ref = rt.push(rt.ref(base, 'vivo'));
+    await rt.set(ref, sala);
+    return ref.key;
   });
-  return ref.key;
+  await fs.setDoc(fs.doc(db, 'invitacionesVivo', id), {
+    de: sala.anfitrion, para: sala.invitado, nombre: sala.nombres[sala.anfitrion], juegos: sala.juegos, dificultad: sala.dificultad, cuando: fs.serverTimestamp(),
+  });
+  return id;
 }
 
 export const verSala = (id, alCambiar) => escuchando(rt.onValue(rt.ref(base, `vivo/${id}`), (d) => alCambiar(d.val()), () => alCambiar(null)));
@@ -346,8 +351,10 @@ export const prepararAbandono = (id, uid) => conRed(() => rt.onDisconnect(rt.ref
 export const cancelarAbandono = (id, uid) => conRed(() => rt.onDisconnect(rt.ref(base, `vivo/${id}/fuera/${uid}`)).cancel()).catch(() => {});
 
 export const escucharInvitaciones = (uid, alLlegar) =>
-  rt.onChildAdded(rt.ref(base, `invitaciones/${uid}`), (d) => alLlegar(d.key, d.val()), () => {});
-export const borrarInvitacion = (uid, sala) => rt.remove(rt.ref(base, `invitaciones/${uid}/${sala}`)).catch(() => {});
+  fs.onSnapshot(fs.query(fs.collection(db, 'invitacionesVivo'), fs.where('para', '==', uid)), (s) => {
+    for (const c of s.docChanges()) if (c.type === 'added') alLlegar(c.doc.id, { ...c.doc.data(), cuando: c.doc.data().cuando?.toMillis() ?? 0 });
+  }, () => {});
+export const borrarInvitacion = (sala) => fs.deleteDoc(fs.doc(db, 'invitacionesVivo', sala)).catch(() => {});
 
 // --- Mensajes entre amigos (`chats/{idChat}/mensajes`), leídos, bloqueos y denuncias (ver database.rules.json) ---
 
