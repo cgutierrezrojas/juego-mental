@@ -7,6 +7,7 @@ import * as S from '../games/solitario.js';
 import * as V from '../games/veintiuno.js';
 import * as B from '../games/bacara.js';
 import { leerJSON } from './datos.js';
+import { leerFichas } from './premios.js';
 import { $, mostrar, confeti, preguntar } from './ui.js';
 import { ligaAnotar } from './liga.js';
 import { abrirJuegoMesa, pintarPartidasCartas, claveRecord } from './cartas-mesa.js';
@@ -319,11 +320,6 @@ function carta(n, o) {
 
 // --- Fichas de casino (21 y Bacará) ---
 
-// `cartas:fichas` = { fichas, max }; la primera vez salen de las que había en el 21.
-function leerFichas() {
-  const v = leerJSON('cartas:21');
-  return { fichas: v.fichas ?? 100, max: v.max ?? 100, ...leerJSON('cartas:fichas') };
-}
 // Guarda las fichas en su clave y el resto del juego en la suya.
 function guardarCasino(clave, j) {
   const { fichas, max, ...resto } = j;

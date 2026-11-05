@@ -13,6 +13,7 @@ import { E } from './estado.js';
 import { idsPorCategoria } from './juegos.js';
 import { historiales, guardarPartida, leerDiarios, guardarDiarios, leerEstrellas, leerRecord, leerHistorial, conUnidad, apuntarLogros } from './datos.js';
 import { anotarEnDuelo } from './duelos.js';
+import { darPremio } from './premios.js';
 
 // Cuenta atrás 3-2-1 y después empieza el juego. Mientras, ✕ la cancela con parar().
 export function jugar() {
@@ -69,8 +70,9 @@ export function terminar(puntos) {
   ligaAnotar('partida');
   // ¿Esta partida es la que completa el entrenamiento de hoy?
   const entrenoHoy = !entrenoAntes && entrenoCompleto(hoy, idsPorCategoria, historiales());
+  const premios = [];
   let celebrar = entrenoHoy;
-  if (entrenoHoy) ligaAnotar('entreno');
+  if (entrenoHoy) { ligaAnotar('entreno'); premios.push(darPremio('tudia')); }
   $('final-puntos').textContent = puntos;
   $('final-entreno').hidden = !entrenoHoy;
   let titular = '';
@@ -94,6 +96,7 @@ export function terminar(puntos) {
       const dia = diarios[E.jugando.fecha];
       const antes = diarioCompleto(dia);
       ligaAnotar('estrellas', conseguidas - (dia.estrellas[E.jugando.diario] || 0)); // solo las nuevas
+      if (conseguidas > 0 && !(dia.estrellas[E.jugando.diario] > 0)) premios.push(darPremio('diario'));
       dia.estrellas[E.jugando.diario] = Math.max(dia.estrellas[E.jugando.diario] || 0, conseguidas);
       guardarDiarios(E.actual.id, diarios);
       $('final-modo').textContent = `📅 Diario ${E.jugando.diario + 1}/3 · Nivel ${nivel} · ${NOMBRE_RETO[cfg.reto]}`;
@@ -167,8 +170,9 @@ export function terminar(puntos) {
     $('btn-mejorar').hidden = true;
   }
   const logros = apuntarLogros();
-  $('final-logros').textContent = logros.map((l) => `🏅 ¡Logro desbloqueado! ${l.icono} ${l.nombre}`).join('\n');
-  $('final-logros').hidden = !logros.length;
+  const avisos = [...logros.map((l) => `🏅 ¡Logro desbloqueado! ${l.icono} ${l.nombre}`), ...premios.filter(Boolean)];
+  $('final-logros').textContent = avisos.join('\n');
+  $('final-logros').hidden = !avisos.length;
   celebrar ||= logros.length > 0;
   $('final-titular').textContent = titular;
   $('final-titular').hidden = !titular;

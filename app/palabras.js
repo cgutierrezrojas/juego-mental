@@ -12,6 +12,7 @@ import * as Es from '../games/escalera.js';
 import * as C from '../games/charadas.js';
 import { E } from './estado.js';
 import { leerJSON } from './datos.js';
+import { darPremio } from './premios.js';
 import { $, mostrar, confeti, compartirTexto } from './ui.js';
 import { ligaAnotar } from './liga.js';
 import { JUEGOS_PALABRAS } from './juegos.js';
@@ -228,6 +229,8 @@ function finDia(hoy) {
   if (acerto) confeti();
   pararPalabras();
   resumenDia(hoy);
+  const premioPalabra = acerto ? darPremio('palabra') : '';
+  if (premioPalabra) $('palabras-aviso').textContent += ` ${premioPalabra}`;
 }
 
 function resumenDia(hoy) {
