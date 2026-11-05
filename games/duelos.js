@@ -19,7 +19,8 @@ export function marcador(duelo, uid, juegos, final = false) {
     const suyo = suyos[id];
     let gana = null;
     if (mio !== undefined && suyo !== undefined) {
-      const mejor = juegos[id]?.menorEsMejor ? mio < suyo : mio > suyo;
+      // En "menos es mejor", 0 es no haber terminado: pierde contra cualquier marca.
+      const mejor = juegos[id]?.menorEsMejor ? mio > 0 && (suyo <= 0 || mio < suyo) : mio > suyo;
       gana = mio === suyo ? 'empate' : mejor ? 'yo' : 'rival';
     } else if (final && (mio !== undefined || suyo !== undefined)) {
       gana = mio !== undefined ? 'yo' : 'rival';

@@ -43,7 +43,8 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['de', 'para', 'nombreDe', 'nombrePara', 'estado', 'creada'])
         && request.resource.data.de == request.auth.uid && request.resource.data.para != request.auth.uid
         && id == request.auth.uid + '_' + request.resource.data.para
-        && request.resource.data.estado == 'pendiente';
+        && request.resource.data.estado == 'pendiente'
+        && nombre(request.resource.data.nombreDe) && nombre(request.resource.data.nombrePara) && request.resource.data.creada is int;
       allow update: if request.auth != null && resource.data.para == request.auth.uid && resource.data.estado == 'pendiente'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['estado']) && request.resource.data.estado == 'aceptada';
     }
@@ -101,8 +102,10 @@ service cloud.firestore {
     function dueloNuevoValido(d) {
       return d.keys().hasOnly(['anfitrion', 'jugadores', 'nombres', 'invitado', 'abierto', 'azar', 'juegos', 'dificultad', 'victoria', 'creado', 'caduca', 'resultados', 'semilla'])
         && d.anfitrion == request.auth.uid && d.jugadores == [request.auth.uid]
-        && d.nombres is map && d.nombres.keys().hasOnly([request.auth.uid])
-        && d.juegos is list && d.juegos.size() >= 1 && d.juegos.size() <= 5
+        && d.nombres is map && d.nombres.keys().hasOnly([request.auth.uid]) && nombre(d.nombres[request.auth.uid])
+        && d.juegos is list && d.juegos.size() >= 1 && d.juegos.size() <= 5 && topes().keys().hasAll(d.juegos)
+        && (d.invitado == null || (d.invitado is string && sonAmigos(request.auth.uid, d.invitado)))
+        && d.creado is int
         && d.victoria in ['juegos', 'puntos'] && d.dificultad in ['facil', 'normal', 'dificil']
         && d.abierto is bool && d.azar is bool && d.resultados == {}
         && (!('semilla' in d) || d.semilla is int)
@@ -118,7 +121,7 @@ service cloud.firestore {
         && request.time.toMillis() < d.caduca
         && n.diff(d).affectedKeys().hasOnly(['jugadores', 'nombres', 'abierto'])
         && n.jugadores == d.jugadores.concat([request.auth.uid]) && n.abierto == false
-        && n.nombres.diff(d.nombres).affectedKeys().hasOnly([request.auth.uid]);
+        && n.nombres.diff(d.nombres).affectedKeys().hasOnly([request.auth.uid]) && nombre(n.nombres[request.auth.uid]);
     }
 
     // Anotar una puntuación: solo la propia, solo un juego del duelo que aún no tenía (sin cambiar ni repetir).
@@ -132,7 +135,32 @@ service cloud.firestore {
         && n.diff(d).affectedKeys().hasOnly(['resultados'])
         && n.resultados.diff(d.resultados).affectedKeys().hasOnly([request.auth.uid])
         && cambio.changedKeys().size() == 0 && cambio.removedKeys().size() == 0 && cambio.addedKeys().size() == 1
-        && cambio.addedKeys().hasOnly(d.juegos);
+        && cambio.addedKeys().hasOnly(d.juegos)
+        && puntoValido(cambio.addedKeys().toList()[0], despues[cambio.addedKeys().toList()[0]]);
+    }
+
+    // Puntuación posible de cada juego en un duelo (0 = no terminó). Un juego que no está aquí no puede ir en un duelo.
+    function topes() {
+      return { 'calculo': 1000, 'mayor': 1000, 'menos': 1000, 'verdad': 1000, 'cuenta': 1000, 'anagrama': 1000, 'distinto': 1000,
+        'series': 1000, 'sobra': 1000, 'balanza': 1000, 'atencion': 1000, 'topos': 1000, 'memoria': 1000, 'trivia': 1000,
+        'puzzle': 100000, 'rayo': 100000, 'parejas': 100000,
+        'serpiente': 100000, 'saltar': 100000, 'autos': 100000, 'ladrillos': 100000,
+        'palabra': 10000, 'ahorcado': 100000, 'sopa': 100000, 'escalera': 10000, 'charadas': 1000, 'granescalera': 1000000 };
+    }
+
+    function puntoValido(id, v) {
+      return v is number && v >= 0 && v <= topes()[id];
+    }
+
+    function nombre(x) {
+      return x is string && x.size() >= 1 && x.size() <= 20;
+    }
+
+    // Amigos: hay una solicitud aceptada entre los dos (en cualquier sentido).
+    function sonAmigos(a, b) {
+      let ida = /databases/$(database)/documents/solicitudes/$(a + '_' + b);
+      let vuelta = /databases/$(database)/documents/solicitudes/$(b + '_' + a);
+      return (exists(ida) && get(ida).data.estado == 'aceptada') || (exists(vuelta) && get(vuelta).data.estado == 'aceptada');
     }
 
     function filaValida(f) {

@@ -77,7 +77,11 @@ export function avisarNube(texto) {
   pintarNube();
 }
 
+let dejarInvitaciones = null; // para no escuchar dos veces al salir y volver a entrar
+
 export async function alCambiarUsuario(u) {
+  dejarInvitaciones?.();
+  dejarInvitaciones = null;
   E.usuario = u;
   E.sesionLista = true;
   if (u) E.estadoNube = ''; // al salir se mantiene el aviso (p. ej. «cuenta borrada»)
@@ -86,7 +90,7 @@ export async function alCambiarUsuario(u) {
   if (u) {
     E.nube.iniciarEstados(u.uid);
     ponerEstado(E.estadoApp);
-    if (E.nube.hayEstados()) E.nube.escucharInvitaciones(u.uid, recibirInvitacion);
+    if (E.nube.hayEstados()) dejarInvitaciones = E.nube.escucharInvitaciones(u.uid, recibirInvitacion);
     await sincronizar();
     comprobarPodio();
     actualizarPerfil();

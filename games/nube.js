@@ -1,6 +1,7 @@
 // Nube con Firebase: sesión con Google, progreso en `usuarios/{uid}` y ranking en `ranking/{uid}`.
 import { semanaDe } from './liga.js';
 import { idChat } from './chat.js';
+import { codigoAmigo } from './amigos.js';
 // El SDK se carga desde gstatic solo cuando hay configuración; si falla (sin conexión), la app sigue sin nube.
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
@@ -201,9 +202,10 @@ export const borrarDuelo = (id) => fs.deleteDoc(fs.doc(db, 'duelos', id));
 
 export const guardarPerfil = (uid, apodo, codigo) => fs.setDoc(documento('perfiles', uid), { apodo, codigo });
 
+// El código sale del uid: solo vale el perfil cuyo uid da ese código (otro podría copiarlo en su perfil).
 export async function buscarPorCodigo(codigo) {
-  const [perfil] = await buscarEn('perfiles', fs.where('codigo', '==', codigo), fs.limit(1));
-  return perfil ?? null;
+  const perfiles = await buscarEn('perfiles', fs.where('codigo', '==', codigo), fs.limit(10));
+  return perfiles.find((p) => codigoAmigo(p.id) === codigo) ?? null;
 }
 
 export async function misSolicitudes(uid) {

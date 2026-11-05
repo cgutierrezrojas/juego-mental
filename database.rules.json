@@ -16,7 +16,13 @@
     "vivo": {
       "$sala": {
         ".read": "auth != null && (data.child('anfitrion').val() === auth.uid || data.child('invitado').val() === auth.uid)",
-        ".write": "auth != null && ((!data.exists() && newData.child('anfitrion').val() === auth.uid && root.child('amigos').child(newData.child('invitado').val()).child(auth.uid).exists()) || (data.exists() && !newData.exists() && (data.child('anfitrion').val() === auth.uid || data.child('invitado').val() === auth.uid)))",
+        ".write": "auth != null && ((!data.exists() && newData.child('anfitrion').val() === auth.uid && root.child('amigos').child(newData.child('invitado').val()).child(auth.uid).exists() && !root.child('bloqueos').child(newData.child('invitado').val()).child(auth.uid).exists()) || (data.exists() && !newData.exists() && (data.child('anfitrion').val() === auth.uid || data.child('invitado').val() === auth.uid)))",
+        "nombres": {
+          "$uid": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20" }
+        },
+        "juegos": {
+          "$i": { ".validate": "newData.isString() && newData.val().matches(/^(calculo|mayor|menos|verdad|distinto|cuenta|series|sobra|balanza|anagrama|atencion|topos|trivia)$/)" }
+        },
         "estado": {
           ".write": "auth != null && (root.child('vivo').child($sala).child('anfitrion').val() === auth.uid || root.child('vivo').child($sala).child('invitado').val() === auth.uid)",
           ".validate": "newData.isString() && newData.val().matches(/^(invitando|aceptada|rechazada)$/)"
@@ -24,14 +30,14 @@
         "puntos": {
           "$uid": {
             ".write": "auth != null && auth.uid === $uid && (root.child('vivo').child($sala).child('anfitrion').val() === auth.uid || root.child('vivo').child($sala).child('invitado').val() === auth.uid)",
-            ".validate": "newData.isNumber()"
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
           }
         },
         "fin": {
           "$ronda": {
             "$uid": {
               ".write": "auth != null && auth.uid === $uid && !data.exists() && (root.child('vivo').child($sala).child('anfitrion').val() === auth.uid || root.child('vivo').child($sala).child('invitado').val() === auth.uid)",
-              ".validate": "newData.isNumber()"
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
             }
           }
         },
@@ -52,7 +58,7 @@
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         "$sala": {
-          ".write": "auth != null && (auth.uid === $uid || (newData.exists() && newData.child('de').val() === auth.uid && root.child('amigos').child($uid).child(auth.uid).exists() && !root.child('bloqueos').child($uid).child(auth.uid).exists()) || (!newData.exists() && data.child('de').val() === auth.uid))"
+          ".write": "auth != null && (auth.uid === $uid || (newData.exists() && !data.exists() && newData.child('de').val() === auth.uid && newData.child('nombre').isString() && newData.child('nombre').val().length <= 20 && root.child('amigos').child($uid).child(auth.uid).exists() && !root.child('bloqueos').child($uid).child(auth.uid).exists()) || (!newData.exists() && data.child('de').val() === auth.uid))"
         }
       }
     },
@@ -63,7 +69,8 @@
         "mensajes": {
           "$mensaje": {
             ".write": "auth != null && !data.exists() && ($chat.beginsWith(auth.uid + '_') || $chat.endsWith('_' + auth.uid)) && newData.child('de').val() === auth.uid && root.child('amigos').child($chat.replace(auth.uid, '').replace('_', '')).child(auth.uid).exists() && !root.child('bloqueos').child($chat.replace(auth.uid, '').replace('_', '')).child(auth.uid).exists()",
-            ".validate": "newData.hasChildren(['de', 'texto', 'cuando']) && newData.child('texto').isString() && newData.child('texto').val().length > 0 && newData.child('texto').val().length <= 300 && newData.child('cuando').val() === now"
+            ".validate": "newData.hasChildren(['de', 'texto', 'cuando']) && newData.child('texto').isString() && newData.child('texto').val().length > 0 && newData.child('texto').val().length <= 300 && newData.child('cuando').val() === now",
+            "$otro": { ".validate": false }
           }
         }
       }
@@ -84,13 +91,20 @@
       ".read": false,
       "$denuncia": {
         ".write": "auth != null && !data.exists() && newData.child('de').val() === auth.uid",
-        ".validate": "newData.hasChildren(['de', 'contra', 'motivo', 'cuando']) && newData.child('motivo').isString() && newData.child('motivo').val().length <= 500"
+        ".validate": "newData.hasChildren(['de', 'contra', 'motivo', 'cuando']) && newData.child('contra').isString() && newData.child('contra').val().length <= 128 && newData.child('motivo').isString() && newData.child('motivo').val().length <= 500",
+        "chat": { ".validate": "newData.isString() && newData.val().length <= 300" },
+        "mensajes": { ".validate": "newData.hasChildren() || newData.isString()", "$i": { ".validate": "$i.length <= 2 && newData.isString() && newData.val().length <= 340" } },
+        "de": { ".validate": true }, "contra": { ".validate": true }, "motivo": { ".validate": true }, "cuando": { ".validate": "newData.val() === now" },
+        "$otro": { ".validate": false }
       }
     },
     "mesas": {
       "$id": {
         ".read": "auth != null && (data.child('jugadores').child('x').val() === auth.uid || data.child('jugadores').child('o').val() === auth.uid)",
         ".write": "auth != null && ((!data.exists() && newData.child('jugadores').child('x').val() === auth.uid && root.child('amigos').child(newData.child('jugadores').child('o').val()).child(auth.uid).exists() && !root.child('bloqueos').child(newData.child('jugadores').child('o').val()).child(auth.uid).exists()) || (data.exists() && !newData.exists() && (data.child('jugadores').child('x').val() === auth.uid || data.child('jugadores').child('o').val() === auth.uid)))",
+        "nombres": {
+          "$uid": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20" }
+        },
         "estado": {
           ".write": "auth != null && root.child('mesas').child($id).child('jugadores').child(data.child('turno').val()).val() === auth.uid && !root.child('mesas').child($id).child('ganador').exists()",
           ".validate": "newData.child('turno').isString() && newData.child('turno').val().matches(/^(x|o)$/) && (newData.parent().child('juego').val() === 'ruleta' ? newData.hasChildren(['x', 'o']) : newData.parent().child('juego').val() === 'ocho' || newData.parent().child('juego').val() === 'escoba' || newData.parent().child('juego').val() === 'carioca' || newData.parent().child('juego').val() === 'burako' ? newData.child('datos').isString() && newData.child('datos').val().length <= 8000 : newData.child('celdas').isString() && newData.child('celdas').val().length <= 64)"

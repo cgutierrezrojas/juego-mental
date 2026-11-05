@@ -717,6 +717,9 @@ probar('duelos: marcador juego a juego y por suma', () => {
   const caducado = duelo({ resultados: { a: { calculo: 5 }, b: {} } });
   assert(marcador(caducado, 'a', INFO).mio === 0, 'sin terminar, lo no jugado no cuenta');
   assert(marcador(caducado, 'a', INFO, true).mio === 1 && resultadoPara(caducado, 'b', INFO) === 'd', 'al terminar, gana quien jugó');
+  // En "menos es mejor", 0 (no terminó) pierde contra cualquier marca.
+  const abandono = marcador(duelo({ resultados: { a: { calculo: 20, rayo: 0, topos: 30 }, b: { calculo: 20, rayo: 900, topos: 30 } } }), 'a', INFO);
+  assert(abandono.porJuego[1].gana === 'rival', abandono.porJuego[1].gana);
   // Reto del Arcade: sin `referencia`, cuentan los puntos tal cual.
   const reto = duelo({ juegos: ['saltar'], victoria: 'puntos', resultados: { a: { saltar: 62 }, b: { saltar: 7 } } });
   const r = marcador(reto, 'a', { saltar: { nombre: 'Saltar' } }, true);
