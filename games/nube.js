@@ -67,8 +67,27 @@ export async function iniciar(config, alCambiar) {
   au.onAuthStateChanged(auth, alCambiar);
 }
 
+// En la app Android, Google se abre con la ventana nativa (plugin) y la sesión se abre aquí con su idToken.
+const nativa = window.Capacitor?.isNativePlatform?.() ? window.Capacitor.Plugins.FirebaseAuthentication : null;
+
+// Credencial de Google desde la ventana nativa, o null si el usuario la cerró.
+async function credencialNativa() {
+  try {
+    const { credential } = await nativa.signInWithGoogle();
+    return au.GoogleAuthProvider.credential(credential.idToken);
+  } catch (e) {
+    if (/cancel/i.test(e.message)) return null;
+    throw e;
+  }
+}
+
 // Ventana de Google para entrar; si el navegador la bloquea, se entra con redirección (recarga la página).
 export async function entrar() {
+  if (nativa) {
+    const credencial = await credencialNativa();
+    if (credencial) await au.signInWithCredential(auth, credencial);
+    return;
+  }
   const google = new au.GoogleAuthProvider();
   try {
     await au.signInWithPopup(auth, google);
@@ -89,15 +108,22 @@ export const usuarioActual = () => auth.currentUser;
 // Si esa cuenta de Google ya existía, se borra lo del invitado en la nube y se entra con ella: 'otra'.
 export async function vincularGoogle() {
   const google = new au.GoogleAuthProvider();
+  let credencial;
   try {
-    await au.linkWithPopup(auth.currentUser, google);
+    if (nativa) {
+      credencial = await credencialNativa();
+      if (!credencial) return 'cancelada';
+      await au.linkWithCredential(auth.currentUser, credencial);
+    } else {
+      await au.linkWithPopup(auth.currentUser, google);
+    }
     return 'vinculada';
   } catch (e) {
     if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return 'cancelada';
     if (e.code !== 'auth/credential-already-in-use') throw e;
     await borrarTodo(auth.currentUser.uid).catch(() => {});
     await au.deleteUser(auth.currentUser).catch(() => {}); // el invitado ya no sirve
-    await au.signInWithCredential(auth, au.GoogleAuthProvider.credentialFromError(e));
+    await au.signInWithCredential(auth, credencial ?? au.GoogleAuthProvider.credentialFromError(e));
     return 'otra';
   }
 }
@@ -164,7 +190,8 @@ export async function borrarCuenta() {
     await au.deleteUser(u);
   } catch (e) {
     if (e.code !== 'auth/requires-recent-login') throw e;
-    await au.reauthenticateWithPopup(u, new au.GoogleAuthProvider());
+    if (nativa) await au.reauthenticateWithCredential(u, await credencialNativa());
+    else await au.reauthenticateWithPopup(u, new au.GoogleAuthProvider());
     await au.deleteUser(u);
   }
 }

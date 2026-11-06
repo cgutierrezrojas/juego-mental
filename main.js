@@ -272,7 +272,8 @@ $('chat-denunciar').onclick = async () => {
 $('chat-volver').onclick = () => abrirAmigos();
 
 // Funcionamiento sin conexión. Solo va en localhost o HTTPS; si falla, la app sigue igual.
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
+// En la app Android los archivos ya vienen dentro: sin service worker.
+if ('serviceWorker' in navigator && !window.Capacitor?.isNativePlatform?.()) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 
 $('btn-liga').onclick = async () => {
   if (await asegurarDuelista()) abrirRanking('liga');
