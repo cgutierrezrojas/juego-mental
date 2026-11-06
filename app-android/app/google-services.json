@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "1029798752749",
+    "firebase_url": "https://juego-mental-89baa-default-rtdb.firebaseio.com",
+    "project_id": "juego-mental-89baa",
+    "storage_bucket": "juego-mental-89baa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1029798752749:android:d0532c5e17400bd36d77e4",
+        "android_client_info": {
+          "package_name": "io.github.cgutierrezrojas.juegomental"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1029798752749-5afmdrqkre4cf8ltemhf484fbu3q3rbi.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5_XjL0GKT-DNSwSi4MqKUu9JiEceExiE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1029798752749-5afmdrqkre4cf8ltemhf484fbu3q3rbi.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
