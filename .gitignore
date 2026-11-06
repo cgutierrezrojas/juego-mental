@@ -2,3 +2,6 @@
 server.log
 .superpowers/
 android/
+node_modules/
+www/
+app-android/keystore.properties

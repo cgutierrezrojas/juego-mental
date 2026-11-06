@@ -21,8 +21,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Copiar solo los archivos de la app
         run: |
-          mkdir _site
-          git ls-files | grep -Ev '^(docs/|\.github/|tests\.(js|html)$|firestore\.rules$|database\.rules\.json$|\.gitignore$)' | xargs -d '\n' cp --parents -t _site
+          node copiar-app.mjs _site
           touch _site/.nojekyll
           ls -R _site | head -50
       - uses: actions/upload-pages-artifact@v3
