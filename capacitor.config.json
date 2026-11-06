@@ -1,0 +1,10 @@
+{
+  "appId": "io.github.cgutierrezrojas.juegomental",
+  "appName": "Pa'l Rato",
+  "webDir": "www",
+  "backgroundColor": "#fff7ec",
+  "android": { "path": "app-android" },
+  "plugins": {
+    "FirebaseAuthentication": { "skipNativeAuth": true, "providers": ["google.com"] }
+  }
+}
