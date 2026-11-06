@@ -329,7 +329,7 @@ Y dentro de `buildTypes { release { … } }`:
 ```bash
 mkdir -p assets
 npx --yes sharp-cli -i icon.svg -o assets/logo.png resize 1024 1024
-npx --yes @capacitor/assets generate --android --iconBackgroundColor '#fff7ec' --iconBackgroundColorDark '#fff7ec' --splashBackgroundColor '#fff7ec' --splashBackgroundColorDark '#fff7ec'
+npx --yes @capacitor/assets generate --android --androidProject app-android --iconBackgroundColor '#fff7ec' --iconBackgroundColorDark '#fff7ec' --splashBackgroundColor '#fff7ec' --splashBackgroundColorDark '#fff7ec'
 ```
 Si `sharp-cli` falla con el SVG, generar el PNG de 1024 px de `icon.svg` con Chrome sin interfaz (`--headless --screenshot --window-size=1024,1024`). Verificar que existen `app-android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png` y un `drawable*/splash.png`.
 
