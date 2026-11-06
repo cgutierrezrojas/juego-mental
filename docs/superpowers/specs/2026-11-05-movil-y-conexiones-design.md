@@ -40,13 +40,36 @@ Orden: **A** (conexiones) → **B** (Capacitor) → **C** (anuncios y compras) �
 
 ## B. App Android con Capacitor
 
-- `npm` entra al proyecto solo para Capacitor (`package.json`, `node_modules/` ignorado). La web sigue sin paso de compilación.
-- `capacitor.config.json`: `appId` = **el mismo paquete** de la app TWA, `appName` «Pa'l Rato», `webDir` = carpeta `www/` generada por un script que copia los archivos de la app (la misma lista que publica Pages).
-- Proyecto nativo en `app-android/` (nombre distinto de `android/`, que guarda la llave y no se sube ni se lee). Se sube al repo sin secretos; la firma se configura con variables de entorno o `keystore.properties` ignorado, que **escribe el usuario**.
-- El service worker no se registra dentro de Capacitor (los archivos ya vienen en la app). El botón atrás nativo llama al mismo `atras()` de `app/ui.js`.
-- Firebase en el WebView: Google Sign-In con ventana emergente no funciona igual dentro de la app; se usa el plugin de autenticación nativa o la redirección (se decide al probar en el celular).
-- Versión con `versionCode` mayor que la TWA publicada; misma llave → se instala como actualización.
-- **Requisitos del usuario:** instalar **Android Studio** (trae JDK 21, que pide Capacitor 8; hoy hay JDK 17), un celular con depuración USB o un emulador.
+**Estructura.**
+- `npm` entra al proyecto solo para Capacitor (`package.json` en la raíz; `node_modules/` ignorado). La web sigue sin paso de compilación.
+- `copiar-app.js` (Node, en la raíz): copia a la carpeta que se le indique los archivos de la app (`git ls-files` menos docs, pruebas, reglas, `.github/`, `.gitignore`, `package*.json`, `capacitor.config.json`, `copiar-app.js`, `assets/` y `app-android/`). **Una sola lista**: el flujo de Pages pasa a usar `node copiar-app.js _site` y Capacitor `node copiar-app.js www`. `www/` va ignorada.
+- `capacitor.config.json`: `appId` `io.github.cgutierrezrojas.juegomental` (el mismo paquete de la TWA), `appName` «Pa'l Rato», `webDir` `www`, `android.path` `app-android`. La web va **dentro** de la app (sin `server.url`): abre sin señal.
+- Proyecto nativo en `app-android/` (nunca en `android/`, que guarda la llave y no se sube ni se lee). Se sube al repo sin secretos.
+- Íconos y pantalla de inicio con `@capacitor/assets` desde `assets/icon-only.png` (1024 px, generado de `icon.svg`) y el color de fondo de la app.
+
+**Cambios en la web (solo dentro de Capacitor, `window.Capacitor?.isNativePlatform()`).**
+- `main.js`: no registra el service worker.
+- Botón atrás: con `@capacitor/app` instalado y sin escucha propia, Android va atrás en el historial del WebView o cierra la app. La app ya maneja atrás con `history`/`popstate` (`app/ui.js`), así que **no hace falta código**.
+- `games/nube.js`: Google con el plugin `@capacitor-firebase/authentication` (`skipNativeAuth: true`, proveedor `google.com`): la ventana nativa de Google entrega un `idToken` y la sesión se abre en el SDK web de siempre con `GoogleAuthProvider.credential(idToken)`:
+  - `entrar()` → `signInWithCredential`.
+  - `vincularGoogle()` → `linkWithCredential`; si la cuenta ya existe (`auth/credential-already-in-use`), mismo camino de hoy pero con esa credencial.
+  - `borrarCuenta()` → `reauthenticateWithCredential`.
+  - Si el usuario cierra la ventana de Google: se trata como cancelado (`entrar` no hace nada, `vincularGoogle` devuelve `'cancelada'`).
+  - Se usa con `Capacitor.Plugins.FirebaseAuthentication`, sin compilador (así se enchufará AdMob en C).
+
+**Versión y firma.**
+- Primera versión en Play (la TWA no se subió): `versionCode` 2 (por si quedó algún 1 de la TWA), `versionName` «2.0».
+- `app-android/app/build.gradle` lee `app-android/keystore.properties` (ignorado; `storeFile`, `storePassword`, `keyAlias`, `keyPassword`) **si existe**; lo escribe el usuario apuntando a su llave. Sin él, solo se compila la versión de prueba.
+- `google-services.json` (en `app-android/app/`) solo trae identificadores públicos, como `firebase-config.js`: se sube al repo.
+- Java: Capacitor 8 pide JDK 21. Si el Gradle del proyecto no acepta el Java 25 de Android Studio, se instala Temurin 21 y se compila con él.
+
+**Requisitos del usuario.**
+1. Escribir `app-android/keystore.properties`.
+2. Sacar las huellas SHA-1 (debug y la de su llave) con `keytool` (comando que se le da).
+3. Firebase › Configuración del proyecto › Agregar app Android con el paquete y las huellas; descargar `google-services.json` a `app-android/app/`. Más adelante, la huella de firma de Play.
+4. Celular con depuración USB (o emulador).
+
+**Pruebas.** `node tests.js`; compilar la versión de prueba, instalarla y comprobar: abre sin barra del navegador y sin señal, atrás igual que en la web, entrar con Google, vincular un invitado, duelo y chat. Al final, `.aab` firmado.
 
 ## C. Anuncios y «Quitar anuncios»
 
