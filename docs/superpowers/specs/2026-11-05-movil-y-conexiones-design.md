@@ -43,7 +43,7 @@ Orden: **A** (conexiones) → **B** (Capacitor) → **C** (anuncios y compras) �
 **Estructura.**
 - `npm` entra al proyecto solo para Capacitor (`package.json` en la raíz; `node_modules/` ignorado). La web sigue sin paso de compilación.
 - `copiar-app.js` (Node, en la raíz): copia a la carpeta que se le indique los archivos de la app (`git ls-files` menos docs, pruebas, reglas, `.github/`, `.gitignore`, `package*.json`, `capacitor.config.json`, `copiar-app.js`, `assets/` y `app-android/`). **Una sola lista**: el flujo de Pages pasa a usar `node copiar-app.js _site` y Capacitor `node copiar-app.js www`. `www/` va ignorada.
-- `capacitor.config.json`: `appId` `io.github.cgutierrezrojas.juegomental` (el mismo paquete de la TWA), `appName` «Pa'l Rato», `webDir` `www`, `android.path` `app-android`. La web va **dentro** de la app (sin `server.url`): abre sin señal.
+- `capacitor.config.json`: `appId` `com.techmbc.palrato` (dominio de la empresa del dueño; cambiado el 2026-11-06 antes de subir a Play, porque el paquete no se puede cambiar después), `appName` «Pa'l Rato», `webDir` `www`, `android.path` `app-android`. La web va **dentro** de la app (sin `server.url`): abre sin señal.
 - Proyecto nativo en `app-android/` (nunca en `android/`, que guarda la llave y no se sube ni se lee). Se sube al repo sin secretos.
 - Íconos y pantalla de inicio con `@capacitor/assets` desde `assets/icon-only.png` (1024 px, generado de `icon.svg`) y el color de fondo de la app.
 

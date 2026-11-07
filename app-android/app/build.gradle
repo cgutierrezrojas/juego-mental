@@ -6,10 +6,10 @@ def firma = new Properties()
 if (llave.exists()) llave.withInputStream { firma.load(it) }
 
 android {
-    namespace = "io.github.cgutierrezrojas.juegomental"
+    namespace = "com.techmbc.palrato"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "io.github.cgutierrezrojas.juegomental"
+        applicationId "com.techmbc.palrato"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 2

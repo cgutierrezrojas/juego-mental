@@ -1,4 +1,4 @@
-package io.github.cgutierrezrojas.juegomental;
+package com.techmbc.palrato;
 
 import com.getcapacitor.BridgeActivity;
 

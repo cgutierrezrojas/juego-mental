@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Pa\'l Rato</string>
     <string name="title_activity_main">Pa\'l Rato</string>
-    <string name="package_name">io.github.cgutierrezrojas.juegomental</string>
-    <string name="custom_url_scheme">io.github.cgutierrezrojas.juegomental</string>
+    <string name="package_name">com.techmbc.palrato</string>
+    <string name="custom_url_scheme">com.techmbc.palrato</string>
 </resources>
