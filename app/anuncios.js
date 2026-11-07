@@ -6,7 +6,7 @@ import { E } from './estado.js';
 const admob = window.Capacitor?.isNativePlatform?.() ? window.Capacitor.Plugins.AdMob : null;
 const CADA = 3; // partidas entre intersticiales
 let listo = Promise.resolve(); // initialize + consentimiento
-let pendiente = false; // toca intersticial al volver a un menú
+let precargado = Promise.resolve(false); // intersticial pedido de antemano (true si cargó)
 
 export const hayAnuncios = () => Boolean(admob);
 const sinIntersticial = () => leer('ajuste:sinAnuncios') === '1'; // compra «Quitar anuncios» (C2)
@@ -38,22 +38,28 @@ export async function verAnuncioPremio() {
   return premiado;
 }
 
-// Una partida de un jugador terminada: cada CADA, el intersticial queda pendiente hasta volver a un menú.
+// Una partida de un jugador terminada: cada CADA, el intersticial sale al segundo (al cerrarlo se ven los
+// resultados). Se precarga una partida antes para que no tarde.
 export function finDePartida() {
   if (!admob || sinIntersticial() || E.enDuelo || E.enVivo) return;
   const n = (Number(leer('anuncios:partidas')) || 0) + 1;
   guardar('anuncios:partidas', String(n));
-  if (n % CADA === 0) pendiente = true;
+  if (n % CADA === CADA - 1) precargar();
+  if (n % CADA === 0) setTimeout(mostrarIntersticial, 1000);
 }
 
-export async function alVolverAlMenu() {
-  if (!pendiente) return;
-  pendiente = false;
+function precargar() {
+  precargado = listo
+    .then(() => admob.prepareInterstitial({ adId: ANUNCIOS.intersticial, isTesting: ANUNCIOS.prueba }))
+    .then(() => true, () => false);
+}
+
+async function mostrarIntersticial() {
   try {
-    await listo;
-    await admob.prepareInterstitial({ adId: ANUNCIOS.intersticial, isTesting: ANUNCIOS.prueba });
-    await admob.showInterstitial();
+    if (!(await precargado)) precargar(); // no estaba listo (p. ej. se abrió la app justo antes): se pide ahora
+    if (await precargado) await admob.showInterstitial();
   } catch {
     // sin anuncio: se sigue
   }
+  precargado = Promise.resolve(false);
 }

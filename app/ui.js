@@ -16,7 +16,6 @@ import { pararChat } from './chat.js';
 import { revisarInvitacionPendiente, salirDeSala } from './vivo.js';
 import { subir } from './cuenta.js';
 import { E } from './estado.js';
-import { alVolverAlMenu } from './anuncios.js';
 
 export const $ = (id) => document.getElementById(id);
 
@@ -109,8 +108,6 @@ addEventListener('popstate', () => {
   }
 });
 
-const MENUS = new Set(['inicio', 'menu', 'mesa', 'trivia', 'cartas', 'arcade', 'palabras']); // menús de sección
-
 export function mostrar(id) {
   if (id !== 'inicio' && !enHistorial) {
     history.pushState(null, '');
@@ -157,7 +154,6 @@ export function mostrar(id) {
   if (id !== 'juego') revisarInvitacionPendiente();
   if (id !== 'juego' && E.estadoApp !== 'conectado') ponerEstado('conectado');
   if (id === 'inicio' || id === 'menu' || id === 'final') subir().catch(() => {}); // sin conexión: se reintenta la próxima vez
-  if (MENUS.has(id)) alVolverAlMenu(); // intersticial pendiente (solo en la app)
 }
 
 // Lluvia de confeti con los colores del tema. Cada pieza se borra al acabar de caer.

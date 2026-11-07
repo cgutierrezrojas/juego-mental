@@ -79,7 +79,7 @@ Solo dentro de la app Android (`window.Capacitor?.isNativePlatform?.()`); en la 
 - `anuncios-config.js` (raíz, como `firebase-config.js`): `{ prueba, premio, intersticial }`. El ID de la app de AdMob va en `app-android` (`strings.xml` → `AndroidManifest.xml`).
 - Al abrir: `initialize` y formulario de consentimiento (UMP) si la ley lo pide.
 - **📺 Ver anuncio +100** en la pantalla «sin fichas» del 21 y el Bacará, junto a desafíos y bono. Solo suma si el anuncio se vio entero (evento de premio). Sin límite diario.
-- **Intersticial cada 3 partidas terminadas de un jugador** (donde hoy se anota `ligaAnotar('partida')`, salvo duelos, en vivo y contra amigos). Queda pendiente y sale al volver a un menú (inicio o el menú de una sección), nunca encima de los resultados ni en plena partida.
+- **Intersticial cada 3 partidas terminadas de un jugador** (donde hoy se anota `ligaAnotar('partida')`, salvo duelos, en vivo y contra amigos). Sale un segundo después de terminar la tercera partida (precargado desde la segunda); al cerrarlo se ven los resultados. Cambiado tras probar en el celular: «al volver al menú» no salía nunca si se encadenaban partidas con «Jugar otra vez».
 - `privacidad.html`: anuncios de AdMob (ID de publicidad, consentimiento) y compras de Google Play.
 
 **C2 · «Quitar anuncios»** (`@capgo/native-purchases` 8.x, Google Play Billing directo): compra única `quitar_anuncios` en Tú (precio desde Play) y «Restaurar compra». Quita los intersticiales; el 📺 de fichas sigue. Al abrir se consulta a Play (`getPurchases`), que recuerda la compra por cuenta de Google en cualquier celular: no se guarda en Firebase. Se prueba con la app en una prueba interna de Play y el usuario como probador de licencias.
