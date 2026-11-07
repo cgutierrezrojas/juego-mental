@@ -84,7 +84,7 @@ Solo dentro de la app Android (`window.Capacitor?.isNativePlatform?.()`); en la 
 
 **C2 · «Quitar anuncios»** (`@capgo/native-purchases` 8.x, Google Play Billing directo): compra única `quitar_anuncios` en Tú (precio desde Play) y «Restaurar compra». Quita los intersticiales; el 📺 de fichas sigue. Al abrir se consulta a Play (`getPurchases`), que recuerda la compra por cuenta de Google en cualquier celular: no se guarda en Firebase. Se prueba con la app en una prueba interna de Play y el usuario como probador de licencias.
 
-- **Requisitos del usuario:** en AdMob, la app y los bloques «Recompensado» e «Intersticial»; `app-ads.txt` en `techmbc.com`; en Play Console, el producto `quitar_anuncios`, perfil de pagos y el formulario de seguridad de datos («Contiene anuncios»).
+- **Requisitos del usuario:** en AdMob, la app y los bloques «Recompensado» e «Intersticial»; `app-ads.txt` en `mbc-tech.com` (donde está el hosting; ese debe ser el sitio web del desarrollador en Play); en Play Console, el producto `quitar_anuncios`, perfil de pagos y el formulario de seguridad de datos («Contiene anuncios»).
 
 ## D. Notificaciones (cuando haya Blaze)
 
