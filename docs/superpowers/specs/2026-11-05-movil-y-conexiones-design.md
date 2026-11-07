@@ -73,11 +73,18 @@ Orden: **A** (conexiones) → **B** (Capacitor) → **C** (anuncios y compras) �
 
 ## C. Anuncios y «Quitar anuncios»
 
-- `@capacitor-community/admob`: **video con premio** opcional (por ejemplo, una pista o una vida extra donde ya existan) e **intersticial** como mucho cada 3 partidas terminadas, nunca en duelos en vivo ni a mitad de partida. Formulario de consentimiento (UMP) donde lo exija la ley.
-- Compra única «Quitar anuncios» con Google Play Billing (plugin de compras); se guarda en el dispositivo y en `usuarios/{uid}` para recuperarla en otro celular.
-- En la web, sin anuncios por ahora (AdSense queda como opción).
-- Privacidad y la ficha de Play («Contiene anuncios», seguridad de datos) se actualizan.
-- **Requisitos del usuario:** cuenta de AdMob (gratis) con la app creada y sus IDs de anuncio; producto «quitar_anuncios» creado en Play Console; perfil de pagos en Play Console.
+Solo dentro de la app Android (`window.Capacitor?.isNativePlatform?.()`); en la web, sin anuncios (AdSense queda como opción). Cuentas de AdMob y Play Console: las de la empresa del dueño.
+
+**C1 · Anuncios** (`@capacitor-community/admob` 8.x), probados con los IDs de prueba de Google hasta tener los reales:
+- `anuncios-config.js` (raíz, como `firebase-config.js`): `{ prueba, premio, intersticial }`. El ID de la app de AdMob va en `app-android` (`strings.xml` → `AndroidManifest.xml`).
+- Al abrir: `initialize` y formulario de consentimiento (UMP) si la ley lo pide.
+- **📺 Ver anuncio +100** en la pantalla «sin fichas» del 21 y el Bacará, junto a desafíos y bono. Solo suma si el anuncio se vio entero (evento de premio). Sin límite diario.
+- **Intersticial cada 3 partidas terminadas de un jugador** (donde hoy se anota `ligaAnotar('partida')`, salvo duelos, en vivo y contra amigos). Queda pendiente y sale al volver a un menú (inicio o el menú de una sección), nunca encima de los resultados ni en plena partida.
+- `privacidad.html`: anuncios de AdMob (ID de publicidad, consentimiento) y compras de Google Play.
+
+**C2 · «Quitar anuncios»** (`@capgo/native-purchases` 8.x, Google Play Billing directo): compra única `quitar_anuncios` en Tú (precio desde Play) y «Restaurar compra». Quita los intersticiales; el 📺 de fichas sigue. Al abrir se consulta a Play (`getPurchases`), que recuerda la compra por cuenta de Google en cualquier celular: no se guarda en Firebase. Se prueba con la app en una prueba interna de Play y el usuario como probador de licencias.
+
+- **Requisitos del usuario:** en AdMob, la app y los bloques «Recompensado» e «Intersticial»; `app-ads.txt` en `techmbc.com`; en Play Console, el producto `quitar_anuncios`, perfil de pagos y el formulario de seguridad de datos («Contiene anuncios»).
 
 ## D. Notificaciones (cuando haya Blaze)
 
