@@ -14,6 +14,7 @@ import { E } from './estado.js';
 import { leerJSON } from './datos.js';
 import { $, confeti, preguntar } from './ui.js';
 import { ligaAnotar } from './liga.js';
+import { finDePartida } from './anuncios.js';
 import { asegurarDuelista } from './duelos.js';
 import { misPartidas, resultadoMesa, apuntarResultadoAmigo } from './mesa.js';
 import { naipe, pantalla, boton, abrirCartas, alSalir, temblar } from './cartas.js';
@@ -383,7 +384,7 @@ function pintarFin(g) {
       guardar(claveRecord(p.J.id, p.nivel), JSON.stringify({ partidas: (r.partidas ?? 0) + 1, ganadas: (r.ganadas ?? 0) + (gane ? 1 : 0) }));
     }
     if (p.modo === 'amigo') apuntarResultadoAmigo(p.id, gane ? 'v' : 'd');
-    else ligaAnotar('partida');
+    else { ligaAnotar('partida'); finDePartida(); }
     if (gane) {
       confeti();
       sonar('record');

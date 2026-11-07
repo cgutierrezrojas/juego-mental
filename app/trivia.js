@@ -13,6 +13,7 @@ import { leerJSON, apuntarLogros } from './datos.js';
 import { abrirPrevia } from './previa.js';
 import { $, mostrar, confeti, preguntar } from './ui.js';
 import { ligaAnotar } from './liga.js';
+import { finDePartida } from './anuncios.js';
 import { asegurarDuelista } from './duelos.js';
 import { misPartidas, resultadoMesa, apuntarResultadoAmigo } from './mesa.js';
 import { abrirGranEscalera } from './granescalera.js';
@@ -647,6 +648,7 @@ function pintarFin(fin) {
   if (!partida.apuntada) {
     partida.apuntada = true;
     ligaAnotar('partida');
+    finDePartida();
     // Solo las partidas clásicas cuentan para el récord y los logros.
     if (partida.modo === 'solo' && R.esClasica(a)) {
       const r = leerJSON('trivia:ruleta');

@@ -12,6 +12,7 @@ import { E } from './estado.js';
 import { leerJSON } from './datos.js';
 import { $, mostrar, confeti } from './ui.js';
 import { ligaAnotar } from './liga.js';
+import { finDePartida } from './anuncios.js';
 import { JUEGOS_ARCADE } from './juegos.js';
 import { anotarEnDuelo, volverAlDuelo } from './duelos.js';
 import { elegirAmigo } from './retos.js';
@@ -326,6 +327,7 @@ function terminar() {
   const x = leerJSON(`arcade:${id}`);
   guardar(`arcade:${id}`, JSON.stringify({ partidas: (x.partidas ?? 0) + 1 }));
   ligaAnotar('partida');
+  finDePartida();
   if (duelo) anotarEnDuelo(puntos);
   sonar(nuevo ? 'record' : 'fallo');
   if (nuevo) confeti();

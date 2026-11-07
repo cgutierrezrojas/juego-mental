@@ -12,6 +12,7 @@ import { CARA } from './juegos.js';
 import { leerJSON, apuntarLogros } from './datos.js';
 import { $, mostrar, confeti, preguntar } from './ui.js';
 import { ligaAnotar } from './liga.js';
+import { finDePartida } from './anuncios.js';
 import { asegurarDuelista } from './duelos.js';
 
 export const JUEGOS_MESA = [
@@ -266,7 +267,7 @@ export function apuntarResultadoAmigo(id, r) {
 function apuntarFinal(g) {
   if (partida.apuntada) return;
   partida.apuntada = true;
-  if (partida.modo !== 'amigo') ligaAnotar('partida');
+  if (partida.modo !== 'amigo') { ligaAnotar('partida'); finDePartida(); }
   const r = g === 'empate' ? 'e' : g === partida.yo ? 'v' : 'd';
   if (partida.modo === 'maquina') {
     const stats = leerJSON('mesa:maquina');

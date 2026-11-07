@@ -15,6 +15,7 @@ import { leerJSON } from './datos.js';
 import { darPremio } from './premios.js';
 import { $, mostrar, confeti, compartirTexto } from './ui.js';
 import { ligaAnotar } from './liga.js';
+import { finDePartida } from './anuncios.js';
 import { JUEGOS_PALABRAS } from './juegos.js';
 import { anotarEnDuelo, volverAlDuelo } from './duelos.js';
 import { elegirAmigo } from './retos.js';
@@ -225,6 +226,7 @@ function finDia(hoy) {
   const nuevo = acerto && esRecord(stats.mejor, Number(leer('record:palabra')) || 0);
   if (nuevo) guardar('record:palabra', String(stats.mejor));
   ligaAnotar('partida');
+  finDePartida();
   sonar(acerto ? 'record' : 'fallo');
   if (acerto) confeti();
   pararPalabras();
@@ -415,6 +417,7 @@ function terminar() {
   const partidas = leerJSON('palabra:partidas');
   guardar('palabra:partidas', JSON.stringify({ ...partidas, [id]: (partidas[id] ?? 0) + 1 }));
   ligaAnotar('partida');
+  finDePartida();
   if (duelo) anotarEnDuelo(puntos);
   sonar(nuevo ? 'record' : 'fallo');
   if (nuevo) confeti();
@@ -625,6 +628,7 @@ function finCharadas() {
   const { e, tema } = p;
   sonar('record');
   ligaAnotar('partida');
+  finDePartida();
   pararPalabras();
   $('palabras-marcador').replaceChildren(el('span', '', '🎭 Charadas'), el('span', '', `✅ ${e.aciertos}`));
   $('palabras-aviso').textContent = `⏱ ¡Tiempo! ${e.aciertos} acierto${e.aciertos === 1 ? '' : 's'}.`;

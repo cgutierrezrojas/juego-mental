@@ -1710,7 +1710,9 @@ probar('palabras: charadas, escalera de palabras y la gran escalera', () => {
 });
 
 // --- premios.js ---
-import { premio, bono, hoyDe, TOPE } from './games/premios.js';
+import { premio, bono, hoyDe, TOPE, ANUNCIO } from './games/premios.js';
+
+assert(ANUNCIO === 100, 'el anuncio da 100 fichas');
 
 probar('premios: montos y una vez al día', () => {
   let r = {};

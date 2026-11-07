@@ -10,6 +10,7 @@ import { E } from './estado.js';
 import { leerJSON } from './datos.js';
 import { $, mostrar, confeti } from './ui.js';
 import { ligaAnotar } from './liga.js';
+import { finDePartida } from './anuncios.js';
 import { anotarEnDuelo, volverAlDuelo } from './duelos.js';
 import { elegirAmigo } from './retos.js';
 import { abrirTrivia } from './trivia.js';
@@ -185,6 +186,7 @@ function terminar() {
   const x = leerJSON('trivia:granescalera');
   guardar('trivia:granescalera', JSON.stringify({ partidas: (x.partidas ?? 0) + 1 }));
   ligaAnotar('partida');
+  finDePartida();
   if (duelo) anotarEnDuelo(puntos);
   sonar(nuevo || e.resultado === 'gano' ? 'record' : 'fallo');
   if (nuevo || e.resultado === 'gano') confeti();

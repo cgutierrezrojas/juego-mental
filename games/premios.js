@@ -5,6 +5,7 @@ export const MONTOS = { tudia: 100, palabra: 50, diario: 10 };
 export const TOPE = 250; // fichas al día por desafíos (el bono va aparte)
 export const TOPE_DIARIOS = 10; // niveles diarios que dan fichas cada día
 export const BONO = 100;
+export const ANUNCIO = 100; // por ver un anuncio con premio (solo en la app)
 
 // El registro de `fecha`: si es de otro día, empieza de cero (el bono guarda su propia fecha).
 const delDia = (r, fecha) => (r?.fecha === fecha ? r : { fecha, ganadas: 0, hechos: [], diarios: 0, bono: r?.bono ?? null });

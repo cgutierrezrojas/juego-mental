@@ -7,8 +7,9 @@ import * as S from '../games/solitario.js';
 import * as V from '../games/veintiuno.js';
 import * as B from '../games/bacara.js';
 import { leerJSON } from './datos.js';
-import { leerFichas, cobrarBono, desafiosDeHoy } from './premios.js';
-import { TOPE, MONTOS, TOPE_DIARIOS, BONO } from '../games/premios.js';
+import { leerFichas, cobrarBono, cobrarAnuncio, desafiosDeHoy } from './premios.js';
+import { hayAnuncios, verAnuncioPremio, finDePartida } from './anuncios.js';
+import { TOPE, MONTOS, TOPE_DIARIOS, BONO, ANUNCIO } from '../games/premios.js';
 import { abrirMentales } from './inicio.js';
 import { abrirJuegoPalabras } from './palabras.js';
 import { $, mostrar, confeti, preguntar } from './ui.js';
@@ -179,6 +180,7 @@ function ganarSolitario() {
     x.movimientos = Math.min(x.movimientos ?? Infinity, sol.e.movimientos);
   });
   ligaAnotar('partida');
+  finDePartida();
   sonar('record');
   confeti();
 }
@@ -347,6 +349,20 @@ function pintarApuesta(j, cabeza, repartir, guardarJ, repintar) {
       repintar();
     });
     bonoBtn.disabled = hoy.bonoUsado;
+    // 📺 Solo en la app: un anuncio con premio, cuantas veces se quiera.
+    const anuncioBtn = boton(`📺 Ver un anuncio +${ANUNCIO}`, 'color', async () => {
+      anuncioBtn.disabled = true;
+      if (!(await verAnuncioPremio())) {
+        anuncioBtn.textContent = '📺 No hay anuncio ahora, prueba en un rato';
+        anuncioBtn.disabled = false;
+        return;
+      }
+      j.fichas += cobrarAnuncio();
+      j.max = Math.max(j.max, j.fichas);
+      j.apuesta = 10;
+      guardarJ();
+      repintar();
+    });
     // Cada desafío: hecho (✓) o un botón para ir a jugarlo.
     const desafio = (hecho, texto, ir) => (hecho ? el('p', 'sin-datos', `✓ ${texto}`) : boton(`🎯 ${texto}`, '', ir));
     return pantalla(marcadorFichas(j), [
@@ -357,7 +373,7 @@ function pintarApuesta(j, cabeza, repartir, guardarJ, repintar) {
       desafio(hoy.palabra, `🔤 Palabra del día: +${MONTOS.palabra}`, () => abrirJuegoPalabras('palabra')),
       desafio(hoy.diarios >= TOPE_DIARIOS, `📅 Niveles diarios (${hoy.diarios}/${TOPE_DIARIOS}): +${MONTOS.diario} cada uno`, () => abrirMentales()),
       el('p', 'sin-datos', `Hoy llevas ${hoy.ganadas} de ${TOPE} fichas por desafíos.`),
-    ], [bonoBtn, boton('Salir', '', abrirCartas)]);
+    ], [bonoBtn, ...(hayAnuncios() ? [anuncioBtn] : []), boton('Salir', '', abrirCartas)]);
   }
   const fichas = el('div', 'fichas-21');
   for (const f of [5, 10, 25, 50]) {
@@ -397,7 +413,7 @@ function cerrarMano(j, cobro, apostado) {
     j.ganadas++;
     sonar('acierto');
   }
-  if (j.manos % 5 === 0) ligaAnotar('partida');
+  if (j.manos % 5 === 0) { ligaAnotar('partida'); finDePartida(); }
 }
 
 const textoCobro = (cobro, apostado) => (cobro > apostado ? `Ganas ${cobro - apostado} fichas` : cobro === apostado ? 'Recuperas tu apuesta' : `Pierdes ${apostado - cobro} fichas`);

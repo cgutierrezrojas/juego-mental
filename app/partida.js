@@ -1,5 +1,6 @@
 // La partida: cuenta atrás, final con estrellas, barra y frases.
 import { ligaAnotar } from './liga.js';
+import { finDePartida } from './anuncios.js';
 import { el, guardar, esRecord } from '../games/comun.js';
 import { sonar } from '../games/efectos.js';
 import { barraFinal, fraseEstrellas, fraseRecord } from '../games/final.js';
@@ -68,6 +69,7 @@ export function terminar(puntos) {
   if (enNiveles) Object.assign(partida, { dificultad: configNivel(E.actual.id, nivel).dificultad, nivel });
   guardarPartida(E.actual.id, partida);
   ligaAnotar('partida');
+  finDePartida();
   // ¿Esta partida es la que completa el entrenamiento de hoy?
   const entrenoHoy = !entrenoAntes && entrenoCompleto(hoy, idsPorCategoria, historiales());
   const premios = [];
