@@ -53,6 +53,7 @@ export function apuntarResultado(duelo) {
 export async function asegurarDuelista(accion = 'jugar con tus amigos') {
   if (!CONFIG) return false;
   if (!(await pedirCuenta(accion))) return false;
+  await E.sincro; // recién entrado: el apodo puede venir con el progreso de la nube
   if (!leer('nube:apodo')) await pedirApodo(false);
   return Boolean(leer('nube:apodo'));
 }

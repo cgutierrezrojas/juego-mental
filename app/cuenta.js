@@ -140,7 +140,8 @@ export async function alCambiarUsuario(u) {
     E.nube.iniciarEstados(u.uid);
     ponerEstado(E.estadoApp);
     if (E.nube.hayEstados()) dejarInvitaciones = E.nube.escucharInvitaciones(u.uid, recibirInvitacion);
-    await sincronizar();
+    E.sincro = sincronizar();
+    await E.sincro;
     comprobarPodio();
     actualizarPerfil();
   }
@@ -182,21 +183,29 @@ export async function sincronizar() {
 }
 
 // Este celular y la nube tienen progreso distinto y aún no se han vinculado: que elija la persona.
+// Termina al elegir el de este celular (tras el apodo) o al cerrar sin elegir; con el de la nube, la app se recarga.
 export function preguntarSincro(enNube) {
   avisarNube('Elige qué progreso conservar.');
   const dialogo = $('dialogo-nube');
-  $('usar-nube').onclick = () => {
-    dialogo.close();
-    bajar(enNube);
-  };
-  $('usar-local').onclick = async () => {
-    dialogo.close();
-    guardar('nube:uid', E.usuario.uid);
-    guardar('nube:cambio', Date.now()); // el de este celular pasa a ser el más reciente
-    await subir().catch(() => avisarNube('Sin conexión con la nube: se sincronizará más tarde.'));
-    pedirApodo(true);
-  };
-  dialogo.showModal();
+  return new Promise((listo) => {
+    let eligio = false;
+    $('usar-nube').onclick = () => {
+      eligio = true;
+      dialogo.close();
+      bajar(enNube);
+    };
+    $('usar-local').onclick = async () => {
+      eligio = true;
+      dialogo.close();
+      guardar('nube:uid', E.usuario.uid);
+      guardar('nube:cambio', Date.now()); // el de este celular pasa a ser el más reciente
+      await subir().catch(() => avisarNube('Sin conexión con la nube: se sincronizará más tarde.'));
+      await pedirApodo(true);
+      listo();
+    };
+    dialogo.addEventListener('close', () => eligio || listo(), { once: true });
+    dialogo.showModal();
+  });
 }
 
 // Trae el progreso de la nube a este celular y recarga la app con él.
