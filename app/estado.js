@@ -13,6 +13,7 @@ export const E = {
   nube: null, // ☁️ módulo games/nube.js, cuando ha cargado
   usuario: null, // usuario con sesión, o null
   estadoNube: '', // texto de estado del bloque Nube
+  nubeFallo: false, // no se pudo cargar la nube (sin conexión al abrir): hay que recargar para reintentar
   sesionLista: false, // ya se sabe si hay sesión (Firebase respondió)
   temporizadores: [], // sonidos y confeti pendientes del final; se cancelan al salir de él
   textoCompartir: '', // resultado de la última partida, para 📤 Compartir

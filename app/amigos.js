@@ -35,7 +35,7 @@ export async function cargarAmigos() {
 }
 
 export async function abrirAmigos(aviso = '') {
-  if (!(await asegurarDuelista())) return;
+  if (!(await asegurarDuelista('ver a tus amigos'))) return;
   mostrar('amigos');
   pintarAmigos(aviso);
 }

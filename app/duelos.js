@@ -11,9 +11,8 @@ import { sonar } from '../games/efectos.js';
 import { E } from './estado.js';
 import { INFO_JUEGOS, HABILIDADES, ICONO_HABILIDAD, JUEGOS, CARA } from './juegos.js';
 import { leerJSON, apuntarLogros, balanceDuelos } from './datos.js';
-import { pintarEstadisticas } from './estadisticas.js';
 import { mostrar, $, confeti } from './ui.js';
-import { avisarNube, pedirApodo } from './cuenta.js';
+import { pedirApodo, pedirCuenta } from './cuenta.js';
 import { agregarAmigo } from './amigos.js';
 import { jugar } from './partida.js';
 import { abrirJuegoArcade } from './arcade.js';
@@ -50,16 +49,10 @@ export function apuntarResultado(duelo) {
   return resultados[duelo.id];
 }
 
-// Para jugar duelos hace falta sesión (Google o invitado) y apodo; si no, se lleva a ☁️ Nube o se pide el apodo.
-export async function asegurarDuelista() {
+// Antes de lo social: internet, nube y sesión (ver pedirCuenta), y apodo para el ranking.
+export async function asegurarDuelista(accion = 'jugar con tus amigos') {
   if (!CONFIG) return false;
-  if (!E.usuario) {
-    pintarEstadisticas();
-    mostrar('estadisticas');
-    avisarNube('⚔️ Entra con Google o como invitado para jugar duelos.');
-    $('nube').scrollIntoView({ block: 'start' });
-    return false;
-  }
+  if (!(await pedirCuenta(accion))) return false;
   if (!leer('nube:apodo')) await pedirApodo(false);
   return Boolean(leer('nube:apodo'));
 }
@@ -96,7 +89,7 @@ export async function pintarAvisoDuelos(forzar = false) {
 }
 
 export async function abrirDuelos() {
-  if (!(await asegurarDuelista())) return;
+  if (!(await asegurarDuelista('jugar duelos'))) return;
   mostrar('duelos');
   pintarDuelos();
 }

@@ -8,7 +8,7 @@ import { E } from './estado.js';
 import { pintarSugerencia } from './menu.js';
 import { ponerEstado, actualizarPerfil, agregarAmigo } from './amigos.js';
 import { recibirInvitacion } from './vivo.js';
-import { pintarAvisoDuelos, abrirDuelo, asegurarDuelista, abrirNuevoDuelo } from './duelos.js';
+import { pintarAvisoDuelos, abrirDuelo, abrirNuevoDuelo } from './duelos.js';
 import { datosDelJuego, sustituirProgreso, conUnidad } from './datos.js';
 import { JUEGOS, JUEGOS_ARCADE, JUEGOS_PALABRAS, GRAN_ESCALERA } from './juegos.js';
 
@@ -16,6 +16,58 @@ import { JUEGOS, JUEGOS_ARCADE, JUEGOS_PALABRAS, GRAN_ESCALERA } from './juegos.
 const CON_RANKING = [...JUEGOS, ...JUEGOS_ARCADE, ...JUEGOS_PALABRAS, GRAN_ESCALERA].filter((j) => !j.sinRanking);
 
 // ☁️ Nube (Firebase): sesión con Google, progreso sincronizado y ranking. Sin CONFIG, no aparece nada de esto.
+
+const errorInvitado = (e) => e.code === 'auth/admin-restricted-operation' || e.code === 'auth/operation-not-allowed'
+  ? 'El modo invitado aún no está activado en Firebase.'
+  : 'No se pudo entrar como invitado (¿sin conexión?).';
+
+// Tras entrar: espera a que alCambiarUsuario apunte al usuario (si Firebase abrió sesión).
+async function conSesion() {
+  if (!E.nube.usuarioActual()) return false;
+  for (let i = 0; i < 50 && !E.usuario; i++) await new Promise((r) => setTimeout(r, 100));
+  return Boolean(E.usuario);
+}
+
+// Ventana de cuenta: título, texto y acciones [texto, función, mensaje de error]. Resuelve true si alguna dejó sesión.
+function ventanaCuenta(titulo, texto, acciones, cerrarTexto = 'Ahora no') {
+  const dialogo = $('dialogo-cuenta');
+  const h3 = el('h3', '', titulo);
+  h3.id = 'cuenta-titulo';
+  const estado = el('p', 'estado-nube', '');
+  const botones = acciones.map(([etiqueta, accion, error], i) => {
+    const b = el('button', i === 0 ? 'grande color' : '', etiqueta);
+    if (i === 0) b.style.setProperty('--c', 'var(--azul)');
+    b.onclick = async () => {
+      estado.textContent = '';
+      try {
+        await accion();
+        if (await conSesion()) dialogo.close('si');
+      } catch (e) {
+        estado.textContent = error(e);
+      }
+    };
+    return b;
+  });
+  const cerrar = el('button', '', cerrarTexto);
+  cerrar.onclick = () => dialogo.close();
+  dialogo.firstElementChild.replaceChildren(h3, el('p', '', texto), ...botones, cerrar, estado);
+  dialogo.returnValue = '';
+  dialogo.showModal();
+  return new Promise((listo) => dialogo.addEventListener('close', () => listo(dialogo.returnValue === 'si'), { once: true }));
+}
+
+// Antes de algo que necesita la nube: avisa si no hay internet o la nube no está, y pide entrar si no hay sesión.
+// true si hay sesión (de antes o abierta desde la ventana).
+export function pedirCuenta(accion) {
+  if (!navigator.onLine) return ventanaCuenta('📶 Sin conexión', `Conéctate a internet para ${accion}. Los juegos de un jugador funcionan sin conexión.`, [], 'Entendido');
+  if (E.nubeFallo) return ventanaCuenta('📶 Ya hay conexión', 'Toca Conectar para cargar tus amigos, duelos y ranking. Tu progreso está guardado.', [['Conectar', () => location.reload(), () => '']]);
+  if (!E.nube || !E.sesionLista) return ventanaCuenta('☁️ Conectando…', 'Conectando con la nube. Inténtalo en unos segundos.', [], 'Entendido');
+  if (E.usuario) return Promise.resolve(true);
+  return ventanaCuenta(`Entra para ${accion}`, 'Con una cuenta guardas tu progreso en la nube, juegas con amigos y apareces en el ranking.', [
+    ['Entrar con Google (recomendado)', () => E.nube.entrar(), () => 'No se pudo entrar. Inténtalo de nuevo.'],
+    ['Seguir como invitado', () => E.nube.entrarInvitado(), errorInvitado],
+  ]);
+}
 
 // Bloque "☁️ Nube" de 📊: entrar, o la cuenta con su estado, el apodo del ranking y las opciones.
 export function pintarNube() {
@@ -32,15 +84,12 @@ export function pintarNube() {
   const partes = [el('h3', 'categoria', '☁️ Nube')];
   if (!E.nube) {
     partes.push(el('p', 'sin-datos', E.estadoNube || 'Conectando con la nube…'));
+    if (E.nubeFallo && navigator.onLine) partes.push(boton('Conectar', () => location.reload()));
   } else if (!E.usuario) {
     partes.push(
       el('p', 'sin-datos', 'Entra con tu cuenta de Google para guardar tu progreso en la nube y competir en el ranking. O sigue como invitado (con un apodo) desde este celular.'),
       boton('Entrar con Google (recomendado)', () => E.nube.entrar().catch(() => avisarNube('No se pudo entrar. Inténtalo de nuevo.'))),
-      boton('Seguir como invitado', () => E.nube.entrarInvitado().catch((e) => avisarNube(
-        e.code === 'auth/admin-restricted-operation' || e.code === 'auth/operation-not-allowed'
-          ? 'El modo invitado aún no está activado en Firebase.'
-          : 'No se pudo entrar como invitado (¿sin conexión?).',
-      ))),
+      boton('Seguir como invitado', () => E.nube.entrarInvitado().catch((e) => avisarNube(errorInvitado(e)))),
     );
     if (E.estadoNube) partes.push(el('p', 'estado-nube', E.estadoNube));
   } else {
@@ -103,7 +152,7 @@ export async function alCambiarUsuario(u) {
       history.replaceState(null, '', location.pathname);
       abrirDuelo(id);
     } else {
-      asegurarDuelista(); // lleva a ☁️ Nube; al entrar se abre el duelo
+      pedirCuenta('jugar este duelo'); // al entrar, alCambiarUsuario abre el duelo
     }
   }
 }

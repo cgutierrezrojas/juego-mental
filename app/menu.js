@@ -10,6 +10,7 @@ import { JUEGOS, idsPorCategoria } from './juegos.js';
 import { retosPendientes, estrellasDelJuego, leerEstrellas, leerRecord, historiales } from './datos.js';
 import { $, mostrar } from './ui.js';
 import { pintarEstadisticas } from './estadisticas.js';
+import { pedirCuenta } from './cuenta.js';
 
 // Abre un juego directamente en modo Niveles, con el camino colocado en tu nivel.
 export function abrirEnNiveles(j) {
@@ -74,8 +75,9 @@ export function pintarSugerencia() {
   const toca = CONFIG && E.sesionLista && (!E.usuario || E.usuario.isAnonymous) && leer('ayuda:inicio') && Date.now() > (Number(leer('nube:sugerencia')) || 0);
   caja.hidden = !toca;
   if (!toca) return;
-  const ir = el('button', '', 'Ir a ☁️ Nube');
+  const ir = el('button', '', E.usuario ? 'Ir a ☁️ Nube' : 'Crear cuenta');
   ir.onclick = () => {
+    if (!E.usuario) return pedirCuenta('guardar tu progreso');
     pintarEstadisticas();
     mostrar('estadisticas');
     $('nube').scrollIntoView({ block: 'start' });

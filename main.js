@@ -186,7 +186,7 @@ $('archivo-copia').onchange = async () => {
 navigator.storage?.persist?.().catch(() => {});
 
 $('btn-ranking').onclick = async () => {
-  if (await asegurarDuelista()) abrirRanking();
+  if (await asegurarDuelista('ver el ranking')) abrirRanking();
 };
 alCompetir(() => Boolean(E.enDuelo || E.enVivo)); // en duelos el reloj no se para al minimizar
 document.addEventListener('visibilitychange', () => {
@@ -203,6 +203,7 @@ if (CONFIG) {
     })
     .catch(() => {
       E.nube = null;
+      E.nubeFallo = true;
       avisarNube('No se pudo conectar con la nube (¿sin conexión?). Tu progreso sigue guardado en este celular.');
     });
 }
@@ -276,7 +277,7 @@ $('chat-volver').onclick = () => abrirAmigos();
 if ('serviceWorker' in navigator && !window.Capacitor?.isNativePlatform?.()) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 
 $('btn-liga').onclick = async () => {
-  if (await asegurarDuelista()) abrirRanking('liga');
+  if (await asegurarDuelista('ver el ranking')) abrirRanking('liga');
 };
 
 // 🎲 Mesa: volver al inicio y de elegir modo a la sección.
