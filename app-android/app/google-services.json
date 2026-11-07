@@ -8,12 +8,49 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:1029798752749:android:d0a1b4e1b1667a6e6d77e4",
+        "android_client_info": {
+          "package_name": "com.techmbc.palrato"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1029798752749-5afmdrqkre4cf8ltemhf484fbu3q3rbi.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5_XjL0GKT-DNSwSi4MqKUu9JiEceExiE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1029798752749-5afmdrqkre4cf8ltemhf484fbu3q3rbi.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:1029798752749:android:d0532c5e17400bd36d77e4",
         "android_client_info": {
           "package_name": "io.github.cgutierrezrojas.juegomental"
         }
       },
       "oauth_client": [
+        {
+          "client_id": "1029798752749-locoo540snnmboufg89viabo953kfgr5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "io.github.cgutierrezrojas.juegomental",
+            "certificate_hash": "cecb65f34b630634db747929cc1a4a811f29ca57"
+          }
+        },
         {
           "client_id": "1029798752749-5afmdrqkre4cf8ltemhf484fbu3q3rbi.apps.googleusercontent.com",
           "client_type": 3
