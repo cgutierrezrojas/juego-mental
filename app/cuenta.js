@@ -162,6 +162,14 @@ export async function alCambiarUsuario(u) {
 export async function sincronizar() {
   try {
     avisarNube('Sincronizando…');
+    // El apodo no va con el progreso: en un celular nuevo se recupera del perfil para no volver a pedirlo.
+    if (!leer('nube:apodo')) {
+      const apodo = await E.nube.leerApodo(E.usuario.uid).catch(() => '');
+      if (apodo) {
+        guardar('nube:apodo', apodo);
+        guardar('nube:preguntado', '1');
+      }
+    }
     const local = datosDelJuego();
     if (tieneProgreso(local) && !leer('nube:cambio')) guardar('nube:cambio', Date.now()); // progreso de antes de la nube
     const enNube = await E.nube.leerProgreso(E.usuario.uid);
