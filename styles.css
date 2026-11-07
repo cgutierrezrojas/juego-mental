@@ -777,6 +777,7 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 /* Tarjeta del nivel: diálogo anclado abajo */
 #tarjeta-nivel,
 #dialogo-nube,
+#dialogo-cuenta,
 #dialogo-pregunta,
 #dialogo-vivo {
   width: min(420px, 100% - 24px);
@@ -792,11 +793,13 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 #tarjeta-nivel.diaria { border-top-color: var(--azul); }
 #tarjeta-nivel[open],
 #dialogo-nube[open],
+#dialogo-cuenta[open],
 #dialogo-pregunta[open],
 #dialogo-vivo[open] { animation: subir 0.2s ease-out; }
 @keyframes subir { from { translate: 0 40px; opacity: 0; } }
 #tarjeta-nivel::backdrop,
 #dialogo-nube::backdrop,
+#dialogo-cuenta::backdrop,
 #dialogo-pregunta::backdrop,
 #dialogo-vivo::backdrop { background: rgba(0, 0, 0, 0.4); }
 .tarjeta-dentro { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
@@ -950,7 +953,8 @@ button.tarjeta { position: relative; }
 #nube p { margin: 0; }
 #nube .estado-nube { font-weight: 700; }
 #nube a { color: inherit; font-size: 0.85rem; }
-#dialogo-nube { border-top-color: var(--azul); }
+#dialogo-nube,
+#dialogo-cuenta { border-top-color: var(--azul); }
 #ranking-lista { margin: 0; padding: 0; list-style-position: inside; text-align: left; }
 #ranking-lista li {
   display: list-item;
