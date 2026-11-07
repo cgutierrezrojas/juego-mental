@@ -17,6 +17,7 @@ import { apuntarLogros, leerEstrellas, datosGuardados, sustituirProgreso } from 
 import { pintarEntreno, pintarProgreso } from './app/menu.js';
 import { jugar } from './app/partida.js';
 import { E } from './app/estado.js';
+import { iniciarAnuncios } from './app/anuncios.js';
 import { volverAlDuelo, anotarEnDuelo, abrirDuelos, abrirNuevoDuelo } from './app/duelos.js';
 import { verResultadoVivo, salirDeSala, pintarMarcadorVivo } from './app/vivo.js';
 import { pintarEstadisticas } from './app/estadisticas.js';
@@ -194,6 +195,7 @@ document.addEventListener('visibilitychange', () => {
   ponerEstado(document.hidden ? 'ausente' : $('juego').hidden ? 'conectado' : 'jugando');
 });
 
+iniciarAnuncios();
 if (CONFIG) {
   import('./games/nube.js')
     .then((modulo) => {

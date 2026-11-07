@@ -1,6 +1,6 @@
 // Service worker: guarda los archivos para poder jugar sin conexión.
 // VERSION es una huella de todos los archivos: tests.js avisa si cambió algo y no se actualizó.
-const VERSION = '525790ba67';
+const VERSION = 'b17539b840';
 const CACHE = 'pal-rato-' + VERSION;
 const ARCHIVOS = [
   './', 'index.html', 'styles.css', 'main.js', 'manifest.json', 'icon.svg', 'apple-touch-icon.png',
@@ -10,7 +10,7 @@ const ARCHIVOS = [
   'games/topos.js', 'games/estadisticas.js', 'games/premios.js', 'games/modos.js', 'games/niveles.js',
   'games/mayor.js', 'games/menos.js', 'games/verdad.js', 'games/anagrama.js', 'games/cuenta.js', 'games/distinto.js', 'games/balanza.js', 'games/parejas.js', 'games/final.js',
   'games/copia.js', 'games/amigos.js', 'games/vivo.js', 'games/chat.js', 
-  'app/estado.js', 'app/juegos.js', 'app/datos.js', 'app/ui.js', 'app/menu.js', 'app/estadisticas.js', 'app/premios.js', 'app/previa.js', 'app/partida.js', 'app/cuenta.js', 'app/duelos.js', 'app/amigos.js', 'app/vivo.js', 'app/chat.js', 'app/liga.js', 'app/inicio.js', 'app/mesa.js', 'app/trivia.js', 'app/cartas.js', 'app/arcade.js', 'games/semilla.js', 'games/serpiente.js', 'games/saltar.js', 'games/autos.js', 'games/ladrillos.js', 'app/retos.js', 'app/palabras.js', 'games/diccionario.js', 'games/palabra.js', 'games/ahorcado.js', 'games/sopa.js', 'games/definiciones.js', 'games/escalera.js', 'games/charadas.js', 'games/granescalera.js', 'app/granescalera.js', 'app/cartas-mesa.js', 'app/carioca.js', 'app/burako.js', 'games/rummy.js', 'games/carioca.js', 'games/burako.js', 'games/ocho.js', 'games/escoba.js', 'img/baraja-espanola.webp', 'games/cartas.js', 'games/solitario.js', 'games/veintiuno.js', 'games/bacara.js', 'games/ruleta.js', 'games/trivia.js', 'games/preguntas.js', 'games/gato.js', 'games/conecta4.js', 'games/liga.js', 'games/duelos.js', 'games/logros.js', 'games/sincro.js', 'games/nube.js', 'firebase-config.js', 'privacidad.html',
+  'app/estado.js', 'app/juegos.js', 'app/datos.js', 'app/ui.js', 'app/menu.js', 'app/estadisticas.js', 'app/premios.js', 'app/previa.js', 'app/partida.js', 'app/cuenta.js', 'app/duelos.js', 'app/amigos.js', 'app/vivo.js', 'app/chat.js', 'app/liga.js', 'app/inicio.js', 'app/mesa.js', 'app/trivia.js', 'app/cartas.js', 'app/arcade.js', 'games/semilla.js', 'games/serpiente.js', 'games/saltar.js', 'games/autos.js', 'games/ladrillos.js', 'app/retos.js', 'app/palabras.js', 'games/diccionario.js', 'games/palabra.js', 'games/ahorcado.js', 'games/sopa.js', 'games/definiciones.js', 'games/escalera.js', 'games/charadas.js', 'games/granescalera.js', 'app/granescalera.js', 'app/cartas-mesa.js', 'app/carioca.js', 'app/burako.js', 'games/rummy.js', 'games/carioca.js', 'games/burako.js', 'games/ocho.js', 'games/escoba.js', 'img/baraja-espanola.webp', 'games/cartas.js', 'games/solitario.js', 'games/veintiuno.js', 'games/bacara.js', 'games/ruleta.js', 'games/trivia.js', 'games/preguntas.js', 'games/gato.js', 'games/conecta4.js', 'games/liga.js', 'games/duelos.js', 'games/logros.js', 'games/sincro.js', 'games/nube.js', 'firebase-config.js', 'anuncios-config.js', 'app/anuncios.js', 'privacidad.html',
 ];
 
 self.addEventListener('install', (e) => {
