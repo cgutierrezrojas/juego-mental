@@ -278,6 +278,18 @@ $('chat-volver').onclick = () => abrirAmigos();
 // En la app Android los archivos ya vienen dentro: sin service worker.
 if ('serviceWorker' in navigator && !window.Capacitor?.isNativePlatform?.()) navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(() => {});
 
+// ◀ Atrás en la app Android: lo de siempre (historial → popstate de app/ui.js); sin historial (en el inicio),
+// cierra la ventana abierta o la app. Sin esta escucha, el plugin no hace nada en el inicio.
+if (window.Capacitor?.isNativePlatform?.()) {
+  const { App } = window.Capacitor.Plugins;
+  App.addListener('backButton', ({ canGoBack }) => {
+    const abierto = document.querySelector('dialog[open]');
+    if (canGoBack) history.back();
+    else if (abierto) abierto.close();
+    else App.exitApp();
+  });
+}
+
 $('btn-liga').onclick = async () => {
   if (await asegurarDuelista('ver el ranking')) abrirRanking('liga');
 };

@@ -17,7 +17,9 @@ const CON_RANKING = [...JUEGOS, ...JUEGOS_ARCADE, ...JUEGOS_PALABRAS, GRAN_ESCAL
 
 // ☁️ Nube (Firebase): sesión con Google, progreso sincronizado y ranking. Sin CONFIG, no aparece nada de esto.
 
-const errorInvitado = (e) => e.code === 'auth/admin-restricted-operation' || e.code === 'auth/operation-not-allowed'
+const hasta = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const errorInvitado =(e) => e.code === 'auth/admin-restricted-operation' || e.code === 'auth/operation-not-allowed'
   ? 'El modo invitado aún no está activado en Firebase.'
   : 'No se pudo entrar como invitado (¿sin conexión?).';
 
@@ -111,7 +113,7 @@ export function pintarNube() {
     // Un invitado que sale pierde su cuenta: solo pueden salir las cuentas de Google.
     if (!E.usuario.isAnonymous) {
       partes.push(boton('Salir', async () => {
-        await E.nube.pararEstados();
+        await Promise.race([E.nube.pararEstados(), hasta(3000)]); // sin red, Firestore no responde: se sale igual
         E.nube.salir();
       }));
     }
@@ -140,7 +142,8 @@ export async function alCambiarUsuario(u) {
     E.nube.iniciarEstados(u.uid);
     ponerEstado(E.estadoApp);
     if (E.nube.hayEstados()) dejarInvitaciones = E.nube.escucharInvitaciones(u.uid, recibirInvitacion);
-    E.sincro = sincronizar();
+    // Sin red a medias, Firestore puede no responder nunca: no se deja colgado lo que espera la sincronización.
+    E.sincro = Promise.race([sincronizar(), hasta(8000)]);
     await E.sincro;
     comprobarPodio();
     actualizarPerfil();
@@ -179,6 +182,7 @@ export async function sincronizar() {
       vinculado: leer('nube:uid') === E.usuario.uid,
       cambioLocal: Number(leer('nube:cambio')) || 0,
       actualizadoNube: enNube?.actualizado ?? 0,
+      subido: Number(leer('nube:subido')) || 0,
     });
     if (decision === 'preguntar') return preguntarSincro(enNube);
     if (decision === 'bajar') return bajar(enNube);
@@ -190,8 +194,9 @@ export async function sincronizar() {
   }
 }
 
-// Este celular y la nube tienen progreso distinto y aún no se han vinculado: que elija la persona.
+// Este celular y la nube tienen progreso distinto (aún sin vincular, o ambos cambiaron): que elija la persona.
 // Termina al elegir el de este celular (tras el apodo) o al cerrar sin elegir; con el de la nube, la app se recarga.
+// Si cierra sin elegir, no se sincroniza nada hasta volver a abrir la app.
 export function preguntarSincro(enNube) {
   avisarNube('Elige qué progreso conservar.');
   const dialogo = $('dialogo-nube');
@@ -206,12 +211,18 @@ export function preguntarSincro(enNube) {
       eligio = true;
       dialogo.close();
       guardar('nube:uid', E.usuario.uid);
+      guardar('nube:subido', enNube.actualizado); // la nube ya se vio: subir() no vuelve a preguntar
       guardar('nube:cambio', Date.now()); // el de este celular pasa a ser el más reciente
       await subir().catch(() => avisarNube('Sin conexión con la nube: se sincronizará más tarde.'));
       await pedirApodo(true);
       listo();
     };
-    dialogo.addEventListener('close', () => eligio || listo(), { once: true });
+    dialogo.addEventListener('close', () => {
+      if (eligio) return;
+      E.sinSincro = true;
+      avisarNube('Sin sincronizar: elige qué progreso conservar al volver a abrir la app.');
+      listo();
+    }, { once: true });
     dialogo.showModal();
   });
 }
@@ -227,9 +238,16 @@ export function bajar(enNube) {
 
 // Sube el progreso (y la fila del ranking, si hay apodo) si ha cambiado desde la última vez.
 export async function subir() {
-  if (!E.nube || !E.usuario || leer('nube:uid') !== E.usuario.uid) return;
+  if (!E.nube || !E.usuario || E.sinSincro || leer('nube:uid') !== E.usuario.uid) return;
   const cambio = Number(leer('nube:cambio')) || 0;
-  if (cambio > (Number(leer('nube:subido')) || 0)) {
+  const subido = Number(leer('nube:subido')) || 0;
+  if (cambio > subido) {
+    // Si otro celular subió después de lo último que vio este, no se pisa: se pregunta cuál conservar.
+    const enNube = await E.nube.leerProgreso(E.usuario.uid);
+    if (enNube && (enNube.actualizado ?? 0) !== subido && tieneProgreso(enNube.datos ?? {})) {
+      if (!$('dialogo-nube').open) preguntarSincro(enNube);
+      return;
+    }
     const datos = datosDelJuego();
     await E.nube.guardarProgreso(E.usuario.uid, datos, cambio);
     const apodo = leer('nube:apodo');

@@ -15,14 +15,17 @@ const DE_PROGRESO = ['record:', 'historial:', 'estrellas:', 'niveles:', 'diarios
 export const tieneProgreso = (datos) => Object.keys(datos).some((clave) => DE_PROGRESO.some((p) => clave.startsWith(p)));
 
 // Qué hacer al tener sesión: 'subir', 'bajar', 'preguntar' o 'nada'.
-// `vinculado`: este celular ya sincronizó con esta cuenta; `cambioLocal` y `actualizadoNube`: ms del último cambio.
-export function decidirSincro({ hayLocal, hayNube, vinculado, cambioLocal, actualizadoNube }) {
+// `vinculado`: este celular ya sincronizó con esta cuenta; `cambioLocal`: ms del último cambio aquí;
+// `actualizadoNube`: versión de la nube; `subido`: la última versión de la nube que vio este celular.
+// La nube cambió si su versión no es la vista (por igualdad: los relojes de los celulares no coinciden).
+export function decidirSincro({ hayLocal, hayNube, vinculado, cambioLocal, actualizadoNube, subido }) {
   if (!hayNube) return hayLocal ? 'subir' : 'nada';
   if (!hayLocal) return 'bajar';
   if (!vinculado) return 'preguntar';
-  if (actualizadoNube > cambioLocal) return 'bajar';
-  if (cambioLocal > actualizadoNube) return 'subir';
-  return 'nada';
+  const cambioNube = actualizadoNube !== subido;
+  if (cambioNube && cambioLocal > subido) return 'preguntar'; // otro celular subió y en este también se jugó
+  if (cambioNube) return 'bajar';
+  return cambioLocal > subido ? 'subir' : 'nada';
 }
 
 // Lo que se publica en el ranking: total de ⭐ (niveles + diarios) y récords Normal·Normal dentro de sus límites.

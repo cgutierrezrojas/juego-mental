@@ -652,11 +652,14 @@ import { tieneProgreso, decidirSincro, datosRanking } from './games/sincro.js';
 
 probar('nube: cuándo subir, bajar o preguntar', () => {
   assert(tieneProgreso({ 'record:calculo': '5' }) && !tieneProgreso({ 'ajuste:tema': 'oscuro', 'ayuda:menu': '1' }));
-  const d = (o) => decidirSincro({ hayLocal: true, hayNube: true, vinculado: true, cambioLocal: 10, actualizadoNube: 10, ...o });
+  const d = (o) => decidirSincro({ hayLocal: true, hayNube: true, vinculado: true, cambioLocal: 10, actualizadoNube: 10, subido: 10, ...o });
   assert(d({ hayNube: false }) === 'subir' && d({ hayNube: false, hayLocal: false }) === 'nada');
   assert(d({ hayLocal: false }) === 'bajar');
   assert(d({ vinculado: false }) === 'preguntar' && d({ vinculado: false, actualizadoNube: 99 }) === 'preguntar');
   assert(d({ actualizadoNube: 20 }) === 'bajar' && d({ cambioLocal: 20 }) === 'subir' && d({}) === 'nada');
+  // Otro celular subió (aunque su reloj vaya atrasado) y en este también se jugó: se pregunta, no se pisa.
+  assert(d({ actualizadoNube: 5, cambioLocal: 20 }) === 'preguntar' && d({ actualizadoNube: 30, cambioLocal: 20 }) === 'preguntar');
+  assert(d({ actualizadoNube: 5 }) === 'bajar');
 });
 
 probar('nube: datos del ranking', () => {

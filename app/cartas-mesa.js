@@ -337,7 +337,7 @@ function pintar() {
         p.vista = e.turno;
         pintar();
       }),
-      boton('Salir', '', abrirCartas),
+      boton('Salir', '', salirMesa),
     ]);
   }
   const quien = p.modo === 'local' ? e.turno : p.yo;
@@ -345,7 +345,7 @@ function pintar() {
   const vista = J.pintar(e, quien, humano && e.turno === quien, actuar, { nombres: p.nombres, repintar: pintar });
   const botones = [...vista.botones];
   if (p.modo === 'amigo') botones.push(boton('🏳️ Rendirse', '', rendirse));
-  botones.push(boton('Salir', '', abrirCartas));
+  botones.push(boton('Salir', '', salirMesa));
   pantalla(vista.marcador, vista.tapete, botones);
   $('cartas-tapete').className = 'tapete-mesa';
   if (!humano) p.timer = setTimeout(() => actuar(J.maquina(p.e, p.nivel)), J.pausa ?? 900);
@@ -365,6 +365,11 @@ const tablaPuntos = (e) => {
   return lista;
 };
 
+// Contra la máquina o a dos en un celular, la partida solo vive aquí: salir (o atrás) la pierde, así que se pregunta.
+async function salirMesa() {
+  if (p.modo === 'amigo' || (await preguntar({ titulo: '¿Salir de la partida?', texto: 'Se perderá la partida en curso.', boton: 'Salir' }))) abrirCartas();
+}
+
 function pintarResumen() {
   const { e } = p;
   const r = e.resumen;
@@ -372,7 +377,7 @@ function pintarResumen() {
     p.visto = r.ronda;
     p.vista = null;
     pintar();
-  }), boton('Salir', '', abrirCartas)]);
+  }), boton('Salir', '', salirMesa)]);
 }
 
 function pintarFin(g) {

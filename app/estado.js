@@ -16,6 +16,7 @@ export const E = {
   nubeFallo: false, // no se pudo cargar la nube (sin conexión al abrir): hay que recargar para reintentar
   sesionLista: false, // ya se sabe si hay sesión (Firebase respondió)
   sincro: null, // promesa de la sincronización al entrar (antes de pedir el apodo, por si viene de la nube)
+  sinSincro: false, // se cerró sin elegir qué progreso conservar: no se sube nada hasta reabrir la app
   temporizadores: [], // sonidos y confeti pendientes del final; se cancelan al salir de él
   textoCompartir: '', // resultado de la última partida, para 📤 Compartir
   enDuelo: null, // { id, juego, rival, numero, total } mientras se juega un juego de un duelo

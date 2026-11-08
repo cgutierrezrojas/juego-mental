@@ -165,6 +165,7 @@ function jugarSolitario() {
 function jugada(nuevo) {
   if (!nuevo) return false;
   sol.historia.push(sol.e);
+  if (sol.historia.length > 100) sol.historia.shift(); // se guarda entera en cada jugada: deshacer hasta 100
   sol.e = nuevo;
   sonar('tic');
   if (S.ganado(nuevo)) ganarSolitario();
