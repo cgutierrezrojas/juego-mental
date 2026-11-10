@@ -622,7 +622,8 @@ function pintarPregunta(cat, corona, texto) {
     sonar(ok ? 'acierto' : 'fallo');
     j.e = corona ? R.responderCorona(j.e, cat, ok, a) : R.responder(j.e, ok, a);
     const fin = R.resultado(j.e, a);
-    subir(null, fin ? j.ficha : undefined, ok || fin ? j.ficha : partida.jugadores[1 - partida.turno].ficha);
+    // El rival solo existe con un amigo (en solitario y en la fiesta no hay jugadores[1 - turno]: antes se colgaba al fallar).
+    if (partida.modo === 'amigo') subir(null, fin ? j.ficha : undefined, ok || fin ? j.ficha : partida.jugadores[1 - partida.turno].ficha);
     pintarMarcador();
     partida.espera = setTimeout(() => seguir(ok, cat), ok ? 900 : 1800);
   }
