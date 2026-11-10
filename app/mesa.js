@@ -289,7 +289,7 @@ function pintarTablero() {
   if (g) apuntarFinal(g);
   const jugadores = ['x', 'o'].map((f) => {
     const d = el('div', `jugador-mesa${!g && partida.estado.turno === f ? ' turno' : ''}`);
-    d.append(el('span', 'ficha', j.fichas[f]), el('span', '', nombreDe(f)));
+    d.append(el('span', 'ficha-mesa', j.fichas[f]), el('span', '', nombreDe(f)));
     return d;
   });
   $('mesa-jugadores').replaceChildren(jugadores[0], el('span', 'vs', 'vs'), jugadores[1]);
