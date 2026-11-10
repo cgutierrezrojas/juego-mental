@@ -82,6 +82,7 @@ export const JUEGOS_ARCADE = [
   { id: 'saltar', nombre: 'Saltar', icono: '🦘', seccion: 'arcade', unidad: 'pts', arcade: true },
   { id: 'autos', nombre: 'Autos', icono: '🏎️', seccion: 'arcade', unidad: 'pts', arcade: true },
   { id: 'ladrillos', nombre: 'Ladrillos', icono: '🧱', seccion: 'arcade', unidad: 'pts', arcade: true },
+  { id: 'bloques', nombre: 'Bloques', icono: '🧩', seccion: 'arcade', unidad: 'pts', arcade: true },
 ];
 
 // 🔤 Palabras (app/palabras.js): con récord y ranking; Ahorcado y Sopa también con retos (duelos de un juego con semilla y nivel).

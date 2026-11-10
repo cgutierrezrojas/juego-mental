@@ -1,5 +1,5 @@
 // 🏎️ Arcade: página de la sección y la pantalla de juego común (bucle de cuadros fijos, controles, dibujo, récords y retos).
-// La lógica de cada juego es pura y está en games/serpiente.js, saltar.js, autos.js y ladrillos.js; aquí solo se dibuja.
+// La lógica de cada juego es pura y está en games/serpiente.js, saltar.js, autos.js, ladrillos.js y bloques.js; aquí solo se dibuja.
 // Récord en `record:<id>` (sube al ranking como los juegos mentales) y partidas en `arcade:<id>`.
 import { el, leer, guardar, esRecord } from '../games/comun.js';
 import { sonar } from '../games/efectos.js';
@@ -8,6 +8,7 @@ import * as S from '../games/serpiente.js';
 import * as J from '../games/saltar.js';
 import * as A from '../games/autos.js';
 import * as L from '../games/ladrillos.js';
+import * as B from '../games/bloques.js';
 import { E } from './estado.js';
 import { leerJSON } from './datos.js';
 import { $, mostrar, confeti } from './ui.js';
@@ -123,13 +124,80 @@ function dibujarLadrillos(ctx, e, c) {
   emoji(ctx, '❤️'.repeat(e.vidas), L.ANCHO - 40, 22, 16);
 }
 
+// 🧩 Bloques: tablero de 10×20 casillas de T y, a la derecha, la siguiente pieza y los datos del modo.
+const T = 30;
+const tiempo = (decimas) => `${Math.floor(decimas / 600)}:${String(Math.floor(decimas / 10) % 60).padStart(2, '0')}.${decimas % 10}`;
+
+function dibujarBloques(ctx, e, c) {
+  const colores = { I: c.azul, O: c.amarillo, T: c.morado, S: c.verde, Z: c.rojo, J: '#2a9d8f', L: c.acento, x: '#8a8f98' };
+  ctx.fillStyle = c.casilla2;
+  ctx.fillRect(0, 0, 410, 600);
+  ctx.fillStyle = c.casilla;
+  ctx.fillRect(0, 0, B.ANCHO * T, B.ALTO * T);
+  ctx.strokeStyle = c.casilla2;
+  ctx.lineWidth = 1;
+  for (let x = 1; x < B.ANCHO; x++) ctx.strokeRect(x * T, 0, 0, B.ALTO * T);
+  for (let y = 1; y < B.ALTO; y++) ctx.strokeRect(0, y * T, B.ANCHO * T, 0);
+  const celda = (x, y, color, lado = T, x0 = 0, y0 = 0) => {
+    if (y < 0) return;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x0 + x * lado + 1.5, y0 + y * lado + 1.5, lado - 3, lado - 3, lado / 6);
+    ctx.fill();
+  };
+  e.celdas.forEach((fila, y) => fila.forEach((t, x) => t && celda(x, y, colores[t])));
+  if (e.pieza && !e.fin) {
+    const { x: px, y: py, c: cs, t } = e.pieza;
+    const yf = B.filaFinal(e);
+    ctx.globalAlpha = 0.25; // sombra: dónde caerá
+    for (const [x, y] of cs) celda(px + x, yf + y, colores[t]);
+    ctx.globalAlpha = 1;
+    for (const [x, y] of cs) celda(px + x, py + y, colores[t]);
+  }
+  // Panel: siguiente pieza y datos.
+  ctx.fillStyle = c.texto;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const texto = (t, y, tam = 14, peso = 'bold') => {
+    ctx.font = `${peso} ${tam}px system-ui, sans-serif`;
+    ctx.fillText(t, 355, y);
+  };
+  texto('Siguiente', 22);
+  const s = B.PIEZAS[e.siguiente];
+  for (const [x, y] of s.c) celda(x, y, colores[e.siguiente], 18, 355 - s.n * 9, 75 - s.n * 9);
+  const datos = [['Líneas', e.modo === 'contrarreloj' ? `${e.lineas}/${B.LINEAS_META}` : e.lineas], ['Nivel', e.nivel]];
+  if (e.modo === 'contrarreloj') datos.push(['Tiempo', tiempo(Math.floor(e.cuadros / 6))]);
+  if (e.modo === 'dosmin') datos.push(['Quedan', tiempo(Math.ceil((B.CUADROS_DOSMIN - e.cuadros) / 6))]);
+  if (e.modo === 'escombros') datos.push(['Basura en', `${Math.ceil((B.CADA_BASURA - (e.cuadros % B.CADA_BASURA)) / 60)} s`]);
+  datos.forEach(([nombre, valor], i) => {
+    ctx.fillStyle = c.texto;
+    texto(nombre, 150 + i * 70, 13, 'normal');
+    texto(String(valor), 175 + i * 70, 18);
+  });
+}
+
 // Cada juego: su módulo, el tamaño del mundo, cómo se dibuja, qué entrada recibe y cómo se juega.
+// `modos` (Bloques): cada uno con su récord (`record:<id>` el primero, que va al ranking; `record:<id>:<modo>` los demás).
 const JUEGOS = {
   serpiente: { M: S, ancho: 400, alto: 400, dibujar: dibujarSerpiente, controles: 'deslizar', ayuda: 'Desliza el dedo sobre el tablero (o usa las flechas) para girar. Come 🍎 (+1) y ⭐ (+5, se va pronto); no choques con el borde ni contigo. Cada 5 frutas va más rápido.' },
   saltar: { M: J, ancho: J.ANCHO, alto: J.ALTO, dibujar: dibujarSaltar, controles: 'tocar', ayuda: 'Toca la pantalla (o espacio) para saltar; tócala otra vez en el aire para un doble salto. Esquiva los cactus y los pájaros bajos. Cuanto más lejos, más rápido.' },
   autos: { M: A, ancho: A.ANCHO, alto: A.ALTO, dibujar: dibujarAutos, controles: 'lados', ayuda: 'Toca la mitad izquierda o derecha (o las flechas) para cambiar de pista. Esquiva el tráfico y junta 🪙 (+10). Cuanto más lejos, más rápido.' },
   ladrillos: { M: L, ancho: L.ANCHO, alto: L.ALTO, dibujar: dibujarLadrillos, controles: 'arrastrar', ayuda: 'Mueve la paleta con el dedo (o las flechas) para que la pelota no caiga y rompa los ladrillos (los de arriba valen más). 3 vidas; cada pared nueva va más rápida.' },
+  bloques: {
+    M: B, ancho: 410, alto: 600, dibujar: dibujarBloques, controles: 'bloques',
+    ayuda: 'Encaja las piezas para completar filas, que se borran. Usa los botones de abajo o el tablero: tocar gira, deslizar a los lados mueve y deslizar hacia abajo suelta (en el teclado: flechas, ↑ gira y espacio suelta).',
+    modos: {
+      clasico: { nombre: '🧩 Clásico', detalle: 'Sin fin; cada 10 líneas, más rápido', unidad: 'pts' },
+      contrarreloj: { nombre: '⏱️ Contrarreloj', detalle: `${B.LINEAS_META} líneas lo antes posible`, unidad: 'tiempo', menorEsMejor: true },
+      dosmin: { nombre: '⏳ 2 minutos', detalle: 'Todos los puntos que puedas', unidad: 'pts' },
+      escombros: { nombre: '🪨 Escombros', detalle: 'La basura sube cada 10 s', unidad: 'líneas' },
+    },
+  },
 };
+
+const claveRecord = (id, modo) => (modo && modo !== 'clasico' ? `record:${id}:${modo}` : `record:${id}`);
+const marca = (e) => (e.modo ? B.resultado(e) : e.puntos); // solo Bloques tiene modos
+const conUnidad = (v, m) => (m?.unidad === 'tiempo' ? tiempo(v) : `${v} ${m?.unidad ?? 'pts'}`);
 
 // --- Página ---
 
@@ -149,7 +217,7 @@ export function abrirArcade() {
 
 // --- Partida ---
 
-// p: { id, J, info, e, semilla, duelo (si se juega un reto), entrada, dedo, teclas, pausa, cuadro, acum, ultimo, colores }
+// p: { id, G, modo (Bloques), info, e, semilla, duelo (si se juega un reto), entrada, mantener (◀ ▶ mantenido), dedo, teclas, pausa, cuadro, acum, ultimo, colores }
 let p = null;
 
 export function pararArcade() {
@@ -170,7 +238,19 @@ export function abrirJuegoArcade(id, duelo = null) {
   $('arcade-marcador').replaceChildren(el('span', '', `${info.icono} ${info.nombre}`), el('span', '', duelo ? '⚔️ Reto' : `🏆 ${record}`));
   $('arcade-tapete').replaceChildren(el('p', 'sin-datos', JUEGOS[id].ayuda), ...(duelo ? [el('p', 'sin-datos', `⚔️ Juegas la misma partida que ${E.enDuelo?.rival ?? 'tu rival'}: gana quien hace más puntos.`)] : []));
   $('arcade-aviso').textContent = '';
-  $('arcade-botones').replaceChildren(boton('▶ Jugar', 'color', () => jugar(id, duelo)), boton('Volver', '', () => (duelo ? volverAlDuelo() : abrirArcade())));
+  const volver = boton('Volver', '', () => (duelo ? volverAlDuelo() : abrirArcade()));
+  // Con modalidades (fuera de un reto, que es siempre la primera): un botón por modo, con su récord.
+  const modos = !duelo && JUEGOS[id].modos;
+  if (!modos) return $('arcade-botones').replaceChildren(boton('▶ Jugar', 'color', () => jugar(id, duelo)), volver);
+  const lista = el('div', 'modos-arcade');
+  for (const [modo, m] of Object.entries(modos)) {
+    const r = Number(leer(claveRecord(id, modo))) || 0;
+    const b = boton(m.nombre, 'grande color', () => jugar(id, null, modo));
+    b.append(el('small', '', `${m.detalle}${r ? ` · 🏆 ${conUnidad(r, m)}` : ''}`));
+    lista.append(b);
+  }
+  $('arcade-tapete').append(lista);
+  $('arcade-botones').replaceChildren(volver);
 }
 
 const boton = (texto, clase, alPulsar) => {
@@ -192,23 +272,53 @@ function colores() {
 
 const TECLAS = { ArrowUp: 'arriba', ArrowDown: 'abajo', ArrowLeft: 'izquierda', ArrowRight: 'derecha', w: 'arriba', s: 'abajo', a: 'izquierda', d: 'derecha', ' ': 'arriba' };
 
-function jugar(id, duelo) {
+function jugar(id, duelo, modo = G_MODO(id)) {
   pararArcade();
   const G = JUEGOS[id];
   const semilla = duelo?.semilla ?? semillaNueva();
-  p = { id, G, info: JUEGOS_ARCADE.find((j) => j.id === id), e: G.M.nuevo(semilla), semilla, duelo, entrada: null, dedo: null, teclas: new Set(), pausa: false, acum: 0, ultimo: 0, colores: colores() };
+  p = { id, G, modo, info: JUEGOS_ARCADE.find((j) => j.id === id), e: G.M.nuevo(semilla, modo), semilla, duelo, entrada: null, mantener: null, dedo: null, teclas: new Set(), pausa: false, acum: 0, ultimo: 0, colores: colores() };
   const lienzo = el('canvas', `lienzo-arcade lienzo-${id}`);
   lienzo.setAttribute('role', 'img');
   lienzo.setAttribute('aria-label', `${p.info.nombre}: ${G.ayuda}`);
   lienzo.style.aspectRatio = `${G.ancho} / ${G.alto}`;
-  $('arcade-tapete').replaceChildren(lienzo);
+  $('arcade-tapete').replaceChildren(lienzo, ...(G.controles === 'bloques' ? [botonesBloques()] : []));
   $('arcade-aviso').textContent = '';
-  $('arcade-botones').replaceChildren(boton('⏸ Pausa', '', alternarPausa), boton('Salir', '', () => (duelo ? terminar() : abrirArcade())));
+  $('arcade-botones').replaceChildren(boton('⏸ Pausa', '', alternarPausa), boton('Salir', '', () => (duelo ? terminar() : G.modos ? abrirJuegoArcade(id) : abrirArcade())));
   controles(lienzo);
   ajustar(lienzo);
   p.lienzo = lienzo;
   marcador();
   p.cuadro = requestAnimationFrame(bucle);
+}
+
+// El modo por defecto (el primero, que es el de los retos); undefined si el juego no tiene modos.
+const G_MODO = (id) => Object.keys(JUEGOS[id].modos ?? {})[0];
+
+// Bloques: ◀ ▶ (mantener repite), ⟳ girar, ▼ bajar rápido mientras se mantiene, ⏬ soltar.
+function botonesBloques() {
+  const fila = el('div', 'botones-bloques');
+  const tecla = (texto, nombre, alPulsar, alSoltar = () => {}) => {
+    const b = el('button', '', texto);
+    b.setAttribute('aria-label', nombre);
+    b.onpointerdown = (ev) => {
+      ev.preventDefault();
+      if (p && !p.pausa) alPulsar();
+    };
+    b.onpointerup = b.onpointercancel = b.onpointerleave = alSoltar;
+    b.onclick = (ev) => ev.detail === 0 && p && !p.pausa && alPulsar(); // con teclado (Enter)
+    fila.append(b);
+  };
+  const mover = (dir) => () => {
+    p.entrada = dir;
+    p.mantener = { dir, t: 0 };
+  };
+  const soltar = () => p && (p.mantener = null);
+  tecla('◀', 'Mover a la izquierda', mover('izquierda'), soltar);
+  tecla('⟳', 'Girar', () => (p.entrada = 'girar'));
+  tecla('▼', 'Bajar rápido', () => (p.e.bajando = true), () => p && (p.e.bajando = false));
+  tecla('⏬', 'Soltar', () => (p.entrada = 'soltar'));
+  tecla('▶', 'Mover a la derecha', mover('derecha'), soltar);
+  return fila;
 }
 
 // Tamaño real del canvas (nítido en pantallas densas) y escala al mundo del juego.
@@ -227,10 +337,12 @@ function controles(lienzo) {
     return { x: ((ev.clientX - r.left) / r.width) * p.G.ancho, y: ((ev.clientY - r.top) / r.height) * p.G.alto };
   };
   let inicio = null;
+  let movido = false; // Bloques: un toque sin deslizar gira
   lienzo.onpointerdown = (ev) => {
     if (!p || p.pausa) return;
     ev.preventDefault();
     const m = mundo(ev);
+    movido = false;
     if (p.G.controles === 'tocar') p.entrada = 'arriba';
     if (p.G.controles === 'lados') p.entrada = m.x < p.G.ancho / 2 ? 'izquierda' : 'derecha';
     if (p.G.controles === 'arrastrar') p.dedo = m.x;
@@ -246,17 +358,45 @@ function controles(lienzo) {
       p.entrada = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'derecha' : 'izquierda') : dy > 0 ? 'abajo' : 'arriba';
       inicio = m; // se puede seguir deslizando para girar otra vez
     }
+    if (p.G.controles === 'bloques') {
+      // Una casilla por cada T deslizada a los lados; hacia abajo (claramente), suelta.
+      const [dx, dy] = [m.x - inicio.x, m.y - inicio.y];
+      if (Math.abs(dx) >= T) {
+        p.entrada = dx > 0 ? 'derecha' : 'izquierda';
+        inicio = { ...inicio, x: m.x };
+        movido = true;
+      } else if (dy >= 3 * T && dy > 2 * Math.abs(dx)) {
+        p.entrada = 'soltar';
+        inicio = null;
+        movido = true;
+      }
+    }
   };
-  lienzo.onpointerup = lienzo.onpointercancel = () => (inicio = null);
+  lienzo.onpointerup = () => {
+    if (p?.G.controles === 'bloques' && inicio && !movido && !p.pausa) p.entrada = 'girar';
+    inicio = null;
+  };
+  lienzo.onpointercancel = () => (inicio = null);
   p.alTeclear = (ev) => {
     const t = TECLAS[ev.key.length === 1 ? ev.key.toLowerCase() : ev.key];
     if (!t || !p || ev.target.closest?.('input, textarea')) return;
     ev.preventDefault();
+    if (p.G.controles === 'bloques') {
+      if (ev.key === ' ') p.entrada = ev.repeat ? null : 'soltar';
+      else if (t === 'arriba') p.entrada = ev.repeat ? null : 'girar';
+      else if (t === 'abajo') p.e.bajando = true;
+      else p.entrada = t; // izquierda / derecha: con la repetición del teclado
+      return;
+    }
     if (ev.repeat) return;
     if (p.G.controles === 'arrastrar') p.teclas.add(t);
     else if (p.G.controles !== 'tocar' || t === 'arriba') p.entrada = t;
   };
-  p.alSoltar = (ev) => p?.teclas.delete(TECLAS[ev.key.length === 1 ? ev.key.toLowerCase() : ev.key]);
+  p.alSoltar = (ev) => {
+    const t = TECLAS[ev.key.length === 1 ? ev.key.toLowerCase() : ev.key];
+    if (p?.G.controles === 'bloques' && t === 'abajo' && ev.key !== ' ') p.e.bajando = false;
+    p?.teclas.delete(t);
+  };
   p.alOcultar = () => document.hidden && p && !p.pausa && !p.e.fin && alternarPausa();
   window.addEventListener('keydown', p.alTeclear);
   window.addEventListener('keyup', p.alSoltar);
@@ -274,6 +414,7 @@ function entrada() {
   }
   const t = p.entrada;
   p.entrada = null;
+  if (p.G.controles === 'bloques' && !t && p.mantener && ++p.mantener.t > 10 && p.mantener.t % 3 === 0) return p.mantener.dir;
   return p.G.controles === 'tocar' ? t === 'arriba' : t;
 }
 
@@ -303,8 +444,10 @@ function cartel(texto) {
 }
 
 function marcador() {
-  const record = Number(leer(`record:${p.id}`)) || 0;
-  $('arcade-marcador').replaceChildren(el('span', '', `${p.info.icono} ${p.e.puntos} pts`), el('span', '', p.duelo ? '⚔️ Reto' : `🏆 ${Math.max(record, p.e.puntos)}`));
+  const m = p.G.modos?.[p.modo];
+  const record = Number(leer(claveRecord(p.id, p.modo))) || 0;
+  const mejor = m?.menorEsMejor || m?.unidad === 'líneas' ? record : Math.max(record, p.e.puntos); // en vivo solo suben los puntos
+  $('arcade-marcador').replaceChildren(el('span', '', `${p.info.icono} ${p.e.puntos} pts`), el('span', '', p.duelo ? '⚔️ Reto' : `🏆 ${!m ? mejor : mejor ? conUnidad(mejor, m) : '—'}`));
 }
 
 function alternarPausa() {
@@ -316,14 +459,17 @@ function alternarPausa() {
 }
 
 function terminar() {
-  const { id, e, info, duelo, semilla } = p;
+  const { id, e, duelo, semilla, modo } = p;
+  const m = p.G.modos?.[modo];
   cancelAnimationFrame(p.cuadro);
   p.G.dibujar(p.ctx, e, p.colores);
-  cartel(e.fin ? '💥' : '🏁');
+  cartel(e.gano || modo === 'dosmin' ? '🏁' : e.fin ? '💥' : '🏁');
   const puntos = e.puntos;
-  const record = Number(leer(`record:${id}`)) || 0;
-  const nuevo = !duelo && esRecord(puntos, record);
-  if (nuevo) guardar(`record:${id}`, String(puntos));
+  const valor = marca(e); // la marca del modo (en los demás juegos, los puntos)
+  const clave = claveRecord(id, modo);
+  const record = Number(leer(clave)) || 0;
+  const nuevo = !duelo && esRecord(valor, record, m?.menorEsMejor);
+  if (nuevo) guardar(clave, String(valor));
   const x = leerJSON(`arcade:${id}`);
   guardar(`arcade:${id}`, JSON.stringify({ partidas: (x.partidas ?? 0) + 1 }));
   ligaAnotar('partida');
@@ -332,9 +478,12 @@ function terminar() {
   sonar(nuevo ? 'record' : 'fallo');
   if (nuevo) confeti();
   pararArcade();
-  $('arcade-aviso').textContent = duelo ? `⚔️ ${puntos} puntos anotados en el reto.` : nuevo ? `🏆 ¡Nuevo récord: ${puntos}!` : `${puntos} puntos · récord ${record}`;
+  const resumen = [valor ? conUnidad(valor, m) : modo === 'contrarreloj' ? `Sin marca: no llegaste a ${B.LINEAS_META} líneas` : conUnidad(0, m), record ? `récord ${conUnidad(record, m)}` : ''];
+  $('arcade-aviso').textContent = duelo ? `⚔️ ${puntos} puntos anotados en el reto.` : nuevo ? `🏆 ¡Nuevo récord: ${conUnidad(valor, m)}!` : resumen.filter(Boolean).join(' · ');
   if (duelo) return $('arcade-botones').replaceChildren(boton('⚔️ Volver al duelo', 'color', volverAlDuelo));
   const amigos = el('div', 'opciones-duelo');
-  $('arcade-botones').replaceChildren(boton('🔄 Otra vez', 'color', () => jugar(id, null)), boton('⚔️ Retar a un amigo', '', () => elegirAmigo(amigos, { id, semilla, puntos })), boton('Volver', '', abrirArcade));
+  // Los retos son siempre del primer modo (el que va al ranking).
+  const retar = modo === G_MODO(id) ? [boton('⚔️ Retar a un amigo', '', () => elegirAmigo(amigos, { id, semilla, puntos }))] : [];
+  $('arcade-botones').replaceChildren(boton('🔄 Otra vez', 'color', () => jugar(id, null, modo)), ...retar, boton('Volver', '', () => (m ? abrirJuegoArcade(id) : abrirArcade())));
   $('arcade-tapete').append(amigos);
 }

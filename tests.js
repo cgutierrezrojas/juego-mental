@@ -1563,6 +1563,77 @@ probar('arcade: semilla, serpiente, saltar, autos y ladrillos', () => {
   }
 });
 
+import * as bl from './games/bloques.js';
+
+probar('arcade: bloques', () => {
+  // Misma semilla, mismas piezas; cada bolsa de 7 trae las 7.
+  const piezas = (s) => {
+    const e = bl.nuevo(s);
+    const lista = [e.pieza.t];
+    for (let i = 0; i < 13; i++) { bl.paso(e, 'soltar'); lista.push(e.pieza?.t); e.celdas.forEach((f) => f.fill(null)); }
+    return lista;
+  };
+  assert(piezas(7).join() === piezas(7).join() && piezas(7).join() !== piezas(8).join(), 'misma semilla, mismas piezas');
+  assert(new Set(piezas(7).slice(0, 7)).size === 7 && new Set(piezas(7).slice(7, 14)).size === 7, 'bolsa de 7');
+  // Una línea: fila de abajo llena salvo 4 huecos que tapa una I acostada.
+  const conI = (filas, nivel = 1) => {
+    const e = bl.nuevo(1);
+    for (let f = 0; f < filas; f++) e.celdas[bl.ALTO - 1 - f] = Array.from({ length: bl.ANCHO }, (_, x) => (x < 4 ? null : 'x'));
+    e.pieza = { t: 'I', n: 4, c: filas === 4 ? [[0, 0], [0, 1], [0, 2], [0, 3]] : bl.PIEZAS.I.c, x: 0, y: 0 };
+    if (filas === 4) for (let f = 0; f < 4; f++) e.celdas[bl.ALTO - 1 - f] = Array.from({ length: bl.ANCHO }, (_, x) => (x === 0 ? null : 'x'));
+    e.nivel = nivel;
+    const y = bl.filaFinal(e);
+    bl.paso(e, 'soltar');
+    return { e, caida: y };
+  };
+  let { e, caida } = conI(1, 2);
+  assert(e.lineas === 1 && e.puntos === 100 * 2 + 2 * caida && e.celdas[bl.ALTO - 1].every((c) => !c), 'una línea: 100 × nivel + soltar');
+  ({ e, caida } = conI(4));
+  assert(e.lineas === 4 && e.puntos === 800 + 2 * caida && e.celdas.every((f) => f.every((c) => !c)), 'cuatro líneas: 800');
+  // No gira dentro de una pared ocupada; junto al borde, gira corriéndose.
+  e = bl.nuevo(1);
+  e.pieza = { t: 'I', n: 4, c: [[1, 0], [1, 1], [1, 2], [1, 3]], x: -1, y: 5 }; // I de pie pegada a la izquierda
+  bl.paso(e, 'girar');
+  assert(e.pieza.c.every(([x]) => e.pieza.x + x >= 0) && e.pieza.c.every(([, y]) => y === 1), 'gira corriéndose del borde');
+  e = bl.nuevo(1);
+  e.celdas.forEach((f) => f.fill('x'));
+  for (let y = 0; y < bl.ALTO; y++) e.celdas[y][4] = null;
+  e.pieza = { t: 'I', n: 4, c: [[0, 0], [0, 1], [0, 2], [0, 3]], x: 4, y: 3 };
+  const antes = JSON.stringify(e.pieza.c);
+  bl.paso(e, 'girar');
+  assert(JSON.stringify(e.pieza.c) === antes, 'sin sitio no gira');
+  // Modos: contrarreloj gana a las 40 líneas; 2 minutos acaba a los 7200 cuadros; escombros sube basura.
+  e = bl.nuevo(1, 'contrarreloj');
+  e.lineas = 39;
+  e.celdas[bl.ALTO - 1] = Array.from({ length: bl.ANCHO }, (_, x) => (x < 4 ? null : 'x'));
+  e.pieza = { t: 'I', n: 4, c: bl.PIEZAS.I.c, x: 0, y: 0 };
+  e.cuadros = 599;
+  bl.paso(e, 'soltar');
+  assert(e.fin && e.gano && bl.resultado(e) === 100, 'contrarreloj: 40 líneas, marca en décimas');
+  e = bl.nuevo(1, 'dosmin');
+  e.cuadros = bl.CUADROS_DOSMIN - 1;
+  bl.paso(e, null);
+  assert(e.fin && e.nivel === 5, '2 minutos');
+  e = bl.nuevo(1, 'escombros');
+  const basura = () => e.celdas.filter((f) => f.includes('x')).length;
+  assert(basura() === 8 && e.celdas.slice(-8).every((f) => f.filter(Boolean).length === bl.ANCHO - 1), 'escombros: 8 filas con un hueco');
+  e.cuadros = bl.CADA_BASURA - 1;
+  e.pieza = { ...e.pieza, y: 0 };
+  bl.paso(e, null);
+  assert(basura() === 9 && !e.fin, 'escombros: sube una fila');
+  // Fin: la pieza nueva no cabe.
+  e = bl.nuevo(1);
+  e.celdas.slice(0, 3).forEach((f) => f.fill('x'));
+  for (let y = 0; y < bl.ALTO; y++) e.celdas[y][9] = null;
+  bl.paso(e, 'soltar');
+  assert(e.fin, 'se tapa y termina');
+  // Bajar rápido suma 1 por fila.
+  e = bl.nuevo(3);
+  e.bajando = true;
+  for (let i = 0; i < 10; i++) bl.paso(e, null);
+  assert(e.puntos === 5 && e.pieza.y === 5, 'bajar rápido');
+});
+
 import * as dic from './games/diccionario.js';
 import * as pd from './games/palabra.js';
 import * as hc from './games/ahorcado.js';
