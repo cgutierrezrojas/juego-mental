@@ -20,6 +20,7 @@ import { abrirJuegoPalabras } from './palabras.js';
 import { abrirGranEscalera } from './granescalera.js';
 
 export const NOMBRE_RESULTADO = { v: 'ganaste', d: 'perdiste', e: 'empate' };
+const VIEJO = 7 * 86400000;
 
 export const nombreRival = (duelo) => duelo.nombres?.[duelo.jugadores.find((j) => j !== E.usuario.uid) ?? ''] ?? null;
 export const horasRestantes = (duelo) => Math.max(0, Math.ceil((duelo.caduca - Date.now()) / 3600000));
@@ -111,6 +112,8 @@ export async function pintarDuelos() {
       if (estado === 'terminado') apuntarResultado(duelo);
       grupos[estado === 'caducado' ? 'terminado' : estado]?.push({ duelo, estado });
     }
+    // Los que caducaron hace más de una semana se borran: así la consulta (límite 60) no se llena de viejos.
+    for (const x of [...mios, ...invit]) if (ahora - x.caduca > VIEJO) E.nube.borrarDuelo(x.id).catch(() => {});
     const titulos = { invitacion: '📨 Te desafían', 'tu-turno': '▶ Tu turno', esperando: '⏳ Esperando al rival', terminado: '🏁 Terminados' };
     const partes = [];
     for (const [grupo, filas] of Object.entries(grupos)) {

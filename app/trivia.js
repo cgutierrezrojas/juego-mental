@@ -142,12 +142,13 @@ const borradorVacio = () => ({ c: '', d: 2, p: '', o: ['', '', '', ''] });
 let borrador = borradorVacio();
 
 // Las aprobadas se guardan en `trivia-extra` y se suman al banco (también sin conexión: ver games/preguntas.js).
-// ponytail: se bajan todas cada vez; con cientos de aprobadas, bajar solo las nuevas.
+// ponytail: se bajan todas, como mucho una vez al día; con cientos de aprobadas, bajar solo las nuevas.
 async function bajarPreguntas() {
-  if (!E.nube) return;
+  if (!E.nube || Date.now() - Number(leer('trivia-extra-cuando') ?? 0) < 86400000) return;
   try {
     const lista = await E.nube.preguntasAprobadas();
     guardar('trivia-extra', JSON.stringify(lista));
+    guardar('trivia-extra-cuando', String(Date.now()));
     agregarPreguntas(lista);
   } catch {
     // sin conexión: quedan las ya guardadas
