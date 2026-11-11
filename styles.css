@@ -1402,7 +1402,7 @@ button.seccion {
 .lienzo-arcade { display: block; width: 100%; max-width: 480px; border-radius: 12px; touch-action: none; user-select: none; -webkit-user-select: none; }
 .lienzo-autos { max-width: 340px; }
 .lienzo-bloques { max-width: min(100%, 290px); margin: 0 auto; }
-.botones-bloques { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-width: 340px; margin: 8px auto 0; }
+.botones-bloques { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; max-width: 360px; margin: 8px auto 0; }
 .botones-bloques button { min-height: 52px; padding: 0; font-size: 1.5rem; touch-action: none; user-select: none; -webkit-user-select: none; }
 .modos-arcade { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .modos-arcade small { display: block; font-size: 0.8rem; font-weight: 600; opacity: 0.9; }
