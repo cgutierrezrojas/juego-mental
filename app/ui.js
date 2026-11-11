@@ -108,6 +108,8 @@ addEventListener('popstate', () => {
   }
 });
 
+const PARTIDAS = ['juego', 'mesa-tablero', 'trivia-partida', 'arcade-juego', 'palabras-juego', 'cartas-juego', 'granescalera'];
+
 export function mostrar(id) {
   if (id !== 'inicio' && !enHistorial) {
     history.pushState(null, '');
@@ -119,13 +121,15 @@ export function mostrar(id) {
   }
   for (const s of document.querySelectorAll('main > section')) s.hidden = s.id !== id;
   $('btn-salir').hidden = id !== 'juego';
-  $('btn-ayuda').hidden = id === 'juego';
+  // Jugando: sin barra de abajo ni ajustes de arriba (cada juego tiene su propio botón para salir).
+  const enPartida = PARTIDAS.includes(id);
+  $('esquina').hidden = enPartida;
   if (id !== 'final') {
     E.temporizadores.forEach(clearTimeout);
     E.temporizadores = [];
   }
   // Barra inferior: oculta en la partida; resalta el botón de la pantalla actual.
-  $('navegacion').hidden = id === 'juego';
+  $('navegacion').hidden = enPartida;
   const pestana = {
     inicio: 'nav-inicio', menu: 'nav-inicio', mesa: 'nav-inicio', 'mesa-modo': 'nav-inicio', 'mesa-tablero': 'nav-inicio', trivia: 'nav-inicio', 'trivia-partida': 'nav-inicio', cartas: 'nav-inicio', 'cartas-juego': 'nav-inicio', arcade: 'nav-inicio', 'arcade-juego': 'nav-inicio', palabras: 'nav-inicio', 'palabras-juego': 'nav-inicio', granescalera: 'nav-inicio', duelos: 'btn-duelos', 'nuevo-duelo': 'btn-duelos', duelo: 'btn-duelos', vivo: 'btn-duelos',
     amigos: 'btn-amigos', chat: 'btn-amigos', ranking: 'btn-ranking', estadisticas: 'btn-estadisticas',

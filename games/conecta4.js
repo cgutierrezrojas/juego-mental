@@ -1,4 +1,4 @@
-// 🔴 Conecta 4: 7 columnas × 6 filas; la ficha cae a la casilla libre más baja. Todo puro.
+// 🔴 4 en línea: 7 columnas × 6 filas; la ficha cae a la casilla libre más baja. Todo puro.
 // Tablero: texto de 42 letras ('x', 'o' o '.'), filas de arriba abajo (casilla = fila * 7 + columna).
 import { azar } from './comun.js';
 
@@ -103,4 +103,4 @@ export function ia(e, nivel = 'normal', rnd = Math.random) {
   return mejores[azar(mejores.length, rnd)];
 }
 
-export const conecta4 = { id: 'conecta4', nombre: 'Conecta 4', inicial, validas, aplicar, ganador, ia };
+export const conecta4 = { id: 'conecta4', nombre: '4 en línea', inicial, validas, aplicar, ganador, ia };

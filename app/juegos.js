@@ -27,7 +27,7 @@ import * as trivia from '../games/trivia.js';
 // Secciones de la sala de juegos. Cada juego dice la suya (`seccion`); una sección sin juegos sale como "Próximamente".
 export const SECCIONES = [
   { id: 'mentales', nombre: 'Mentales', icono: '🧠', color: 'morado', descripcion: 'memoria, cálculo, atención, lógica y reflejos' },
-  { id: 'mesa', nombre: 'Mesa', icono: '🎲', color: 'verde', descripcion: 'gato, conecta 4 y más' },
+  { id: 'mesa', nombre: 'Mesa', icono: '🎲', color: 'verde', descripcion: 'gato, 4 en línea y más' },
   { id: 'trivia', nombre: 'Trivia', icono: '❓', color: 'azul', descripcion: 'preguntas de todo tipo' },
   { id: 'cartas', nombre: 'Cartas', icono: '🃏', color: 'rojo', descripcion: 'solitario, 21, ocho loco…' },
   { id: 'arcade', nombre: 'Arcade', icono: '🏎️', color: 'acento', descripcion: 'autos, serpiente y más' },

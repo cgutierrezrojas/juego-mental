@@ -143,6 +143,7 @@ button.color {
   gap: 8px;
   margin-left: auto; /* siempre a la derecha, aunque ✕ esté oculto */
 }
+#esquina[hidden] { display: none; }
 
 #barra button {
   font-size: 1.1rem;

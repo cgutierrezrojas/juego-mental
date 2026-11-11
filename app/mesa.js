@@ -1,4 +1,4 @@
-// 🎲 Mesa: juegos por turnos (Gato y Conecta 4) contra la máquina, a dos en un celular o contra un amigo.
+// 🎲 Mesa: juegos por turnos (Gato y 4 en línea) contra la máquina, a dos en un celular o contra un amigo.
 // Con un amigo, la misma partida sirve en vivo y por turnos: se guarda en la Realtime Database (`mesas/{id}`).
 // Cada juego (games/gato.js, games/conecta4.js) define sus reglas y su máquina; aquí se pinta y se juega.
 import { el, leer, guardar } from '../games/comun.js';
@@ -345,7 +345,7 @@ function tableroGato(j, g) {
 function tableroConecta(j) {
   const rejilla = el('div', 'tablero-conecta');
   rejilla.setAttribute('role', 'group');
-  rejilla.setAttribute('aria-label', 'Tablero de Conecta 4: elige una columna');
+  rejilla.setAttribute('aria-label', 'Tablero de 4 en línea: elige una columna');
   for (let c = 0; c < COLUMNAS; c++) {
     const columna = el('button', 'columna-conecta');
     const libres = [...Array(FILAS).keys()].filter((f) => partida.estado.celdas[f * COLUMNAS + c] === '.').length;

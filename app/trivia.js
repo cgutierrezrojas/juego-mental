@@ -525,7 +525,12 @@ function pintarRuleta() {
     const lento = !matchMedia('(prefers-reduced-motion: reduce)').matches;
     partida.espera = setTimeout(() => pintarPregunta(IDS[i], false), lento ? 1800 : 300);
   });
-  $('trivia-botones').replaceChildren(girar, ...(partida.modo === 'amigo' ? [rendirse()] : []));
+  // Jugando, la barra de abajo no está: en solitario y en fiesta se sale desde aquí (la partida se pierde).
+  const salir = boton('Salir', '', () => {
+    clearTimeout(partida.espera);
+    abrirTrivia();
+  });
+  $('trivia-botones').replaceChildren(girar, partida.modo === 'amigo' ? rendirse() : salir);
 }
 
 function pintarElegirCorona() {
