@@ -1,5 +1,5 @@
 // ☁️ Nube: sesión, sincronización, apodo y ranking.
-import { filaLiga, semanaActual, comprobarPodio, pintarRankingLiga } from './liga.js';
+import { filaLiga, semanaActual, comprobarPodio, pintarRankingLiga, soyAdmin, botonesModeracion } from './liga.js';
 import { CONFIG } from '../firebase-config.js';
 import { el, leer, guardar } from '../games/comun.js';
 import { tieneProgreso, decidirSincro, datosRanking } from '../games/sincro.js';
@@ -7,6 +7,8 @@ import { $, preguntar, mostrar } from './ui.js';
 import { E } from './estado.js';
 import { pintarSugerencia } from './menu.js';
 import { ponerEstado, actualizarPerfil, agregarAmigo } from './amigos.js';
+import { apodoOfensivo } from '../games/amigos.js';
+import { hayAnuncios, privacidadAnuncios } from './anuncios.js';
 import { recibirInvitacion } from './vivo.js';
 import { pintarAvisoDuelos, abrirDuelo, abrirNuevoDuelo } from './duelos.js';
 import { datosDelJuego, sustituirProgreso, conUnidad } from './datos.js';
@@ -81,7 +83,7 @@ export function pintarNube() {
     b.onclick = alPulsar;
     return b;
   };
-  const privacidad = el('a', '', 'Privacidad y créditos');
+  const privacidad = el('a', '', 'Privacidad, normas y créditos');
   privacidad.href = 'privacidad.html';
   const partes = [el('h3', 'categoria', '☁️ Nube')];
   if (!E.nube) {
@@ -119,6 +121,7 @@ export function pintarNube() {
     }
     partes.push(boton('🗑️ Borrar mi cuenta', borrarNube));
   }
+  if (hayAnuncios()) partes.push(boton('🔒 Privacidad de los anuncios', () => privacidadAnuncios().catch(() => avisarNube('En tu región no hay opciones de privacidad de anuncios que cambiar.'))));
   partes.push(privacidad);
   caja.replaceChildren(...partes);
 }
@@ -252,8 +255,11 @@ export async function subir() {
     await E.nube.guardarProgreso(E.usuario.uid, datos, cambio);
     const apodo = leer('nube:apodo');
     if (apodo) {
-      await E.nube.guardarRanking(E.usuario.uid, { apodo, ...datosRanking(datos), actualizado: cambio });
-      await E.nube.guardarLiga(semanaActual(), E.usuario.uid, filaLiga(apodo, cambio));
+      // Si alguien fue expulsado del ranking, las reglas rechazan su fila: el progreso igual queda subido.
+      await Promise.all([
+        E.nube.guardarRanking(E.usuario.uid, { apodo, ...datosRanking(datos), actualizado: cambio }),
+        E.nube.guardarLiga(semanaActual(), E.usuario.uid, filaLiga(apodo, cambio)),
+      ]).catch(() => {});
     }
     guardar('nube:subido', cambio);
   }
@@ -261,18 +267,18 @@ export async function subir() {
 }
 
 // Apodo del ranking (2–20 caracteres; vacío = no aparecer). `primeraVez`: solo se pregunta una vez por celular.
-export async function pedirApodo(primeraVez) {
+export async function pedirApodo(primeraVez, aviso = '', propuesta = leer('nube:apodo')) {
   if (primeraVez && leer('nube:preguntado')) return;
   guardar('nube:preguntado', '1');
-  const propuesta = leer('nube:apodo') || (E.usuario.isAnonymous ? `Invitado-${10000 + Math.floor(Math.random() * 90000)}` : '');
   const texto = await preguntar({
     titulo: '🏆 Tu apodo en el ranking',
-    texto: 'De 2 a 20 caracteres. Nunca se muestran tu nombre ni tu correo. Déjalo vacío para no aparecer.',
+    texto: aviso || 'De 2 a 20 caracteres. Nunca se muestran tu nombre ni tu correo. Déjalo vacío para no aparecer. Al guardarlo aceptas las normas de uso (están en «Privacidad, normas y créditos»): nada de insultos, acoso ni trampas.',
     boton: 'Guardar',
-    campo: propuesta,
+    campo: propuesta || (E.usuario.isAnonymous ? `Invitado-${10000 + Math.floor(Math.random() * 90000)}` : ''),
   });
   if (texto === null) return; // cancelado: no cambia nada
   const apodo = texto.trim().slice(0, 20);
+  if (apodoOfensivo(apodo)) return pedirApodo(false, '🚫 Ese apodo no está permitido: elige otro, sin insultos ni groserías.', apodo);
   try {
     if (apodo.length >= 2) {
       guardar('nube:apodo', apodo);
@@ -351,7 +357,7 @@ export async function pintarRanking() {
   $('ranking-lista').replaceChildren(el('li', 'sin-datos', 'Cargando…'));
   $('ranking-tu').textContent = '';
   try {
-    const filas = await E.nube.top(campo, menor);
+    const [filas, esAdmin] = await Promise.all([E.nube.top(campo, menor), soyAdmin()]);
     $('ranking-lista').replaceChildren(
       ...(filas.length
         ? filas.map((f) => {
@@ -364,7 +370,9 @@ export async function pintarRanking() {
               const amigo = el('button', 'retar', '👥');
               amigo.setAttribute('aria-label', `Agregar a ${f.apodo} como amigo`);
               amigo.onclick = () => agregarAmigo(f.uid, f.apodo);
-              li.append(retar, amigo);
+              const acciones = el('span', 'acciones');
+              acciones.append(retar, amigo, ...botonesModeracion(f, esAdmin, pintarRanking));
+              li.append(acciones);
             }
             return li;
           })

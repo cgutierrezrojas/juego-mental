@@ -10,10 +10,11 @@ service cloud.firestore {
     }
 
     // Ranking: lo ve cualquiera con sesión; cada uno solo escribe su fila, con la forma y valores posibles.
+    // Un admin puede borrar filas; quien está en `baneados` ya no puede escribir la suya.
     match /ranking/{uid} {
       allow read: if request.auth != null;
-      allow delete: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid && filaValida(request.resource.data);
+      allow delete: if request.auth != null && (request.auth.uid == uid || esAdmin());
+      allow create, update: if request.auth != null && request.auth.uid == uid && !baneado() && filaValida(request.resource.data);
     }
 
     // Duelos por turnos (games/duelos.js): lo ve cualquiera con sesión (para aceptar por enlace o al azar).
@@ -65,8 +66,8 @@ service cloud.firestore {
     // Liga semanal: la ve cualquiera con sesión; cada uno escribe solo su fila de cada semana.
     match /liga/{semana}/jugadores/{uid} {
       allow read: if request.auth != null;
-      allow delete: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid
+      allow delete: if request.auth != null && (request.auth.uid == uid || esAdmin());
+      allow create, update: if request.auth != null && request.auth.uid == uid && !baneado()
         && request.resource.data.keys().hasOnly(['apodo', 'puntos', 'actualizado'])
         && request.resource.data.apodo is string && request.resource.data.apodo.size() >= 2 && request.resource.data.apodo.size() <= 20
         && request.resource.data.puntos is int && request.resource.data.puntos >= 0 && request.resource.data.puntos <= 5000
@@ -95,6 +96,17 @@ service cloud.firestore {
 
     match /admins/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Expulsados del ranking y la liga: solo un admin los escribe (y los perdona borrándolos).
+    match /baneados/{uid} {
+      allow read: if esAdmin();
+      allow create, update: if esAdmin() && request.resource.data.keys().hasOnly(['apodo', 'cuando']);
+      allow delete: if esAdmin();
+    }
+
+    function baneado() {
+      return exists(/databases/$(database)/documents/baneados/$(request.auth.uid));
     }
 
     function esAdmin() {

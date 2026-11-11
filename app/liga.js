@@ -6,7 +6,7 @@ import { amigosDe } from '../games/amigos.js';
 import { CONFIG } from '../firebase-config.js';
 import { E } from './estado.js';
 import { leerJSON, apuntarLogros } from './datos.js';
-import { $, confeti } from './ui.js';
+import { $, confeti, preguntar } from './ui.js';
 
 export const semanaActual = () => semanaDe(fechaLocal());
 const registro = (semana) => leerJSON('liga:' + semana);
@@ -53,14 +53,63 @@ export async function comprobarPodio() {
   }
 }
 
+// ¿Es admin quien está conectado? (se pregunta una vez por cuenta)
+let admin = { uid: null, si: false };
+export async function soyAdmin() {
+  if (admin.uid !== E.usuario.uid) admin = { uid: E.usuario.uid, si: await E.nube.esAdmin(E.usuario.uid).catch(() => false) };
+  return admin.si;
+}
+
+// Botones de una fila de otro jugador en el ranking o la liga: ⚠️ denunciar y, solo para un admin, 🚫 expulsar.
+export function botonesModeracion(f, esAdmin, alExpulsar) {
+  const boton = (texto, etiqueta, alPulsar) => {
+    const b = el('button', 'retar', texto);
+    b.setAttribute('aria-label', etiqueta);
+    b.onclick = () => alPulsar(b);
+    return b;
+  };
+  const denunciar = boton('⚠️', `Denunciar a ${f.apodo}`, async (b) => {
+    const motivo = await preguntar({
+      titulo: `⚠️ Denunciar a ${f.apodo}`,
+      texto: 'Cuéntanos qué pasa (por ejemplo: apodo ofensivo o puntaje imposible). Lo revisaremos.',
+      boton: 'Enviar denuncia',
+      campo: '',
+    });
+    if (motivo === null) return;
+    try {
+      await E.nube.denunciar({ de: E.usuario.uid, contra: f.uid, motivo: `[ranking: ${f.apodo}] ${motivo.trim() || '(sin motivo)'}`.slice(0, 500) });
+      b.textContent = '✓';
+      b.disabled = true;
+    } catch {
+      b.textContent = '✗'; // sin conexión
+    }
+  });
+  if (!esAdmin) return [denunciar];
+  const expulsar = boton('🚫', `Expulsar a ${f.apodo} del ranking`, async (b) => {
+    const seguro = await preguntar({
+      titulo: `🚫 Expulsar a ${f.apodo}`,
+      texto: 'Sale del ranking y de la liga y ya no podrá volver a aparecer. Para perdonarlo, borra su documento en «baneados» en la consola de Firebase.',
+      boton: 'Expulsar',
+    });
+    if (seguro) E.nube.expulsar(f.uid, f.apodo, semanaActual()).then(alExpulsar, () => (b.textContent = '✗'));
+  });
+  return [denunciar, expulsar];
+}
+
 // Clasificación de la liga en la pantalla 🏆 Ranking: todos (top 20 y tu puesto) o solo tus amigos.
 export async function pintarRankingLiga(soloAmigos) {
   const semana = semanaActual();
   const uid = E.usuario.uid;
   const dias = diasRestantes(fechaLocal());
+  const esAdmin = await soyAdmin();
   const fila = (f) => {
     const li = el('li', f.uid === uid ? 'propia' : '');
     li.append(el('span', '', f.apodo), el('span', 'valor', `${f.puntos} pts`));
+    if (f.uid !== uid) {
+      const acciones = el('span', 'acciones');
+      acciones.append(...botonesModeracion(f, esAdmin, () => pintarRankingLiga(soloAmigos)));
+      li.append(acciones);
+    }
     return li;
   };
   let filas;

@@ -40,3 +40,20 @@ export function amigosDe(solicitudes, uid) {
 // Estado que se muestra de un amigo: el último publicado, salvo que tenga más de `limite` ms (la app se cerró sin avisar).
 export const enLinea = (dato, ahora, limite = 5 * 60000) =>
   !dato?.cuando || ahora - dato.cuando > limite ? 'desconectado' : dato.estado;
+
+// Apodos con insultos o groserías (filtro sencillo: no atrapa todo, para eso están las denuncias).
+// Se pasa a minúsculas sin tildes, con 0→o, 1→i, 3→e, 4→a, 5→s, 7→t, @→a y sin letras repetidas.
+// Las palabras cortas solo cuentan como palabra entera o al inicio de una (así «computadora» o «disputa» pasan).
+const GROSERIAS_LARGAS = ['conchetumare', 'conchesumare', 'conchetumadre', 'culiao', 'culiado', 'maricon', 'aweonao', 'hueon', 'weon',
+  'mierda', 'pendejo', 'cabron', 'pedofil', 'violador', 'porno', 'hitler', 'nazi', 'chupala', 'chupalo', 'pichula', 'zorra', 'malparid', 'gonorrea', 'hijodeputa', 'hijueputa', 'putamadre', 'conchatumadre', 'conchatumare', 'mamahuevo'];
+const GROSERIAS_CORTAS = ['puta', 'puto', 'ctm', 'csm', 'qlo', 'ql', 'pene', 'sexo', 'verga', 'coño', 'polla', 'marica', 'joto', 'chucha', 'teta', 'culo', 'raja'];
+const SIN_TRUCOS = { 0: 'o', 1: 'i', 3: 'e', 4: 'a', 5: 's', 7: 't', '@': 'a', $: 's' };
+const sinRepetidas = (t) => t.replace(/(.)\1+/g, '$1');
+export function apodoOfensivo(apodo) {
+  const limpio = sinRepetidas(apodo.toLowerCase().replace(/ñ/g, '\u0001').normalize('NFD').replace(/\p{M}/gu, '').replace(/\u0001/g, 'ñ')
+    .replace(/[013457@$]/g, (c) => SIN_TRUCOS[c]));
+  const junto = limpio.replace(/[^a-zñ]/g, '');
+  if (GROSERIAS_LARGAS.some((g) => junto.includes(sinRepetidas(g)))) return true;
+  const palabras = [...limpio.split(/[^a-zñ]+/).filter(Boolean), junto]; // junto: «p.u.t.a»
+  return palabras.some((p) => GROSERIAS_CORTAS.map(sinRepetidas).some((g) => p === g || (p.startsWith(g) && p.length <= g.length + 2)));
+}

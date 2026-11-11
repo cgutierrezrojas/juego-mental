@@ -22,6 +22,12 @@ export function iniciarAnuncios() {
   })().catch(() => {});
 }
 
+// 🔒 Privacidad de los anuncios: vuelve a abrir el formulario de consentimiento de Google (falla si en la región no aplica).
+export async function privacidadAnuncios() {
+  await listo;
+  await admob.showPrivacyOptionsForm();
+}
+
 // Anuncio con premio: true solo si se vio entero.
 export async function verAnuncioPremio() {
   if (!admob) return false;

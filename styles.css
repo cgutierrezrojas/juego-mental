@@ -955,9 +955,14 @@ button.tarjeta { position: relative; }
 #nube a { color: inherit; font-size: 0.85rem; }
 #dialogo-nube,
 #dialogo-cuenta { border-top-color: var(--azul); }
-#ranking-lista { margin: 0; padding: 0; list-style-position: inside; text-align: left; }
+#ranking-lista { margin: 0; padding: 0; list-style: none; text-align: left; counter-reset: puesto; }
+/* En fila: puesto, apodo, valor y botones; si no caben, los botones bajan a otra línea */
 #ranking-lista li {
-  display: list-item;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  counter-increment: puesto;
   margin-bottom: 6px;
   padding: 10px 12px;
   border-radius: 12px;
@@ -967,8 +972,11 @@ button.tarjeta { position: relative; }
 }
 [data-tema="oscuro"] #ranking-lista li { border: 1px solid rgba(255, 255, 255, 0.2); }
 #ranking-lista li.propia { outline: 3px solid var(--acento); }
-#ranking-lista .valor { float: right; }
-#ranking-lista li.sin-datos { list-style: none; box-shadow: none; background: none; }
+#ranking-lista li::before { content: counter(puesto) "."; }
+#ranking-lista li > span:first-of-type { flex: 1 1 9em; min-width: 0; overflow-wrap: anywhere; }
+#ranking-lista .acciones { display: flex; gap: 6px; margin-left: auto; }
+#ranking-lista li.sin-datos { box-shadow: none; background: none; counter-increment: none; }
+#ranking-lista li.sin-datos::before { content: none; }
 #ranking-tu { margin: 0; font-weight: 800; }
 #ranking-tu:empty { display: none; }
 #ranking-tipo { font: inherit; font-weight: 700; padding: 10px; border-radius: 12px; }
@@ -1044,7 +1052,7 @@ button.tarjeta { position: relative; }
 .resultado-duelo { margin: 0; font-size: 1.3rem; font-weight: 900; }
 .resultado-duelo.resultado-v { color: var(--ok); }
 .resultado-duelo.resultado-d { color: var(--mal); }
-#ranking-lista .retar { float: right; margin-left: 8px; padding: 0 8px; font-size: 0.9rem; box-shadow: none; }
+#ranking-lista .retar { margin: 0; padding: 0 8px; font-size: 0.9rem; box-shadow: none; }
 
 /* Duelo: marcador y juegos en una sola cuadrícula (columnas iguales para Tú y Rival) */
 .tabla-duelo { display: flex; flex-direction: column; gap: 6px; }

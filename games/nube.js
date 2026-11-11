@@ -214,6 +214,14 @@ export const proponer = (datos) => fs.addDoc(fs.collection(db, 'propuestas'), { 
 export const misPropuestas = (uid) => buscarEn('propuestas', fs.where('de', '==', uid), fs.limit(50));
 export const propuestasPendientes = () => buscarEn('propuestas', fs.where('estado', '==', 'pendiente'), fs.limit(50));
 export const esAdmin = async (uid) => (await fs.getDoc(documento('admins', uid))).exists();
+// Solo un admin: deja a alguien fuera del ranking y la liga (`baneados/{uid}`; se perdona borrándolo en la consola).
+export async function expulsar(uid, apodo, semana) {
+  const lote = fs.writeBatch(db);
+  lote.set(documento('baneados', uid), { apodo, cuando: fs.serverTimestamp() });
+  lote.delete(documento('ranking', uid));
+  lote.delete(jugadorLiga(semana, uid));
+  await lote.commit();
+}
 export const preguntasAprobadas = async () => (await fs.getDocs(fs.collection(db, 'preguntas'))).docs.map((d) => d.data());
 
 // Aprobar copia la pregunta a `preguntas` (con el mismo id) y marca la propuesta; rechazar solo la marca.

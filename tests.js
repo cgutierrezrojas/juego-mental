@@ -744,7 +744,7 @@ probar('duelos: estados', () => {
 });
 
 // --- amigos.js ---
-import { codigoAmigo, normalizarCodigo, amigosDe, enLinea } from './games/amigos.js';
+import { codigoAmigo, normalizarCodigo, amigosDe, enLinea, apodoOfensivo } from './games/amigos.js';
 
 probar('amigos: código de amigo y solicitudes', () => {
   const c = codigoAmigo('uidDePrueba123');
@@ -762,6 +762,11 @@ probar('amigos: código de amigo y solicitudes', () => {
   ];
   const r = amigosDe(s, 'yo');
   assert(r.amigos.map((a) => a.apodo).join() === 'Ana,Bea' && r.recibidas[0].uid === 'leo' && r.enviadas[0].uid === 'sol', JSON.stringify(r));
+});
+
+probar('amigos: apodos ofensivos (con trucos) sí; palabras normales no', () => {
+  for (const t of ['Put4', 'Put4madre', 'P.U.T.A', 'weon123', 'MIERDAAA', 'Ana_ctm', 'Coño', 'conchetumareee', 'Hueona']) assert(apodoOfensivo(t), t);
+  for (const t of ['Computadora', 'Disputa', 'Juan Pérez', 'Ñoño', 'Pollito', 'Perrita', 'Invitado-12345', 'Cono Sur']) assert(!apodoOfensivo(t), t);
 });
 
 probar('enLinea: el estado vale 5 minutos; después, desconectado', () => {

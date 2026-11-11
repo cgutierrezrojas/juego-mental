@@ -5,7 +5,7 @@ import { perfil } from '../games/estadisticas.js';
 import { E } from './estado.js';
 import { asegurarDuelista, abrirNuevoDuelo } from './duelos.js';
 import { mostrar, $, compartirTexto, preguntar } from './ui.js';
-import { abrirChat, marcarNoLeidos } from './chat.js';
+import { abrirChat, marcarNoLeidos, bloquearA } from './chat.js';
 import { abrirRetoVivo } from './vivo.js';
 
 // 👥 Amigos y estados (lógica pura en games/amigos.js). Necesitan sesión y apodo, como los duelos.
@@ -104,7 +104,16 @@ export async function pintarAmigos(aviso = '') {
             await E.nube.borrarSolicitud(r.id).catch(() => {});
             pintarAmigos();
           }),
+          boton('🚫', async () => {
+            const seguro = await preguntar({
+              titulo: `🚫 Bloquear a ${r.apodo}`,
+              texto: 'No podrá volver a pedirte amistad, escribirte ni retarte. Puedes desbloquearlo después en Amigos.',
+              boton: 'Bloquear',
+            });
+            if (seguro) bloquearA({ uid: r.uid, apodo: r.apodo });
+          }),
         ));
+        partes.at(-1).lastChild.setAttribute('aria-label', `Bloquear a ${r.apodo}`);
       }
     }
     if (enviadas.length) {
