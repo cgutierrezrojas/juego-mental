@@ -10,6 +10,7 @@ import { CONFIG } from '../firebase-config.js';
 import { SECCIONES, JUEGOS, JUEGOS_ARCADE, JUEGOS_PALABRAS, idsPorCategoria } from './juegos.js';
 import { historiales, retosPendientes } from './datos.js';
 import { misPuntosLiga } from './liga.js';
+import { pintarCabeceraPerfil } from './perfil.js';
 import { $, mostrar } from './ui.js';
 
 // Abre Mentales (la página con los juegos de ahora) y, si se pide, la lleva hasta una parte.
@@ -22,6 +23,7 @@ export function abrirMentales(selector) {
 export const ABRIR = { mentales: () => abrirMentales(), mesa: abrirMesa, trivia: abrirTrivia, cartas: abrirCartas, arcade: abrirArcade, palabras: abrirPalabras };
 
 export function pintarInicio() {
+  pintarCabeceraPerfil();
   const hoy = fechaLocal();
   const hechos = jugadosEn(hoy, historiales());
   const cuantos = entrenoDelDia(hoy, idsPorCategoria).filter((id) => hechos.has(id)).length;

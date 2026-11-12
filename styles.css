@@ -1499,3 +1499,50 @@ button.seccion {
 }
 [data-tema="oscuro"] .aviso-perfil { color: var(--fondo); }
 .aviso-perfil[hidden] { display: none; }
+
+/* 🙂 Perfil: avatar con marco, cabecera del inicio, calendario y misiones */
+.avatar {
+  position: relative; isolation: isolate; display: inline-grid; place-items: center; flex: none;
+  width: 2.2em; height: 2.2em; border-radius: 50%; background: var(--fondo); font-size: 1rem; line-height: 1;
+  box-shadow: 0 0 0 3px var(--marco, transparent);
+}
+.avatar.grande { font-size: 2.4rem; }
+.marco-bronce { --marco: #cd7f32; }
+.marco-plata { --marco: #a8b2bd; }
+.marco-oro { --marco: #e6b800; }
+.marco-esmeralda { --marco: #2ecc71; }
+.marco-rubi { --marco: #e0115f; }
+.marco-diamante { --marco: #6fd3ff; }
+.marco-fuego { --marco: #ff6a00; box-shadow: 0 0 0 3px var(--marco), 0 0 10px 2px #ffb000; }
+.marco-arcoiris { box-shadow: none; }
+.marco-arcoiris::before {
+  content: ''; position: absolute; inset: -3px; z-index: -1; border-radius: 50%;
+  background: conic-gradient(#e63946, #ffb000, #2ecc71, #1f6feb, #7b2cbf, #e63946);
+  animation: girar-marco 3s linear infinite;
+}
+@keyframes girar-marco { to { transform: rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) { .marco-arcoiris::before { animation: none; } }
+
+.cabecera-perfil { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; }
+.cabecera-perfil .avatar { font-size: 1.4rem; }
+.texto-perfil { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.barra-perfil { width: 100%; height: 10px; accent-color: var(--acento); }
+.tarjetas-perfil { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tarjeta-perfil { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px; }
+
+.perfil-cabeza { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 8px 0 16px; }
+.rejilla-avatares { display: grid; grid-template-columns: repeat(auto-fill, minmax(48px, 1fr)); gap: 6px; }
+.rejilla-avatares button { margin: 0; padding: 6px 0; font-size: 1.5rem; }
+.fila-marcos { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
+.fila-marcos button { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 0; padding: 10px 4px; }
+.rejilla-avatares .elegido, .fila-marcos .elegido { outline: 3px solid var(--acento); }
+.calendario { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 8px; }
+.calendario .dia { display: flex; flex-direction: column; align-items: center; padding: 6px 0; border-radius: 10px; background: var(--superficie); box-shadow: var(--relieve); font-size: 0.85rem; }
+.calendario .dia.hoy { outline: 3px solid var(--acento); }
+.calendario .dia.hecho { opacity: 0.6; }
+.misiones { display: flex; flex-direction: column; gap: 12px; }
+.mision { display: flex; flex-direction: column; gap: 4px; }
+.mision.hecha { opacity: 0.7; }
+.tarjeta-perfil.color, #perfil-contenido button.color, #btn-perfil { --c: var(--acento); }
+#perfil-contenido button.color:disabled { opacity: 0.6; cursor: default; }
+[data-tema="oscuro"] .calendario .dia { border: 1px solid var(--acento); }

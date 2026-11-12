@@ -24,6 +24,7 @@ import { pintarEstadisticas } from './app/estadisticas.js';
 import { abrirRanking, subir, pintarNube, alCambiarUsuario, avisarNube } from './app/cuenta.js';
 import { ponerEstado, abrirAmigos } from './app/amigos.js';
 import { bloquearA } from './app/chat.js';
+import { abrirPerfil } from './app/perfil.js';
 
 $('btn-tema').onclick = () => {
   const tema = document.documentElement.dataset.tema === 'oscuro' ? 'claro' : 'oscuro';
@@ -119,6 +120,8 @@ $('btn-ayuda').onclick = () => {
   else mostrarAyuda(AYUDA_DE_PANTALLA[pantalla]);
   document.querySelector('.ayuda')?.scrollIntoView({ block: 'center' });
 };
+
+$('btn-perfil').onclick = abrirPerfil;
 
 $('btn-estadisticas').onclick = () => {
   pintarEstadisticas();

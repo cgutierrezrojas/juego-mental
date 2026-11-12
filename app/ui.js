@@ -132,7 +132,7 @@ export function mostrar(id) {
   $('navegacion').hidden = enPartida;
   const pestana = {
     inicio: 'nav-inicio', menu: 'nav-inicio', mesa: 'nav-inicio', 'mesa-modo': 'nav-inicio', 'mesa-tablero': 'nav-inicio', trivia: 'nav-inicio', 'trivia-partida': 'nav-inicio', cartas: 'nav-inicio', 'cartas-juego': 'nav-inicio', arcade: 'nav-inicio', 'arcade-juego': 'nav-inicio', palabras: 'nav-inicio', 'palabras-juego': 'nav-inicio', granescalera: 'nav-inicio', duelos: 'btn-duelos', 'nuevo-duelo': 'btn-duelos', duelo: 'btn-duelos', vivo: 'btn-duelos',
-    amigos: 'btn-amigos', chat: 'btn-amigos', ranking: 'btn-ranking', estadisticas: 'btn-estadisticas',
+    amigos: 'btn-amigos', chat: 'btn-amigos', ranking: 'btn-ranking', estadisticas: 'btn-estadisticas', perfil: 'btn-estadisticas',
   }[id];
   for (const b of document.querySelectorAll('#navegacion button')) b.setAttribute('aria-current', b.id === pestana ? 'page' : 'false');
   if (id === 'inicio') {

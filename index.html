@@ -31,6 +31,8 @@
 
     <section id="inicio">
       <h1>Pa'l Rato</h1>
+      <button id="cabecera-perfil" class="cabecera-perfil"></button>
+      <div id="tarjetas-perfil" class="tarjetas-perfil"></div>
       <div id="hoy" class="fila-hoy"></div>
       <div id="sugerencia-cuenta" hidden></div>
       <div id="secciones" class="secciones"></div>
@@ -280,8 +282,17 @@
       </div>
     </section>
 
+    <section id="perfil" hidden>
+      <header class="cabecera-seccion">
+        <button class="btn-a-inicio" aria-label="Volver al inicio">←</button>
+        <h2>🙂 Tu perfil</h2>
+      </header>
+      <div id="perfil-contenido"></div>
+    </section>
+
     <section id="estadisticas" hidden>
       <h2>👤 Tú</h2>
+      <button id="btn-perfil" class="color">🙂 Tu perfil: nivel, avatar y misiones</button>
       <div id="estadisticas-contenido"></div>
       <div id="nube" hidden></div>
       <div id="copia">
