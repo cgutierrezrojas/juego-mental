@@ -1,7 +1,7 @@
-// 🪙 Fichas por desafíos y bono del día (reglas puras en games/premios.js).
+// 🪙 Fichas por desafíos del día (reglas puras en games/premios.js).
 import { guardar } from '../games/comun.js';
 import { fechaLocal } from '../games/estadisticas.js';
-import { premio, bono, hoyDe, ANUNCIO } from '../games/premios.js';
+import { premio, hoyDe, ANUNCIO } from '../games/premios.js';
 import { leerJSON } from './datos.js';
 
 const NOMBRE = { tudia: 'completar Tu día', palabra: 'la palabra del día', diario: 'un nivel diario' };
@@ -26,13 +26,6 @@ export function darPremio(tipo) {
   if (!fichas) return '';
   sumarFichas(fichas);
   return `🪙 +${fichas} fichas por ${NOMBRE[tipo]}`;
-}
-
-export function cobrarBono() {
-  const { registro, fichas } = bono(leerJSON('cartas:premios'), fechaLocal());
-  guardar('cartas:premios', JSON.stringify(registro));
-  if (fichas) sumarFichas(fichas);
-  return fichas;
 }
 
 export const desafiosDeHoy = () => hoyDe(leerJSON('cartas:premios'), fechaLocal());

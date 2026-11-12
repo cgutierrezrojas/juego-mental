@@ -1789,7 +1789,7 @@ probar('palabras: charadas, escalera de palabras y la gran escalera', () => {
 });
 
 // --- premios.js ---
-import { premio, bono, hoyDe, TOPE, ANUNCIO } from './games/premios.js';
+import { premio, hoyDe, TOPE, ANUNCIO } from './games/premios.js';
 
 assert(ANUNCIO === 100, 'el anuncio da 100 fichas');
 
@@ -1824,15 +1824,10 @@ probar('premios: niveles diarios hasta 10 y tope de 250', () => {
   assert(q.fichas === 0, 'pasado el tope no da nada');
 });
 
-probar('premios: día nuevo empieza de cero; el bono una vez al día y fuera del tope', () => {
-  let r = premio({}, 'tudia', '2026-11-05').registro;
-  let b = bono(r, '2026-11-05');
-  assert(b.fichas === 100);
-  r = b.registro;
-  assert(bono(r, '2026-11-05').fichas === 0, 'bono dos veces');
-  assert(hoyDe(r, '2026-11-05').bonoUsado && hoyDe(r, '2026-11-05').ganadas === 100, 'el bono no suma al tope');
+probar('premios: día nuevo empieza de cero', () => {
+  const r = premio({}, 'tudia', '2026-11-05').registro;
+  assert(premio(r, 'tudia', '2026-11-05').fichas === 0, 'dos veces el mismo día');
   assert(premio(r, 'tudia', '2026-11-06').fichas === 100, 'otro día');
-  assert(!hoyDe(r, '2026-11-06').bonoUsado && bono(r, '2026-11-06').fichas === 100, 'bono de otro día');
   assert(premio(null, 'palabra', '2026-11-06').fichas === 50, 'sin registro');
 });
 

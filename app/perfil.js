@@ -2,7 +2,7 @@
 import { leer, guardar } from '../games/comun.js';
 import { fechaLocal } from '../games/estadisticas.js';
 import { semanaDe } from '../games/liga.js';
-import { nivelDe, xpDe, avanzar, MARCOS, FICHAS_NIVEL, AVATAR_INICIAL } from '../games/perfil.js';
+import { cobrarCalendario, diaDeHoy, nivelDe, xpDe, avanzar, MARCOS, FICHAS_NIVEL, AVATAR_INICIAL } from '../games/perfil.js';
 import { leerJSON } from './datos.js';
 import { sumarFichas } from './premios.js';
 import { $, confeti } from './ui.js';
@@ -53,4 +53,18 @@ export function anotarPerfil(tipo, n = 1, seccion = null) {
   }
   sumarXP(xp, avisos);
   avisarPerfil(avisos);
+}
+
+export const calendarioHoy = () => diaDeHoy(leerJSON('perfil:calendario'), fechaLocal());
+
+// Cobra el día del calendario (si no se cobró hoy). Devuelve las fichas.
+export function cobrarDia() {
+  const { registro, fichas, xp, dia } = cobrarCalendario(leerJSON('perfil:calendario'), fechaLocal());
+  if (!fichas) return 0;
+  guardar('perfil:calendario', JSON.stringify(registro));
+  sumarFichas(fichas);
+  const avisos = [`🎁 Día ${dia}/7: +${fichas} fichas`];
+  sumarXP(xp, avisos);
+  avisarPerfil(avisos);
+  return fichas;
 }

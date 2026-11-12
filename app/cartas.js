@@ -7,14 +7,15 @@ import * as S from '../games/solitario.js';
 import * as V from '../games/veintiuno.js';
 import * as B from '../games/bacara.js';
 import { leerJSON } from './datos.js';
-import { leerFichas, cobrarBono, cobrarAnuncio, desafiosDeHoy } from './premios.js';
+import { leerFichas, cobrarAnuncio, desafiosDeHoy } from './premios.js';
 import { hayAnuncios, verAnuncioPremio, finDePartida } from './anuncios.js';
-import { TOPE, MONTOS, TOPE_DIARIOS, BONO, ANUNCIO } from '../games/premios.js';
+import { TOPE, MONTOS, TOPE_DIARIOS, ANUNCIO } from '../games/premios.js';
 import { abrirMentales } from './inicio.js';
 import { abrirJuegoPalabras } from './palabras.js';
 import { $, mostrar, confeti, preguntar } from './ui.js';
 import { ligaAnotar } from './liga.js';
-import { anotarPerfil } from './perfil.js';
+import { anotarPerfil, calendarioHoy, cobrarDia } from './perfil.js';
+import { CALENDARIO } from '../games/perfil.js';
 import { abrirJuegoMesa, pintarPartidasCartas, claveRecord } from './cartas-mesa.js';
 
 export const JUEGOS_CARTAS = 7; // para la cuenta del inicio
@@ -343,15 +344,17 @@ function pintarApuesta(j, cabeza, repartir, guardarJ, repintar) {
   const apuesta = Math.min(j.apuesta, j.fichas - (j.fichas % 5)) || 0;
   j.apuesta = apuesta;
   if (j.fichas < 5) {
-    const hoy = desafiosDeHoy();
-    const bonoBtn = boton(hoy.bonoUsado ? '🎁 Bono del día: vuelve mañana' : `🎁 Bono del día +${BONO}`, 'color', () => {
-      j.fichas += cobrarBono();
+    const cal = calendarioHoy();
+    const bonoBtn = boton(cal.cobrado ? '🎁 Calendario: vuelve mañana' : `🎁 Calendario, día ${cal.dia}/7: +${CALENDARIO[cal.dia - 1]}`, 'color', () => {
+      const antes = leerFichas().fichas;
+      cobrarDia();
+      j.fichas += leerFichas().fichas - antes; // incluye las del nivel si sube
       j.max = Math.max(j.max, j.fichas);
       j.apuesta = 10;
       guardarJ();
       repintar();
     });
-    bonoBtn.disabled = hoy.bonoUsado;
+    bonoBtn.disabled = cal.cobrado;
     // 📺 Solo en la app: un anuncio con premio, cuantas veces se quiera.
     const anuncioBtn = boton(`📺 Ver un anuncio +${ANUNCIO}`, 'color', async () => {
       anuncioBtn.disabled = true;
