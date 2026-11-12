@@ -1546,3 +1546,7 @@ button.seccion {
 .tarjeta-perfil.color, #perfil-contenido button.color, #btn-perfil { --c: var(--acento); }
 #perfil-contenido button.color:disabled { opacity: 0.6; cursor: default; }
 [data-tema="oscuro"] .calendario .dia { border: 1px solid var(--acento); }
+
+.con-avatar { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.con-avatar > span:not(.avatar) { overflow-wrap: anywhere; }
+.nivel-chico { opacity: 0.7; font-size: 0.75rem; white-space: nowrap; }

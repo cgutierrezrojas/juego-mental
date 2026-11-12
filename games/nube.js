@@ -272,13 +272,16 @@ export const borrarDuelo = (id) => fs.deleteDoc(fs.doc(db, 'duelos', id));
 
 // --- Amigos (`perfiles/{uid}` con apodo y código; `solicitudes/{de_para}`: pendiente o aceptada) ---
 
-export const guardarPerfil = (uid, apodo, codigo) => fs.setDoc(documento('perfiles', uid), { apodo, codigo });
+export const guardarPerfil = (uid, apodo, codigo, extra = {}) => fs.setDoc(documento('perfiles', uid), { apodo, codigo, ...extra });
+
+// Perfil público de alguien (apodo, código y, si los tiene, avatar, marco y nivel) o null.
+export async function leerPerfil(uid) {
+  const d = await fs.getDoc(documento('perfiles', uid));
+  return d.exists() ? d.data() : null;
+}
 
 // Apodo del perfil en la nube ('' si no hay): para recuperarlo en un celular nuevo.
-export async function leerApodo(uid) {
-  const d = await fs.getDoc(documento('perfiles', uid));
-  return d.exists() ? d.data().apodo ?? '' : '';
-}
+export const leerApodo = async (uid) => (await leerPerfil(uid))?.apodo ?? '';
 
 // El código sale del uid: solo vale el perfil cuyo uid da ese código (otro podría copiarlo en su perfil).
 export async function buscarPorCodigo(codigo) {

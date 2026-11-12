@@ -6,6 +6,7 @@ import { tieneProgreso, decidirSincro, datosRanking } from '../games/sincro.js';
 import { $, preguntar, mostrar } from './ui.js';
 import { E } from './estado.js';
 import { pintarSugerencia } from './menu.js';
+import { filaPublica, nombreConAvatar } from './perfil.js';
 import { ponerEstado, actualizarPerfil, agregarAmigo } from './amigos.js';
 import { apodoOfensivo } from '../games/amigos.js';
 import { hayAnuncios, privacidadAnuncios } from './anuncios.js';
@@ -257,9 +258,10 @@ export async function subir() {
     if (apodo) {
       // Si alguien fue expulsado del ranking, las reglas rechazan su fila: el progreso igual queda subido.
       await Promise.all([
-        E.nube.guardarRanking(E.usuario.uid, { apodo, ...datosRanking(datos), actualizado: cambio }),
+        E.nube.guardarRanking(E.usuario.uid, { apodo, ...datosRanking(datos), ...filaPublica(), actualizado: cambio }),
         E.nube.guardarLiga(semanaActual(), E.usuario.uid, filaLiga(apodo, cambio)),
       ]).catch(() => {});
+      actualizarPerfil().catch(() => {});
     }
     guardar('nube:subido', cambio);
   }
@@ -282,7 +284,7 @@ export async function pedirApodo(primeraVez, aviso = '', propuesta = leer('nube:
   try {
     if (apodo.length >= 2) {
       guardar('nube:apodo', apodo);
-      await E.nube.guardarRanking(E.usuario.uid, { apodo, ...datosRanking(datosDelJuego()), actualizado: Date.now() });
+      await E.nube.guardarRanking(E.usuario.uid, { apodo, ...datosRanking(datosDelJuego()), ...filaPublica(), actualizado: Date.now() });
       await E.nube.guardarLiga(semanaActual(), E.usuario.uid, filaLiga(apodo, Date.now()));
       await actualizarPerfil();
     } else {
@@ -362,7 +364,7 @@ export async function pintarRanking() {
       ...(filas.length
         ? filas.map((f) => {
             const li = el('li', f.uid === E.usuario.uid ? 'propia' : '');
-            li.append(el('span', '', f.apodo), el('span', 'valor', conSufijo(valorDe(f))));
+            li.append(nombreConAvatar(f), el('span', 'valor', conSufijo(valorDe(f))));
             if (f.uid !== E.usuario.uid) {
               const retar = el('button', 'retar', '⚔️');
               retar.setAttribute('aria-label', `Desafiar a ${f.apodo}`);

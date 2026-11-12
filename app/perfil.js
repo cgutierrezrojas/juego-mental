@@ -11,9 +11,20 @@ const miXP = () => Number(leer('perfil:xp')) || 0;
 export const miNivel = () => nivelDe(miXP());
 export const miAvatar = () => ({ a: AVATAR_INICIAL, m: 'ninguno', ...leerJSON('perfil:avatar') });
 // Lo que ven los demás junto al apodo (ranking, liga y perfil público).
+// Siempre valores que aceptan las reglas de Firestore (si no, se rechaza toda la fila).
 export function filaPublica() {
   const { a, m } = miAvatar();
-  return { avatar: a, marco: m, nivel: Math.min(1000, miNivel().nivel) };
+  const nivel = Math.max(1, Math.min(1000, Math.floor(miNivel().nivel) || 1));
+  const avatar = typeof a === 'string' && a.length >= 1 && a.length <= 16 ? a : AVATAR_INICIAL;
+  return { avatar, marco: marcosDisponibles(nivel).some((x) => x.id === m) ? m : 'ninguno', nivel };
+}
+
+// Apodo con avatar, marco y nivel (si la fila los trae) para el ranking, la liga y Amigos.
+export function nombreConAvatar(f, clase = '') {
+  const s = el('span', `con-avatar ${clase}`.trim());
+  s.append(dibujoAvatar(f.avatar, f.marco), el('span', '', f.apodo));
+  if (f.nivel) s.append(el('small', 'nivel-chico', `Nv ${f.nivel}`));
+  return s;
 }
 
 let ocultar;

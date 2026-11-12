@@ -1,5 +1,6 @@
 // 👥 Amigos y estados.
 import { leer, el, guardar } from '../games/comun.js';
+import { filaPublica, nombreConAvatar } from './perfil.js';
 import { codigoAmigo, amigosDe, normalizarCodigo } from '../games/amigos.js';
 import { perfil } from '../games/estadisticas.js';
 import { E } from './estado.js';
@@ -24,7 +25,7 @@ export function dejarDeEscuchar() {
 // Perfil público (apodo y código de amigo): se guarda al entrar y al cambiar el apodo.
 export async function actualizarPerfil() {
   const apodo = leer('nube:apodo');
-  if (E.nube && E.usuario && apodo) await E.nube.guardarPerfil(E.usuario.uid, apodo, codigoAmigo(E.usuario.uid)).catch(() => {});
+  if (E.nube && E.usuario && apodo) await E.nube.guardarPerfil(E.usuario.uid, apodo, codigoAmigo(E.usuario.uid), filaPublica()).catch(() => {});
 }
 
 // Amigos y solicitudes; de paso, actualiza quién puede ver mi estado.
@@ -128,7 +129,8 @@ export async function pintarAmigos(aviso = '') {
 
     partes.push(el('h3', 'categoria', `👥 Tus amigos (${amigos.length})`));
     if (!amigos.length) partes.push(el('p', 'sin-datos', 'Aún no tienes amigos. Comparte tu código o agrega a alguien desde el ranking o un duelo.'));
-    for (const a of amigos) {
+    const perfiles = await Promise.all(amigos.map((a) => E.nube.leerPerfil(a.uid).catch(() => null)));
+    for (const [i, a] of amigos.entries()) {
       const estado = el('span', 'estado-amigo', E.nube.hayEstados() ? '⚫' : '');
       estado.setAttribute('role', 'img');
       estado.setAttribute('aria-label', NOMBRE_ESTADO.desconectado);
@@ -157,7 +159,7 @@ export async function pintarAmigos(aviso = '') {
         pintarAmigos();
       });
       quitar.setAttribute('aria-label', `Quitar a ${a.apodo}`);
-      partes.push(fila(estado, el('span', 'nombre-amigo', a.apodo), mensajes, vivo, retar, quitar));
+      partes.push(fila(estado, nombreConAvatar({ ...perfiles[i], apodo: a.apodo }, 'nombre-amigo'), mensajes, vivo, retar, quitar));
     }
     const listaBloqueos = Object.entries(bloqueos);
     if (listaBloqueos.length) {

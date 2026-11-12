@@ -7,7 +7,7 @@ import { CONFIG } from '../firebase-config.js';
 import { E } from './estado.js';
 import { leerJSON, apuntarLogros } from './datos.js';
 import { $, confeti, preguntar } from './ui.js';
-import { anotarPerfil } from './perfil.js';
+import { anotarPerfil, filaPublica, nombreConAvatar } from './perfil.js';
 
 export const semanaActual = () => semanaDe(fechaLocal());
 const registro = (semana) => leerJSON('liga:' + semana);
@@ -24,7 +24,7 @@ export function ligaAnotar(tipo, n = 1, seccion = null) {
 }
 
 // Fila que se publica (si hay apodo): `liga/{semana}/jugadores/{uid}`.
-export const filaLiga = (apodo, actualizado) => ({ apodo, puntos: misPuntosLiga(), actualizado });
+export const filaLiga = (apodo, actualizado) => ({ apodo, puntos: misPuntosLiga(), ...filaPublica(), actualizado });
 
 // Menú: puntos de la semana y días que quedan (o el aviso de una medalla recién ganada).
 export function pintarLigaMenu() {
@@ -107,7 +107,7 @@ export async function pintarRankingLiga(soloAmigos) {
   const esAdmin = await soyAdmin();
   const fila = (f) => {
     const li = el('li', f.uid === uid ? 'propia' : '');
-    li.append(el('span', '', f.apodo), el('span', 'valor', `${f.puntos} pts`));
+    li.append(nombreConAvatar(f), el('span', 'valor', `${f.puntos} pts`));
     if (f.uid !== uid) {
       const acciones = el('span', 'acciones');
       acciones.append(...botonesModeracion(f, esAdmin, () => pintarRankingLiga(soloAmigos)));

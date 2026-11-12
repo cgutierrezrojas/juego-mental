@@ -31,7 +31,8 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow delete: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['apodo', 'codigo'])
+        && request.resource.data.keys().hasOnly(['apodo', 'codigo', 'avatar', 'marco', 'nivel'])
+        && adornoValido(request.resource.data)
         && request.resource.data.apodo is string && request.resource.data.apodo.size() >= 2 && request.resource.data.apodo.size() <= 20
         && request.resource.data.codigo is string && request.resource.data.codigo.size() == 7;
     }
@@ -68,7 +69,8 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow delete: if request.auth != null && (request.auth.uid == uid || esAdmin());
       allow create, update: if request.auth != null && request.auth.uid == uid && !baneado()
-        && request.resource.data.keys().hasOnly(['apodo', 'puntos', 'actualizado'])
+        && request.resource.data.keys().hasOnly(['apodo', 'puntos', 'actualizado', 'avatar', 'marco', 'nivel'])
+        && adornoValido(request.resource.data)
         && request.resource.data.apodo is string && request.resource.data.apodo.size() >= 2 && request.resource.data.apodo.size() <= 20
         && request.resource.data.puntos is int && request.resource.data.puntos >= 0 && request.resource.data.puntos <= 5000
         && request.resource.data.actualizado is int;
@@ -203,8 +205,16 @@ service cloud.firestore {
       return (exists(ida) && get(ida).data.estado == 'aceptada') || (exists(vuelta) && get(vuelta).data.estado == 'aceptada');
     }
 
+    // Avatar, marco y nivel del perfil (opcionales: las filas viejas no los tienen).
+    function adornoValido(f) {
+      return (!('avatar' in f) || (f.avatar is string && f.avatar.size() >= 1 && f.avatar.size() <= 16))
+        && (!('marco' in f) || f.marco in ['ninguno', 'bronce', 'plata', 'oro', 'esmeralda', 'rubi', 'diamante', 'fuego', 'arcoiris'])
+        && (!('nivel' in f) || (f.nivel is int && f.nivel >= 1 && f.nivel <= 1000));
+    }
+
     function filaValida(f) {
-      return f.keys().hasOnly(['apodo', 'estrellas', 'records', 'actualizado'])
+      return f.keys().hasOnly(['apodo', 'estrellas', 'records', 'actualizado', 'avatar', 'marco', 'nivel'])
+        && adornoValido(f)
         && f.apodo is string && f.apodo.size() >= 2 && f.apodo.size() <= 20
         && f.estrellas is int && f.estrellas >= 0 && f.estrellas <= 1000000
         && f.actualizado is int
