@@ -1836,6 +1836,73 @@ probar('premios: día nuevo empieza de cero; el bono una vez al día y fuera del
   assert(premio(null, 'palabra', '2026-11-06').fichas === 50, 'sin registro');
 });
 
+// --- perfil.js ---
+import { nivelDe, xpDe, marcosDisponibles, AVATARES, cobrarCalendario, diaDeHoy, misionesDe, avanzar } from './games/perfil.js';
+
+probar('perfil: curva de niveles y títulos', () => {
+  assert(nivelDe(0).nivel === 1 && nivelDe(0).paraSubir === 100 && nivelDe(0).titulo === 'Novato');
+  assert(nivelDe(99).nivel === 1 && nivelDe(100).nivel === 2 && nivelDe(100).enNivel === 0 && nivelDe(100).paraSubir === 120);
+  assert(nivelDe(220).nivel === 3, 'nivel 3 con 100+120');
+  const xpPara = (n) => { let x = 0; for (let i = 1; i < n; i++) x += 100 + 20 * (i - 1); return x; };
+  for (const [n, t] of [[9, 'Novato'], [10, 'Aprendiz'], [20, 'Hábil'], [30, 'Experto'], [40, 'Maestro'], [50, 'Leyenda'], [80, 'Leyenda']]) {
+    assert(nivelDe(xpPara(n)).nivel === n && nivelDe(xpPara(n)).titulo === t, `nivel ${n}`);
+  }
+});
+
+probar('perfil: XP por evento y marcos', () => {
+  assert(xpDe('partida') === 10 && xpDe('victoria') === 20 && xpDe('empate') === 10 && xpDe('entreno') === 30 && xpDe('estrellas', 3) === 15 && xpDe('otro') === 0);
+  const ids = marcosDisponibles(15).map((m) => m.id);
+  assert(ids.includes('oro') && !ids.includes('esmeralda') && ids[0] === 'ninguno', ids.join());
+  assert(AVATARES.length >= 30 && new Set(AVATARES).size === AVATARES.length, 'avatares');
+});
+
+probar('perfil: calendario de 7 días', () => {
+  let r = null;
+  const dias = ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07', '2026-11-08'];
+  const fichas = dias.map((d) => { const c = cobrarCalendario(r, d); r = c.registro; return c.fichas; });
+  assert(fichas.join() === '50,75,100,125,150,200,400,50', fichas.join());
+  assert(cobrarCalendario({ dia: 6, fecha: '2026-11-06' }, '2026-11-07').xp === 100, 'día 7 da XP');
+  assert(cobrarCalendario(r, '2026-11-08').fichas === 0, 'dos veces el mismo día');
+  assert(diaDeHoy(r, '2026-11-08').cobrado && diaDeHoy(r, '2026-11-09').dia === 2);
+  assert(cobrarCalendario({ dia: 4, fecha: '2026-11-01' }, '2026-11-03').dia === 1, 'faltar un día vuelve al 1');
+  assert(cobrarCalendario({ dia: 1, fecha: '2026-02-28' }, '2026-03-01').dia === 2, 'cambio de mes');
+});
+
+probar('perfil: misiones de la semana', () => {
+  const a = misionesDe('2026-W46');
+  assert(JSON.stringify(a) === JSON.stringify(misionesDe('2026-W46')), 'misma semana, mismas misiones');
+  assert(a.map((m) => m.dificultad).join() === 'facil,media,dificil');
+  assert(a.map((m) => m.fichas).join() === '100,200,300' && a.map((m) => m.xp).join() === '50,100,150');
+  for (let s = 1; s <= 52; s++) {
+    const ms = misionesDe(`2027-W${String(s).padStart(2, '0')}`);
+    const secs = ms.map((m) => m.seccion).filter(Boolean);
+    assert(new Set(secs).size === secs.length, `secciones repetidas en ${s}`);
+    for (const m of ms) assert(!m.texto.includes('{'), m.texto);
+  }
+});
+
+probar('perfil: avance de misiones', () => {
+  // Busca una semana con la misión de sección fácil y otra con «4 secciones distintas».
+  const semanaCon = (id) => { for (let s = 1; s <= 53; s++) { const w = `2027-W${String(s).padStart(2, '0')}`; if (misionesDe(w).some((m) => m.id === id)) return w; } };
+  const w = semanaCon('seccion3');
+  const m = misionesDe(w).find((x) => x.id === 'seccion3');
+  const otra = ['mentales', 'mesa', 'trivia', 'cartas', 'arcade', 'palabras'].find((s) => s !== m.seccion);
+  let r = avanzar(null, 'partida', 2, otra, w).registro;
+  assert(!r.avance.seccion3, 'otra sección no cuenta');
+  r = avanzar(r, 'partida', 2, m.seccion, w).registro;
+  assert(r.avance.seccion3 === 2);
+  const fin = avanzar(r, 'partida', 1, m.seccion, w);
+  assert(fin.cumplidas.some((x) => x.id === 'seccion3') && fin.registro.cobradas.includes('seccion3'), 'se cumple');
+  assert(!avanzar(fin.registro, 'partida', 1, m.seccion, w).cumplidas.some((x) => x.id === 'seccion3'), 'no se cobra dos veces');
+  const w2 = semanaCon('secciones4');
+  let r2 = null;
+  for (const s of ['mesa', 'mesa', 'trivia', 'duelos', 'cartas']) r2 = avanzar(r2, 'partida', 1, s, w2).registro;
+  assert(r2.secciones.join() === 'mesa,trivia,cartas', r2.secciones.join());
+  assert(avanzar(r2, 'partida', 1, 'arcade', w2).cumplidas.some((x) => x.id === 'secciones4'), '4 distintas');
+  assert(Object.keys(avanzar(r2, 'partida', 1, 'mesa', '2099-W01').registro.avance).length <= 3, 'semana nueva empieza de cero');
+  assert(avanzar(r2, 'partida', 1, 'mesa', '2099-W01').registro.secciones.join() === 'mesa');
+});
+
 // --- sw.js: VERSION es la huella de los archivos; si alguno cambia, hay que ponerla al día para que llegue a todos ---
 if (globalThis.process?.versions?.node) {
   const { readFileSync } = await import('node:fs');
