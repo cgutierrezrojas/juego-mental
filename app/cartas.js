@@ -345,6 +345,7 @@ function pintarApuesta(j, cabeza, repartir, guardarJ, repintar) {
   j.apuesta = apuesta;
   if (j.fichas < 5) {
     const cal = calendarioHoy();
+    const hoy = desafiosDeHoy();
     const bonoBtn = boton(cal.cobrado ? '🎁 Calendario: vuelve mañana' : `🎁 Calendario, día ${cal.dia}/7: +${CALENDARIO[cal.dia - 1]}`, 'color', () => {
       const antes = leerFichas().fichas;
       cobrarDia();
