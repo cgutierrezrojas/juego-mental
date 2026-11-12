@@ -45,7 +45,7 @@ export function apuntarResultado(duelo) {
   if (resultados[duelo.id]) return null;
   resultados[duelo.id] = resultadoPara(duelo, E.usuario.uid, INFO_JUEGOS);
   guardar('duelos:resultados', JSON.stringify(resultados));
-  ligaAnotar({ v: 'victoria', e: 'empate' }[resultados[duelo.id]]);
+  ligaAnotar({ v: 'victoria', e: 'empate' }[resultados[duelo.id]], 1, 'duelos');
   apuntarLogros();
   return resultados[duelo.id];
 }

@@ -654,7 +654,7 @@ function pintarFin(fin) {
   const j = actual();
   if (!partida.apuntada) {
     partida.apuntada = true;
-    ligaAnotar('partida');
+    ligaAnotar('partida', 1, 'trivia');
     finDePartida();
     // Solo las partidas clásicas cuentan para el récord y los logros.
     if (partida.modo === 'solo' && R.esClasica(a)) {
@@ -691,7 +691,7 @@ function pintarFinAmigo() {
   const r = g === partida.yo ? 'v' : 'd';
   if (!partida.apuntada) {
     partida.apuntada = true;
-    apuntarResultadoAmigo(partida.id, r);
+    apuntarResultadoAmigo(partida.id, r, 'trivia');
     if (r === 'v') {
       confeti();
       sonar('record');

@@ -225,7 +225,7 @@ function finDia(hoy) {
   guardar('palabra:stats', JSON.stringify(stats));
   const nuevo = acerto && esRecord(stats.mejor, Number(leer('record:palabra')) || 0);
   if (nuevo) guardar('record:palabra', String(stats.mejor));
-  ligaAnotar('partida');
+  ligaAnotar('partida', 1, 'palabras');
   finDePartida();
   sonar(acerto ? 'record' : 'fallo');
   if (acerto) confeti();
@@ -416,7 +416,7 @@ function terminar() {
   if (nuevo) guardar(`record:${id}`, String(puntos));
   const partidas = leerJSON('palabra:partidas');
   guardar('palabra:partidas', JSON.stringify({ ...partidas, [id]: (partidas[id] ?? 0) + 1 }));
-  ligaAnotar('partida');
+  ligaAnotar('partida', 1, 'palabras');
   finDePartida();
   if (duelo) anotarEnDuelo(puntos);
   sonar(nuevo ? 'record' : 'fallo');
@@ -627,7 +627,7 @@ function marcarCharada(resultado) {
 function finCharadas() {
   const { e, tema } = p;
   sonar('record');
-  ligaAnotar('partida');
+  ligaAnotar('partida', 1, 'palabras');
   finDePartida();
   pararPalabras();
   $('palabras-marcador').replaceChildren(el('span', '', '🎭 Charadas'), el('span', '', `✅ ${e.aciertos}`));

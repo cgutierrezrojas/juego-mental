@@ -68,13 +68,13 @@ export function terminar(puntos) {
   const nivel = enNiveles ? E.jugando.nivel : 0;
   if (enNiveles) Object.assign(partida, { dificultad: configNivel(E.actual.id, nivel).dificultad, nivel });
   guardarPartida(E.actual.id, partida);
-  ligaAnotar('partida');
+  ligaAnotar('partida', 1, E.actual.seccion ?? 'mentales');
   finDePartida();
   // ¿Esta partida es la que completa el entrenamiento de hoy?
   const entrenoHoy = !entrenoAntes && entrenoCompleto(hoy, idsPorCategoria, historiales());
   const premios = [];
   let celebrar = entrenoHoy;
-  if (entrenoHoy) { ligaAnotar('entreno'); premios.push(darPremio('tudia')); }
+  if (entrenoHoy) { ligaAnotar('entreno', 1, 'mentales'); premios.push(darPremio('tudia')); }
   $('final-puntos').textContent = puntos;
   $('final-entreno').hidden = !entrenoHoy;
   let titular = '';
@@ -97,7 +97,7 @@ export function terminar(puntos) {
       const diarios = leerDiarios(E.actual.id);
       const dia = diarios[E.jugando.fecha];
       const antes = diarioCompleto(dia);
-      ligaAnotar('estrellas', conseguidas - (dia.estrellas[E.jugando.diario] || 0)); // solo las nuevas
+      ligaAnotar('estrellas', conseguidas - (dia.estrellas[E.jugando.diario] || 0), 'mentales'); // solo las nuevas
       if (conseguidas > 0 && !(dia.estrellas[E.jugando.diario] > 0)) premios.push(darPremio('diario'));
       dia.estrellas[E.jugando.diario] = Math.max(dia.estrellas[E.jugando.diario] || 0, conseguidas);
       guardarDiarios(E.actual.id, diarios);
@@ -108,7 +108,7 @@ export function terminar(puntos) {
       if (siguiente) E.diarioElegido = pendiente;
       $('btn-repetir').textContent = siguiente ? '▶ Siguiente diario' : '↻ Reintentar';
     } else {
-      ligaAnotar('estrellas', conseguidas - (leerEstrellas(E.actual.id)[nivel - 1] || 0)); // solo las nuevas
+      ligaAnotar('estrellas', conseguidas - (leerEstrellas(E.actual.id)[nivel - 1] || 0), 'mentales'); // solo las nuevas
       guardar('estrellas:' + E.actual.id, JSON.stringify(conEstrellas(leerEstrellas(E.actual.id), nivel, conseguidas)));
       $('final-modo').textContent = `🪜 Nivel ${nivel} · ${NOMBRE_RETO[cfg.reto]}`;
       if (siguiente) E.nivelElegido++;

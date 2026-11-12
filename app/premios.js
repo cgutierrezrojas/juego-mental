@@ -12,7 +12,7 @@ export function leerFichas() {
   return { fichas: v.fichas ?? 100, max: v.max ?? 100, ...leerJSON('cartas:fichas') };
 }
 
-function sumarFichas(n) {
+export function sumarFichas(n) {
   const f = leerFichas();
   f.fichas += n;
   f.max = Math.max(f.max, f.fichas);

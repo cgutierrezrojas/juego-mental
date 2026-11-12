@@ -631,7 +631,7 @@ probar('final: frases', () => {
 import { esClaveDelJuego, crearCopia, leerCopia } from './games/copia.js';
 
 probar('copia de seguridad: solo claves del juego, ida y vuelta', () => {
-  assert(esClaveDelJuego('record:calculo') && esClaveDelJuego('diarios:mayor') && !esClaveDelJuego('otra-web:x'));
+  assert(esClaveDelJuego('record:calculo') && esClaveDelJuego('perfil:xp') && esClaveDelJuego('diarios:mayor') && !esClaveDelJuego('otra-web:x'));
   const texto = crearCopia([['record:calculo', '23'], ['estrellas:mayor', '[3,2]'], ['otra-web:x', 'no']], '2026-10-23');
   const copia = JSON.parse(texto);
   assert(copia.app === 'juego-mental' && copia.version === 1 && copia.fecha === '2026-10-23');

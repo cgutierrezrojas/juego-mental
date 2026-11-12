@@ -7,6 +7,7 @@ import { CONFIG } from '../firebase-config.js';
 import { E } from './estado.js';
 import { leerJSON, apuntarLogros } from './datos.js';
 import { $, confeti, preguntar } from './ui.js';
+import { anotarPerfil } from './perfil.js';
 
 export const semanaActual = () => semanaDe(fechaLocal());
 const registro = (semana) => leerJSON('liga:' + semana);
@@ -14,10 +15,12 @@ export const misPuntosLiga = () => puntosLiga(registro(semanaActual()));
 const MEDALLA = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
 // Suma a la semana en curso: 'partida', 'estrellas' (n), 'entreno', 'victoria' o 'empate'.
-export function ligaAnotar(tipo, n = 1) {
+// `seccion` ('mentales', 'mesa', 'trivia', 'cartas', 'arcade', 'palabras' o 'duelos') cuenta para las misiones del perfil.
+export function ligaAnotar(tipo, n = 1, seccion = null) {
   if (tipo === 'estrellas' && n <= 0) return;
   const semana = semanaActual();
   guardar('liga:' + semana, JSON.stringify(anotarLiga(registro(semana), tipo, fechaLocal(), n)));
+  anotarPerfil(tipo, n, seccion);
 }
 
 // Fila que se publica (si hay apodo): `liga/{semana}/jugadores/{uid}`.

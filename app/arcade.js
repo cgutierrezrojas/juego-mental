@@ -472,7 +472,7 @@ function terminar() {
   if (nuevo) guardar(clave, String(valor));
   const x = leerJSON(`arcade:${id}`);
   guardar(`arcade:${id}`, JSON.stringify({ partidas: (x.partidas ?? 0) + 1 }));
-  ligaAnotar('partida');
+  ligaAnotar('partida', 1, 'arcade');
   finDePartida();
   if (duelo) anotarEnDuelo(puntos);
   sonar(nuevo ? 'record' : 'fallo');

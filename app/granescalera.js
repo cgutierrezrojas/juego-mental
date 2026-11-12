@@ -185,7 +185,7 @@ function terminar() {
   if (nuevo) guardar('record:granescalera', String(puntos));
   const x = leerJSON('trivia:granescalera');
   guardar('trivia:granescalera', JSON.stringify({ partidas: (x.partidas ?? 0) + 1 }));
-  ligaAnotar('partida');
+  ligaAnotar('partida', 1, 'trivia');
   finDePartida();
   if (duelo) anotarEnDuelo(puntos);
   sonar(nuevo || e.resultado === 'gano' ? 'record' : 'fallo');

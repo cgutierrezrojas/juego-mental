@@ -12,6 +12,7 @@ import { CARA } from './juegos.js';
 import { leerJSON, apuntarLogros } from './datos.js';
 import { $, mostrar, confeti, preguntar } from './ui.js';
 import { ligaAnotar } from './liga.js';
+import { anotarPerfil } from './perfil.js';
 import { finDePartida } from './anuncios.js';
 import { asegurarDuelista } from './duelos.js';
 
@@ -253,13 +254,13 @@ function jugar(jugada) {
 }
 
 // Resultado de una partida con un amigo (Mesa o Ruleta): se apunta una sola vez por partida.
-export function apuntarResultadoAmigo(id, r) {
+export function apuntarResultadoAmigo(id, r, seccion = 'mesa') {
   const resultados = leerJSON('mesa:resultados');
   if (resultados[id]) return;
   resultados[id] = r;
   guardar('mesa:resultados', JSON.stringify(resultados));
-  ligaAnotar('partida');
-  ligaAnotar({ v: 'victoria', e: 'empate' }[r]);
+  ligaAnotar('partida', 1, seccion);
+  ligaAnotar({ v: 'victoria', e: 'empate' }[r], 1, seccion);
   apuntarLogros();
 }
 
@@ -267,7 +268,7 @@ export function apuntarResultadoAmigo(id, r) {
 function apuntarFinal(g) {
   if (partida.apuntada) return;
   partida.apuntada = true;
-  if (partida.modo !== 'amigo') { ligaAnotar('partida'); finDePartida(); }
+  if (partida.modo !== 'amigo') { ligaAnotar('partida', 1, 'mesa'); finDePartida(); }
   const r = g === 'empate' ? 'e' : g === partida.yo ? 'v' : 'd';
   if (partida.modo === 'maquina') {
     const stats = leerJSON('mesa:maquina');
@@ -276,6 +277,7 @@ function apuntarFinal(g) {
     stats[partida.juego] = { ...delJuego, [partida.nivel]: { ...actual, [r]: actual[r] + 1 } };
     guardar('mesa:maquina', JSON.stringify(stats));
   }
+  if (partida.modo === 'maquina' && r === 'v') anotarPerfil('victoria', 1, 'mesa');
   if (partida.modo === 'amigo') apuntarResultadoAmigo(partida.id, r);
   if (r === 'v' || partida.modo === 'local') {
     confeti();

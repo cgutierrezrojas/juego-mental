@@ -1490,3 +1490,12 @@ button.seccion {
 .publico-escalera { display: flex; flex-direction: column; gap: 3px; }
 .publico-escalera .barra-palabra span:last-child { background: var(--azul); color: var(--fondo); }
 #granescalera-contenido .opciones-duelo button:disabled { opacity: 0.35; text-decoration: line-through; }
+
+/* 🙂 Avisos del perfil (subir de nivel, misión cumplida) */
+.aviso-perfil {
+  position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 20;
+  max-width: min(92vw, 420px); margin: 0; padding: 10px 16px; border-radius: 14px;
+  background: var(--acento); color: #fff; font-weight: bold; text-align: center; box-shadow: var(--relieve);
+}
+[data-tema="oscuro"] .aviso-perfil { color: var(--fondo); }
+.aviso-perfil[hidden] { display: none; }

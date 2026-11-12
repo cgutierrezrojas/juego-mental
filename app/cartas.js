@@ -14,6 +14,7 @@ import { abrirMentales } from './inicio.js';
 import { abrirJuegoPalabras } from './palabras.js';
 import { $, mostrar, confeti, preguntar } from './ui.js';
 import { ligaAnotar } from './liga.js';
+import { anotarPerfil } from './perfil.js';
 import { abrirJuegoMesa, pintarPartidasCartas, claveRecord } from './cartas-mesa.js';
 
 export const JUEGOS_CARTAS = 7; // para la cuenta del inicio
@@ -180,7 +181,8 @@ function ganarSolitario() {
     x.tiempo = Math.min(x.tiempo ?? Infinity, sol.segundos);
     x.movimientos = Math.min(x.movimientos ?? Infinity, sol.e.movimientos);
   });
-  ligaAnotar('partida');
+  ligaAnotar('partida', 1, 'cartas');
+  anotarPerfil('victoria', 1, 'cartas');
   finDePartida();
   sonar('record');
   confeti();
@@ -414,7 +416,13 @@ function cerrarMano(j, cobro, apostado) {
     j.ganadas++;
     sonar('acierto');
   }
-  if (j.manos % 5 === 0) { ligaAnotar('partida'); finDePartida(); }
+  if (j.manos % 5 === 0) {
+    const antes = leerFichas().fichas; // si sube de nivel o cumple una misión, esas fichas van a esta mano
+    ligaAnotar('partida', 1, 'cartas');
+    j.fichas += leerFichas().fichas - antes;
+    j.max = Math.max(j.max, j.fichas);
+    finDePartida();
+  }
 }
 
 const textoCobro = (cobro, apostado) => (cobro > apostado ? `Ganas ${cobro - apostado} fichas` : cobro === apostado ? 'Recuperas tu apuesta' : `Pierdes ${apostado - cobro} fichas`);

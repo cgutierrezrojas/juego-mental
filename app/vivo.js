@@ -179,7 +179,7 @@ export function pintarResultadoVivo(sala, resultado, titulo, rival, boton) {
   const resultados = leerJSON('duelos:resultados');
   if (!resultados[clave]) {
     resultados[clave] = resultado;
-    ligaAnotar({ v: 'victoria', e: 'empate' }[resultado]);
+    ligaAnotar({ v: 'victoria', e: 'empate' }[resultado], 1, 'duelos');
     guardar('duelos:resultados', JSON.stringify(resultados));
     apuntarLogros();
     if (resultado === 'v') {
