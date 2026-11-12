@@ -652,6 +652,7 @@ import { tieneProgreso, decidirSincro, datosRanking } from './games/sincro.js';
 
 probar('nube: cuándo subir, bajar o preguntar', () => {
   assert(tieneProgreso({ 'record:calculo': '5' }) && !tieneProgreso({ 'ajuste:tema': 'oscuro', 'ayuda:menu': '1' }));
+  assert(tieneProgreso({ 'perfil:xp': '10' })); // solo subir de nivel también es progreso que no se debe pisar
   const d = (o) => decidirSincro({ hayLocal: true, hayNube: true, vinculado: true, cambioLocal: 10, actualizadoNube: 10, subido: 10, ...o });
   assert(d({ hayNube: false }) === 'subir' && d({ hayNube: false, hayLocal: false }) === 'nada');
   assert(d({ hayLocal: false }) === 'bajar');

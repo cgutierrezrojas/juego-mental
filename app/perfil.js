@@ -9,14 +9,20 @@ import { $, confeti, mostrar } from './ui.js';
 
 const miXP = () => Number(leer('perfil:xp')) || 0;
 export const miNivel = () => nivelDe(miXP());
-export const miAvatar = () => ({ a: AVATAR_INICIAL, m: 'ninguno', ...leerJSON('perfil:avatar') });
+// Avatar y marco guardados, pero solo si valen: marco por encima del nivel actual (copia o nube con menos XP) no se muestra.
+export function miAvatar() {
+  const { a, m } = leerJSON('perfil:avatar') ?? {};
+  return {
+    a: typeof a === 'string' && a.length >= 1 && a.length <= 16 ? a : AVATAR_INICIAL,
+    m: marcosDisponibles(miNivel().nivel).some((x) => x.id === m) ? m : 'ninguno',
+  };
+}
 // Lo que ven los demás junto al apodo (ranking, liga y perfil público).
 // Siempre valores que aceptan las reglas de Firestore (si no, se rechaza toda la fila).
 export function filaPublica() {
   const { a, m } = miAvatar();
   const nivel = Math.max(1, Math.min(1000, Math.floor(miNivel().nivel) || 1));
-  const avatar = typeof a === 'string' && a.length >= 1 && a.length <= 16 ? a : AVATAR_INICIAL;
-  return { avatar, marco: marcosDisponibles(nivel).some((x) => x.id === m) ? m : 'ninguno', nivel };
+  return { avatar: a, marco: m, nivel };
 }
 
 // Apodo con avatar, marco y nivel (si la fila los trae) para el ranking, la liga y Amigos.
@@ -31,7 +37,8 @@ let ocultar;
 export function avisarPerfil(textos) {
   if (!textos.length) return;
   const aviso = $('aviso-perfil');
-  aviso.textContent = textos.join(' · ');
+  // si el aviso anterior sigue a la vista (misma jugada), se añade en vez de pisarlo
+  aviso.textContent = (aviso.hidden ? '' : aviso.textContent + ' · ') + textos.join(' · ');
   aviso.hidden = false;
   clearTimeout(ocultar);
   ocultar = setTimeout(() => (aviso.hidden = true), 4000);

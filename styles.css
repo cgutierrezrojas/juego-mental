@@ -1496,6 +1496,7 @@ button.seccion {
   position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 20;
   max-width: min(92vw, 420px); margin: 0; padding: 10px 16px; border-radius: 14px;
   background: var(--acento); color: #fff; font-weight: bold; text-align: center; box-shadow: var(--relieve);
+  pointer-events: none; /* no tapa las apuestas de debajo */
 }
 [data-tema="oscuro"] .aviso-perfil { color: var(--fondo); }
 .aviso-perfil[hidden] { display: none; }
@@ -1535,6 +1536,7 @@ button.seccion {
 .rejilla-avatares button { margin: 0; padding: 6px 0; font-size: 1.5rem; }
 .fila-marcos { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
 .fila-marcos button { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 0; padding: 10px 4px; }
+.fila-marcos button:disabled { opacity: 0.45; filter: grayscale(1); cursor: default; } /* marco aún bloqueado */
 .rejilla-avatares .elegido, .fila-marcos .elegido { outline: 3px solid var(--acento); }
 .calendario { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 8px; }
 .calendario .dia { display: flex; flex-direction: column; align-items: center; padding: 6px 0; border-radius: 10px; background: var(--superficie); box-shadow: var(--relieve); font-size: 0.85rem; }
@@ -1547,6 +1549,7 @@ button.seccion {
 #perfil-contenido button.color:disabled { opacity: 0.6; cursor: default; }
 [data-tema="oscuro"] .calendario .dia { border: 1px solid var(--acento); }
 
-.con-avatar { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
-.con-avatar > span:not(.avatar) { overflow-wrap: anywhere; }
-.nivel-chico { opacity: 0.7; font-size: 0.75rem; white-space: nowrap; }
+.con-avatar { display: inline-grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 6px; min-width: 0; }
+.con-avatar > .avatar { grid-row: span 2; }
+.con-avatar > span:not(.avatar) { overflow-wrap: anywhere; grid-column: 2; }
+.nivel-chico { grid-column: 2; opacity: 0.7; font-size: 0.75rem; white-space: nowrap; }
