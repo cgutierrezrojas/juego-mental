@@ -119,7 +119,12 @@ $('btn-ayuda').onclick = () => {
   if (pantalla === 'previa') pintarPrevia(E.actual);
   else mostrarAyuda(AYUDA_DE_PANTALLA[pantalla]);
   document.querySelector('.ayuda')?.scrollIntoView({ block: 'center' });
+  $('esquina').open = false;
 };
+// Menú ⚙️: se cierra al tocar fuera de él.
+document.addEventListener('click', (e) => {
+  if (!$('esquina').contains(e.target)) $('esquina').open = false;
+});
 
 $('btn-perfil').onclick = abrirPerfil;
 

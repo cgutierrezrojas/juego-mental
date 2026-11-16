@@ -178,15 +178,15 @@ export function confeti() {
 // Tema: el <script> del <head> ya puso data-tema; aquí se cambia con el botón ☀️/🌙.
 export function pintarTema() {
   const oscuro = document.documentElement.dataset.tema === 'oscuro';
-  $('btn-tema').textContent = oscuro ? '☀️' : '🌙';
+  $('btn-tema').textContent = oscuro ? '☀️ Tema claro' : '🌙 Tema oscuro';
   document.querySelector('meta[name="theme-color"]').content = oscuro ? '#0b0f2a' : '#fff7ec';
 }
 
-// Ajustes 🔊 y 📳 (se guardan en efectos.js).
+// Ajustes 🔊 y 📳 del menú ⚙️ (se guardan en efectos.js).
 export function pintarAjustes() {
-  $('btn-sonido').textContent = activo('sonido') ? '🔊' : '🔇';
+  $('btn-sonido').textContent = activo('sonido') ? '🔊 Sonido: sí' : '🔇 Sonido: no';
   $('btn-sonido').setAttribute('aria-pressed', activo('sonido'));
-  $('btn-vibracion').classList.toggle('apagado', !activo('vibracion'));
+  $('btn-vibracion').textContent = activo('vibracion') ? '📳 Vibración: sí' : '📴 Vibración: no';
   $('btn-vibracion').setAttribute('aria-pressed', activo('vibracion'));
 }
 

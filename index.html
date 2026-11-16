@@ -18,15 +18,18 @@
 </head>
 <body>
   <main>
-    <!-- Barra fija en todas las pantallas: ✕ (solo jugando) a la izquierda, ajustes a la derecha -->
+    <!-- Barra fija arriba (no se va al bajar): ✕ (solo jugando) a la izquierda, ⚙️ ajustes a la derecha -->
     <header id="barra">
       <button id="btn-salir" aria-label="Salir al menú" hidden>✕</button>
-      <div id="esquina">
-        <button id="btn-ayuda" aria-label="Ver la ayuda otra vez">❓</button>
-        <button id="btn-sonido" aria-label="Sonido"></button>
-        <button id="btn-vibracion" aria-label="Vibración">📳</button>
-        <button id="btn-tema" aria-label="Cambiar tema"></button>
-      </div>
+      <details id="esquina">
+        <summary aria-label="Ajustes">⚙️</summary>
+        <div class="menu-ajustes">
+          <button id="btn-sonido"></button>
+          <button id="btn-vibracion"></button>
+          <button id="btn-tema"></button>
+          <button id="btn-ayuda">❓ Ver la ayuda</button>
+        </div>
+      </details>
     </header>
 
     <section id="inicio">

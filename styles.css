@@ -32,6 +32,11 @@
 
 * { box-sizing: border-box; }
 
+html, body {
+  overscroll-behavior: none; /* sin rebote ni estirado al llegar al borde, como una app */
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   margin: 0;
   background: var(--fondo);
@@ -131,19 +136,49 @@ button.color {
   box-shadow: 0 0 10px var(--c);
 }
 
-/* Barra de arriba, en todas las pantallas: ✕ a la izquierda (solo jugando), ajustes a la derecha */
+/* Barra de arriba, fija al bajar: ✕ a la izquierda (solo jugando), ⚙️ a la derecha */
 #barra {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
-  margin-bottom: 12px;
+  min-height: 44px;
+  margin: -16px -16px 12px;
+  padding: 6px 16px;
+  background: var(--fondo);
 }
 
 #esquina {
-  display: flex;
-  gap: 8px;
+  position: relative;
   margin-left: auto; /* siempre a la derecha, aunque ✕ esté oculto */
 }
 #esquina[hidden] { display: none; }
+#esquina summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 12px;
+  font-size: 1.4rem;
+}
+#esquina summary::-webkit-details-marker { display: none; }
+#esquina[open] summary { background: color-mix(in srgb, var(--texto) 12%, transparent); }
+.menu-ajustes {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 210px;
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--fondo);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+.menu-ajustes button { text-align: left; }
+#barra .menu-ajustes button[hidden] { display: none; }
 
 #barra button {
   font-size: 1.1rem;
@@ -249,8 +284,6 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
   50% { transform: scale(1.25); }
 }
 
-/* Ajuste de la esquina apagado (📳) */
-#esquina button.apagado { opacity: 0.35; }
 
 /* Si el sistema pide menos movimiento: sin deslizamientos, sin latido, sin zoom en la cuenta atrás.
    (El anillo de acierto/fallo se mantiene: es corto y es la respuesta del juego.) */
