@@ -635,7 +635,7 @@ probar('final: frases', () => {
 });
 
 // --- copia.js ---
-import { esClaveDelJuego, crearCopia, leerCopia } from './games/copia.js';
+import { esClaveDelJuego, crearCopia, leerCopia, restaurado } from './games/copia.js';
 
 probar('copia de seguridad: solo claves del juego, ida y vuelta', () => {
   assert(esClaveDelJuego('record:calculo') && esClaveDelJuego('perfil:xp') && esClaveDelJuego('diarios:mayor') && !esClaveDelJuego('otra-web:x'));
@@ -652,6 +652,17 @@ probar('copia de seguridad: solo claves del juego, ida y vuelta', () => {
     try { leerCopia(malo); } catch { fallo = true; }
     assert(fallo, `debería rechazar ${malo}`);
   }
+});
+
+probar('copia: al restaurar, las flotas de Batalla naval de este celular se quedan y las traídas llegan sin hist', () => {
+  const aqui = JSON.stringify({ barcos: [1], sal: 'a', hist: [{ turno: 'x' }, { turno: 'o' }] });
+  const vieja = JSON.stringify({ barcos: [9], sal: 'b', hist: [{ turno: 'x' }] });
+  const r = restaurado({ 'naval:m1': aqui, 'record:x': '1', 'naval:m3': aqui }, { 'naval:m1': vieja, 'naval:m2': vieja, 'naval:m4': 'null', 'naval:m5': '{roto', 'record:y': '2' });
+  assert(r['naval:m1'] === aqui, 'no pisa la flota de la partida en curso');
+  assert(r['naval:m3'] === aqui, 'no borra una flota que la copia no trae');
+  assert(r['naval:m2'] === JSON.stringify({ barcos: [9], sal: 'b' }), 'la traída llega sin hist');
+  assert(!('naval:m4' in r) && !('naval:m5' in r), 'descarta flotas rotas');
+  assert(r['record:y'] === '2' && !('record:x' in r), 'el resto se sustituye como antes');
 });
 
 // --- sincro.js ---
@@ -2157,6 +2168,11 @@ probar('naval: siguePartida acepta solo mis escrituras (o parte) o una jugada ho
   assert(N.trampaPorRendicion('x', 'x', false, true) === false, 'se rindió el rival y gano yo');
   assert(N.trampaPorRendicion('o', 'x', false, true) === true, 'el rival se rinde y se da la victoria');
   assert(N.trampaPorRendicion('x', 'x', false, false) === null, 'sin rendición se revisa');
+});
+
+probar('naval: igual no depende del orden de las claves (eco de la nube en Damas)', () => {
+  assert(N.igual({ celdas: 'x', sinComer: 0, turno: 'o' }, { celdas: 'x', turno: 'o', sinComer: 0 }));
+  assert(!N.igual({ a: [1, 2] }, { a: [2, 1] }) && !N.igual({ a: 1 }, { a: 1, b: 2 }) && !N.igual(null, {}));
 });
 
 probar('naval: tiros repetidos no hacen ganar ni pasan la revisión', () => {

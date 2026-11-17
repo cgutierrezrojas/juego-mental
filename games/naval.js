@@ -146,7 +146,7 @@ export async function verificar(e, ficha) {
 }
 
 // Igualdad profunda de datos JSON (sin importar el orden de las claves).
-const igual = (a, b) => a === b || (!!a && !!b && typeof a === 'object' && typeof b === 'object' && Array.isArray(a) === Array.isArray(b)
+export const igual = (a, b) => a === b || (!!a && !!b && typeof a === 'object' && typeof b === 'object' && Array.isArray(a) === Array.isArray(b)
   && Object.keys(a).length === Object.keys(b).length && Object.keys(a).every((k) => igual(a[k], b[k])));
 const RESPUESTAS = ['a', 't', ...FLOTA.map((l) => 'h' + l)];
 

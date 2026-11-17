@@ -48,7 +48,7 @@ export function jugadas(e) {
   let r = memo.get(clave);
   if (!r) {
     r = generar(e);
-    if (memo.size > 50000) memo.clear(); // ponytail: caché simple, se vacía al llenarse
+    if (memo.size > 5000) memo.clear(); // ponytail: caché simple, se vacía al llenarse (y en cada ia) para no retener memoria en el celular
     memo.set(clave, r);
   }
   return r;
@@ -121,11 +121,12 @@ function valorCon(posicion) {
 const NORMAL = { validas, aplicar, ganador, valor: valorCon(false) };
 const DIFICIL = { validas, aplicar, ganador, valor: valorCon(true) };
 
-// ponytail: profundidad 5 por tiempo en celular (con 6 hubo jugadas de 410 ms en finales de damas)
+// ponytail: profundidad 4 por tiempo en celular (con 5 la peor jugada tardaba 120 ms en PC; con 4, 32 ms y gana 95 % a la normal); sube a 5 si hace falta más fuerza
 export function ia(e, nivel = 'normal', rnd = Math.random) {
+  memo.clear();
   const v = validas(e);
   if (nivel === 'facil' || v.length === 1) return v[azar(v.length, rnd)];
-  return nivel === 'dificil' ? mejorJugada(e, DIFICIL, 5, rnd) : mejorJugada(e, NORMAL, 2, rnd);
+  return nivel === 'dificil' ? mejorJugada(e, DIFICIL, 4, rnd) : mejorJugada(e, NORMAL, 2, rnd);
 }
 
 export const damas = { id: 'damas', nombre: 'Damas', inicial, validas, aplicar, ganador, ia };

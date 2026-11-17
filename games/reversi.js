@@ -36,14 +36,14 @@ function volteos(celdas, i, t) {
   return todas;
 }
 
-// ponytail: caché simple por tablero+turno (el minimax repite posiciones); se vacía al llenarse.
+// ponytail: caché simple por tablero+turno (el minimax repite posiciones); se vacía al llenarse y en cada ia (memoria del celular).
 const memo = new Map();
 function jugadasDe(celdas, t) {
   const clave = celdas + t;
   let r = memo.get(clave);
   if (!r) {
     r = [...Array(64).keys()].filter((i) => volteos(celdas, i, t).length);
-    if (memo.size > 50000) memo.clear();
+    if (memo.size > 5000) memo.clear();
     memo.set(clave, r);
   }
   return r;
@@ -73,6 +73,7 @@ const DIFICIL = {
 };
 
 export function ia(e, nivel = 'normal', rnd = Math.random) {
+  memo.clear();
   const v = validas(e);
   if (nivel === 'facil') return v[azar(v.length, rnd)];
   // ponytail: profundidad 3; con 4 pasaba de 300 ms por jugada en celulares lentos (515 ms en PC); sube a 4 si hace falta más fuerza

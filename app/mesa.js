@@ -13,7 +13,7 @@ import { reversi, contar as contarReversi } from '../games/reversi.js';
 import { tableroReversi } from './mesa-reversi.js';
 import { cajas, contar as contarCajas } from '../games/cajas.js';
 import { tableroCajas } from './mesa-cajas.js';
-import { naval, FLOTA as FLOTA_NAVAL, flotaAlAzar, nuevaSal, sellar, responder, vencedor, verificar, coherente, siguePartida, trampaPorRendicion } from '../games/naval.js';
+import { naval, FLOTA as FLOTA_NAVAL, flotaAlAzar, nuevaSal, sellar, responder, vencedor, verificar, coherente, siguePartida, trampaPorRendicion, igual } from '../games/naval.js';
 import { colocarFlota, tableroNaval, textoRespuesta } from './mesa-naval.js';
 import { E } from './estado.js';
 import { CARA } from './juegos.js';
@@ -31,7 +31,7 @@ export const JUEGOS_MESA = [
     tablero: tableroConecta, ultimaJugada: (a, d) => [...d.celdas].findIndex((c, k) => c !== a.celdas[k]) % COLUMNAS },
   { ...damas, icono: '⚫', reglas: 'Damas latinas: comer es obligatorio y manda la jugada que más come. La dama vuela en diagonal.', fichas: { x: '⚪', o: '⚫' },
     tablero: tableroDamas,
-    marcador: (e) => ({ x: `${[...e.celdas].filter((c) => c.toLowerCase() === 'x').length} pieza${[...e.celdas].filter((c) => c.toLowerCase() === 'x').length === 1 ? '' : 's'}`, o: `${[...e.celdas].filter((c) => c.toLowerCase() === 'o').length} pieza${[...e.celdas].filter((c) => c.toLowerCase() === 'o').length === 1 ? '' : 's'}` }),
+    marcador: (e) => { const f = (t) => { const k = [...e.celdas].filter((c) => c.toLowerCase() === t).length; return `${k} pieza${k === 1 ? '' : 's'}`; }; return { x: f('x'), o: f('o') }; },
     ultimaJugada: (a, d) => [...d.celdas].findIndex((c, k) => c !== '.' && a.celdas[k] === '.') },
   { ...reversi, icono: '⚪', reglas: 'Encierra las fichas del rival entre dos tuyas para darlas vuelta. Gana quien tenga más al final.', fichas: { x: '⚫', o: '⚪' },
     tablero: tableroReversi,
@@ -43,11 +43,11 @@ export const JUEGOS_MESA = [
     marcador: (e) => { const c = contarCajas(e); const f = (k) => `${k} caja${k === 1 ? '' : 's'}`; return { x: f(c.x), o: f(c.o) }; },
     ultimaJugada: (a, d) => [...d.celdas].findIndex((c, k) => c === '-' && a.celdas[k] === '.') },
   { ...naval, icono: '🚢', reglas: 'Coloca tus 5 barcos (no pueden tocarse) y hunde la flota rival disparando por turnos.', fichas: { x: '🚢', o: '⛴️' },
-  soloPorTurnos: true,
   tablero: tableroNaval,
   marcador: (e) => ({ x: `${e.tiros.x.filter(([, r]) => r[0] === 'h').length}/${FLOTA_NAVAL.length} hundidos`, o: `${e.tiros.o.filter(([, r]) => r[0] === 'h').length}/${FLOTA_NAVAL.length} hundidos` }),
   aNube: (e) => ({ turno: e.turno, datos: JSON.stringify(e) }),
-  deNube: (s) => JSON.parse(s.datos),
+  // Unos `datos` ilegibles solo los escribe un rival tramposo: null (ver ilegible en alActualizar).
+  deNube: (s) => { try { const e = JSON.parse(s.datos); return e && typeof e === 'object' ? e : null; } catch { return null; } },
   async preparar({ modo, contenedor }) {
     const x = await colocarFlota(contenedor, modo === 'local' ? '🚢 Jugador 1: coloca tu flota' : '🚢 Coloca tu flota');
     if (!x) return null;
@@ -83,6 +83,13 @@ export const JUEGOS_MESA = [
       p.trampaRival = trampa;
       return;
     }
+    if (p.ilegible) {
+      // `datos` ilegibles (se sigue con el último estado bueno, `e`): con mi turno es trampa; si no, se ignoran.
+      if (p.mesa.estado.turno !== yo) return;
+      p.trampaRival = true;
+      if (!(await enviar(e, yo))) p.trampaRival = undefined;
+      return;
+    }
     if (!mio && e.sellos?.[yo]) { p.sinBarcos = true; return; } // datos borrados: solo puede rendirse
     if (e.turno !== yo) return; // turno del rival (o mi propio eco): se revisa cuando me lo devuelva
     // Cada cosa que escribo se anota en `hist` antes de enviarla.
@@ -95,6 +102,7 @@ export const JUEGOS_MESA = [
     };
     if (!mio) {
       // Invitado que aún no coloca: coloca, sella y escribe (sigue siendo su turno).
+      limpiarCabecera();
       const barcos = await colocarFlota($('mesa-tablero-juego'), '🚢 Coloca tu flota');
       if (!sigue()) return;
       if (!barcos) { pararMesa(); return abrirMesa(); }
@@ -103,8 +111,10 @@ export const JUEGOS_MESA = [
       return escribir({ ...e, sellos: { ...e.sellos, [yo]: await sellar(barcos, mio.sal) } });
     }
     // Un cambio que no cuadra, o un tiro repetido o fuera del tablero: trampa. Se cierra a mi favor sin revelar nada.
-    const nuevo = e.pendiente !== null && e.pendiente !== undefined ? responder(e, mio.barcos) : e;
-    if (!cuadra() || (nuevo === e && e.pendiente !== null && e.pendiente !== undefined)) {
+    // (cuadra antes de responder: responder no se fía de un estado que no cuadra)
+    const pendiente = e.pendiente !== null && e.pendiente !== undefined;
+    const nuevo = cuadra() ? (pendiente ? responder(e, mio.barcos) : e) : null;
+    if (!nuevo || (nuevo === e && pendiente)) {
       p.trampaRival = true;
       if (!(await enviar(e, yo))) p.trampaRival = undefined; // se reintenta con la próxima actualización
       return;
@@ -136,7 +146,7 @@ const guardarNaval = (id, mio) => guardar('naval:' + id, JSON.stringify(mio));
 // ponytail: si la app se cierra justo entre que la nube guarda y avisa, ese único paso queda sin confirmar.
 function confirmarNaval(id, estado) {
   const mio = leerNaval(id);
-  const k = mio?.hist?.findIndex((h) => JSON.stringify(h) === JSON.stringify(estado)) ?? -1;
+  const k = mio?.hist?.findIndex((h) => igual(h, estado)) ?? -1;
   if (k > 0) guardarNaval(id, { ...mio, hist: mio.hist.slice(k) });
 }
 const aNube = (j, e) => (j.aNube ? j.aNube(e) : e);
@@ -144,6 +154,12 @@ const deNube = (j, s) => (j.deNube ? j.deNube(s) : s);
 const juegoDe = (id) => JUEGOS_MESA.find((j) => j.id === id);
 const CADUCA = 7 * 24 * 60 * 60 * 1000; // una partida sin movimientos en 7 días se da por perdida para todos
 const otro = (f) => (f === 'x' ? 'o' : 'x');
+// Sin el marcador ni los botones de la partida anterior (al colocar la flota de Batalla naval).
+function limpiarCabecera() {
+  $('mesa-estado').textContent = '';
+  $('mesa-jugadores').replaceChildren();
+  $('mesa-botones').replaceChildren();
+}
 
 // Partida abierta: { juego, modo: 'maquina' | 'local' | 'amigo', nivel, estado, yo, nombres, id, parar, apuntada }
 let partida = null;
@@ -303,9 +319,7 @@ async function retarAmigo(juego, amigo, opciones = {}) {
     // Con un amigo, a la mesa solo va el sello de la flota; la flota y la sal quedan en este celular.
     pararMesa();
     mostrar('mesa-tablero');
-    $('mesa-estado').textContent = '';
-    $('mesa-jugadores').replaceChildren();
-    $('mesa-botones').replaceChildren(); // sin el botón de revancha de la partida anterior
+    limpiarCabecera();
     const barcos = await colocarFlota($('mesa-tablero-juego'), `🚢 Coloca tu flota contra ${amigo.apodo}`);
     if (!barcos) return abrirModo(juego);
     const sal = nuevaSal();
@@ -338,6 +352,7 @@ async function empezar({ juego, modo, nivel, opciones = {} }) {
   let extra = {};
   if (j.preparar) {
     mostrar('mesa-tablero');
+    limpiarCabecera();
     extra = await j.preparar({ modo, contenedor: $('mesa-tablero-juego') });
     if (mio !== empezando || $('mesa-tablero').hidden) return; // se fue o empezó otra
     if (!extra) return abrirModo(juego); // canceló
@@ -363,10 +378,12 @@ async function abrirPartidaAmigo(id) {
       return;
     }
     const j = juegoDe(mesa.juego);
-    const estado = deNube(j, mesa.estado);
-    const nueva = partida.estado && JSON.stringify(estado) !== JSON.stringify(partida.estado);
+    let estado = deNube(j, mesa.estado);
+    const ilegible = !estado; // (Batalla naval) se sigue con el último estado bueno
+    if (ilegible) estado = partida.estado ?? j.inicial({ amigo: true });
+    const nueva = partida.estado && !igual(estado, partida.estado);
     if (nueva && j.ultimaJugada) partida.ultima = j.ultimaJugada(partida.estado, estado); // la jugada del rival (para animarla)
-    Object.assign(partida, { juego: mesa.juego, estado, mesa, opciones: Object.fromEntries((j.opciones ?? []).filter((o) => estado[o.clave] !== undefined).map((o) => [o.clave, estado[o.clave]])), yo: mesa.jugadores.x === E.usuario.uid ? 'x' : 'o' });
+    Object.assign(partida, { juego: mesa.juego, estado, mesa, ilegible, opciones: Object.fromEntries((j.opciones ?? []).filter((o) => estado[o.clave] !== undefined).map((o) => [o.clave, estado[o.clave]])), yo: mesa.jugadores.x === E.usuario.uid ? 'x' : 'o' });
     if (nueva) sonar('tic');
     if (j.alActualizar && !partida.escribiendo) {
       // Una revisión a la vez: si llega otra actualización mientras tanto, se repite al terminar con la última.
@@ -502,6 +519,9 @@ function apuntarFinal(g) {
   }
   if (partida.modo === 'maquina' && r === 'v') anotarPerfil('victoria', 1, 'mesa');
   if (partida.modo === 'amigo') apuntarResultadoAmigo(partida.id, r);
+  if (partida.modo === 'amigo' && partida.juego === 'naval') {
+    try { localStorage.removeItem('naval:' + partida.id); } catch { /* sin localStorage */ } // ya no hace falta: no crece sin fin en la nube
+  }
   if (r === 'v' || partida.modo === 'local') {
     confeti();
     sonar('record');

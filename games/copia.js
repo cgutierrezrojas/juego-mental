@@ -24,3 +24,24 @@ export function leerCopia(texto) {
   }
   return Object.fromEntries(Object.entries(copia.datos).filter(([clave, valor]) => esClaveDelJuego(clave) && typeof valor === 'string'));
 }
+
+// Lo que queda guardado al restaurar `nuevos` (copia o nube) sobre `actuales` (ambos { clave: valor }).
+// Las flotas de 🚢 Batalla naval con amigos (`naval:<id>`) que ya están en este celular no se tocan; las que llegan de
+// fuera se guardan sin `hist`: puede ser de un turno ya pasado y haría ver trampa a un rival honesto (sin él solo se
+// revisan sus respuestas y, al final, lo que revela).
+export function restaurado(actuales, nuevos) {
+  const esNaval = (clave) => clave.startsWith('naval:');
+  const r = Object.fromEntries(Object.entries(actuales).filter(([clave]) => esNaval(clave)));
+  for (const [clave, valor] of Object.entries(nuevos)) {
+    if (!esNaval(clave)) r[clave] = valor;
+    else if (!(clave in r)) {
+      try {
+        const { hist, ...flota } = JSON.parse(valor);
+        if (flota.barcos) r[clave] = JSON.stringify(flota);
+      } catch {
+        // flota rota: no se trae
+      }
+    }
+  }
+  return r;
+}

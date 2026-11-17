@@ -4,7 +4,7 @@ import { DIFICULTADES } from '../games/modos.js';
 import { NUM_NIVELES, desdeAntiguo, podarDiarios, nivelesDelDia, siguienteNivel, totalEstrellas, estrellasDiarias, diarioCompleto, NIVELES_POR_MUNDO } from '../games/niveles.js';
 import { fechaLocal, mejorRacha, entrenosCompletados, anotar } from '../games/estadisticas.js';
 import { logrosNuevos } from '../games/logros.js';
-import { esClaveDelJuego } from '../games/copia.js';
+import { esClaveDelJuego, restaurado } from '../games/copia.js';
 import { E } from './estado.js';
 import { JUEGOS, idsPorCategoria } from './juegos.js';
 
@@ -145,10 +145,12 @@ export function datosGuardados() {
   }
 }
 
-// Cambia todo el progreso del juego por `datos` ({ clave: valor }); las claves que no estén se borran.
+// Cambia todo el progreso del juego por `datos` ({ clave: valor }); las claves que no estén se borran
+// (salvo las flotas de Batalla naval de este celular: ver restaurado).
 export function sustituirProgreso(datos) {
+  const nuevo = restaurado(datosDelJuego(), datos);
   for (const [clave] of datosGuardados()) if (esClaveDelJuego(clave)) localStorage.removeItem(clave);
-  for (const [clave, valor] of Object.entries(datos)) if (esClaveDelJuego(clave) && typeof valor === 'string') guardar(clave, valor);
+  for (const [clave, valor] of Object.entries(nuevo)) if (esClaveDelJuego(clave) && typeof valor === 'string') guardar(clave, valor);
 }
 
 export const datosDelJuego = () => Object.fromEntries(datosGuardados().filter(([clave]) => esClaveDelJuego(clave)));
