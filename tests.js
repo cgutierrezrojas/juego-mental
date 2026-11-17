@@ -2104,30 +2104,55 @@ await probarAsync('naval: amigo con sello, respuesta automática y revisión', a
   assert(k >= 0 && N.coherente(bx, e.tiros.o) && !N.coherente(bx, t), 'detecta respuesta falsa');
 });
 
-probar('naval: cambioValido detecta respuestas falsas, aciertos borrados, sellos cambiados y revelado ajeno', () => {
+probar('naval: siguePartida acepta solo mis escrituras (o parte) o una jugada honesta del rival', () => {
   const f = [{ c: 0, l: 5, v: false }, { c: 20, l: 4, v: false }, { c: 40, l: 3, v: false }, { c: 60, l: 3, v: false }, { c: 80, l: 2, v: false }];
-  const mio = { barcos: f, sal: 'ab', sellos: { x: 's1', o: 's2' }, mios: [[5, 'a']], tiro: 9 };
-  const e = { turno: 'o', tiros: { x: [[5, 'a'], [9, 't']], o: [[0, 't'], [99, 'a']] }, pendiente: null, sellos: { x: 's1', o: 's2' }, revelado: {} };
-  assert(N.cambioValido(mio, e, 'x'), 'honesto');
-  assert(N.cambioValido(mio, { ...e, tiros: { ...e.tiros, x: [[5, 'a']] } }, 'x'), 'sin respuesta aún');
-  assert(!N.cambioValido(mio, { ...e, tiros: { ...e.tiros, o: [...e.tiros.o, [33, 'h5']] } }, 'x'), 'respuesta mía inventada');
-  assert(!N.cambioValido(mio, { ...e, tiros: { ...e.tiros, o: [[0, 'a']] } }, 'x'), 'respuesta mía cambiada');
-  assert(!N.cambioValido(mio, { ...e, tiros: { ...e.tiros, x: [[9, 't']] } }, 'x'), 'acierto mío borrado');
-  assert(!N.cambioValido(mio, { ...e, tiros: { ...e.tiros, x: [[5, 'a'], [8, 'a']] } }, 'x'), 'responde a otra casilla');
-  assert(N.cambioValido(mio, { ...e, turno: 'x', pendiente: null, tiros: { ...e.tiros, x: [[5, 'a']] } }, 'x'), 'mi tiro no llegó a enviarse: no es trampa');
-  const tirando = { ...mio, suyos: 2 }; // al tirar al 9 ya había respondido sus 2 tiros
-  assert(!N.cambioValido(tirando, { ...e, turno: 'x', pendiente: 50, tiros: { ...e.tiros, x: [[5, 'a']] } }, 'x'), 'dispara otra vez sin responder mi tiro');
-  assert(N.cambioValido(tirando, { ...e, turno: 'x', pendiente: null, tiros: { ...e.tiros, x: [[5, 'a']] } }, 'x'), '(a) solo se perdió mi tiro');
-  assert(N.cambioValido(tirando, { ...e, turno: 'x', pendiente: 99, tiros: { x: [[5, 'a']], o: [[0, 't']] } }, 'x'), '(b) se perdieron mi respuesta y mi tiro');
-  const viejo = { barcos: f, sal: 'ab' };
-  assert(N.cambioValido(viejo, { ...e, turno: 'o' }, 'x'), 'formato viejo sin historial: no se marca');
-  assert(!N.cambioValido(viejo, { ...e, tiros: { ...e.tiros, o: [[0, 'a']] } }, 'x'), 'formato viejo: mis respuestas igual se revisan');
-  assert(!N.cambioValido(mio, { ...e, tiros: { ...e.tiros, x: [[5, 'a'], [9, 't'], [10, 'a']] } }, 'x'), 'dos respuestas de golpe');
-  assert(!N.cambioValido(mio, { ...e, sellos: { x: 's1', o: 'otro' } }, 'x'), 'sello del rival cambiado');
-  assert(!N.cambioValido(mio, { ...e, sellos: { o: 's2' } }, 'x'), 'mi sello borrado');
-  assert(!N.cambioValido({ ...mio, sellos: { x: 's1' } }, { ...e, turno: 'x', sellos: { x: 's1' } }, 'x'), 'me toca y el rival no selló');
-  assert(!N.cambioValido(mio, { ...e, revelado: { x: {} } }, 'x'), 'revelado a mi nombre puesto por el rival');
-  assert(N.cambioValido(mio, { ...e, revelado: { x: { barcos: f, sal: 'ab' } } }, 'x'), 'mi revelado de verdad');
+  const ok = (h, e, m) => assert(N.siguePartida(h, e, 'x'), m);
+  const no = (h, e, m) => assert(!N.siguePartida(h, e, 'x'), m);
+  // B: me llega el turno con su tiro al 33; W1: respondo; W2: disparo al 9 y le paso el turno.
+  const B = { turno: 'x', tiros: { x: [[5, 't']], o: [[0, 't'], [99, 'a']] }, pendiente: 33, sellos: { x: 's1', o: 's2' }, revelado: {} };
+  const W1 = N.responder(B, f), W2 = N.aplicar(W1, 9), hist = [B, W1, W2];
+  const jugada = (cambios = {}) => ({ ...W2, tiros: { ...W2.tiros, x: [...W2.tiros.x, [9, 'a']] }, pendiente: 50, turno: 'x', ...cambios });
+  ok(hist, jugada(), 'jugada honesta del rival');
+  ok(hist, { revelado: {}, sellos: { o: 's2', x: 's1' }, pendiente: 50, turno: 'x', tiros: { o: W2.tiros.o, x: [[5, 't'], [9, 'a']] } }, 'el orden de las claves no importa');
+  ok(hist, B, 'se perdieron mi respuesta y mi tiro');
+  ok(hist, W1, 'se perdió solo mi tiro');
+  ok(hist, W2, 'mi propio estado');
+  no(hist, jugada({ tiros: { x: [[5, 't'], [9, 'a']], o: [[0, 't'], [33, 'a']] } }), 'responde pero borra un agua de sus tiros');
+  no(hist, { ...W2, tiros: { x: W2.tiros.x, o: [[0, 't'], [33, 'a']] }, pendiente: 60, turno: 'x' }, 'exploit: borra un agua, no responde y dispara');
+  no(hist, { ...W2, pendiente: 50, turno: 'x' }, 'no responde mi tiro y dispara');
+  no(hist, { ...W1, pendiente: 50 }, 'borra mi tiro y dispara');
+  no(hist, jugada({ tiros: { x: [[5, 't'], [9, 'a']], o: [[0, 't'], [99, 'a'], [33, 'h5']] } }), 'respuesta mía falsificada');
+  no(hist, jugada({ tiros: { x: [[9, 'a']], o: W2.tiros.o } }), 'acierto mío borrado');
+  no(hist, jugada({ tiros: { x: [[5, 't'], [8, 'a']], o: W2.tiros.o } }), 'responde a otra casilla');
+  no(hist, jugada({ tiros: { x: [[5, 't'], [9, 'a'], [10, 'a']], o: W2.tiros.o } }), 'dos respuestas');
+  no(hist, jugada({ tiros: { x: [[5, 't'], [9, 'zz']], o: W2.tiros.o } }), 'respuesta mal formada');
+  no(hist, jugada({ sellos: { x: 's1', o: 'otro' } }), 'sello del rival cambiado');
+  no(hist, jugada({ sellos: { o: 's2' } }), 'mi sello borrado');
+  no(hist, jugada({ revelado: { x: {} } }), 'revelado a mi nombre puesto por el rival');
+  no(hist, jugada({ revelado: { o: { barcos: f, sal: 'cd' } } }), 'revela sin haber perdido');
+  no(hist, jugada({ pendiente: 33 }), 'tiro repetido');
+  no(hist, jugada({ pendiente: 100 }), 'tiro fuera del tablero');
+  no(hist, jugada({ turno: 'o' }), 'no me pasa el turno');
+  no(hist, jugada({ barcos: { x: f } }), 'campo de más');
+  no([B, W1], jugada(), 'el rival no puede jugar si mi último estado no le pasó el turno');
+  // Mi tiro ya llegó a la nube (hist recortado a W2): volver a B o a W1 es que el rival se niega a responder.
+  no([W2], B, 'vuelve a B (borra su último agua) cuando mi tiro ya llegó');
+  no([W2], W1, 'borra mi tiro cuando ya llegó');
+  ok([W2], jugada(), 'jugada honesta tras confirmar');
+  // Primera jugada del invitado: sella y dispara sobre mi estado inicial.
+  const ini = { ...N.inicial({ amigo: true }), sellos: { x: 's1' } };
+  ok([ini], { ...ini, sellos: { x: 's1', o: 's2' }, pendiente: 0, turno: 'x' }, 'el invitado sella y dispara');
+  no([ini], { ...ini, pendiente: 0, turno: 'x' }, 'dispara sin sellar');
+  // Final: mi tiro hunde su último barco (perdió: revela y me pasa el turno).
+  const casi = { ...W2, tiros: { ...W2.tiros, x: [[1, 'h5'], [2, 'h4'], [3, 'h3'], [4, 'h3']] } };
+  const respFinal = { ...casi, tiros: { ...casi.tiros, x: [...casi.tiros.x, [9, 'h2']] }, pendiente: null, turno: 'x' };
+  ok([casi], { ...respFinal, revelado: { o: { barcos: f, sal: 'cd' } } }, 'perdió: revela y me pasa el turno');
+  no([casi], respFinal, 'pierde sin revelar');
+  // Final: perdí, revelé y le pasé el turno; él revela y cierra.
+  const perdi = { turno: 'o', tiros: { x: [[5, 'a']], o: [[1, 'h5'], [2, 'h4'], [3, 'h3'], [4, 'h3'], [6, 'h2']] }, pendiente: null, sellos: { x: 's1', o: 's2' }, revelado: { x: { barcos: f, sal: 'ab' } } };
+  ok([perdi], { ...perdi, revelado: { ...perdi.revelado, o: { barcos: f, sal: 'cd' } } }, 'ganó: revela y cierra');
+  no([perdi], { ...perdi, revelado: { x: { barcos: f, sal: 'zz' }, o: { barcos: f, sal: 'cd' } } }, 'cambia lo que revelé');
+  no([{ ...perdi, revelado: {} }], { ...perdi, revelado: { o: { barcos: f, sal: 'cd' } } }, 'cierra sin que yo haya revelado');
   assert(N.trampaPorRendicion('o', 'x', true, false) === false, 'me rendí');
   assert(N.trampaPorRendicion('x', 'x', false, true) === false, 'se rindió el rival y gano yo');
   assert(N.trampaPorRendicion('o', 'x', false, true) === true, 'el rival se rinde y se da la victoria');

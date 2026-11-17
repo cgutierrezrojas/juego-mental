@@ -145,34 +145,36 @@ export async function verificar(e, ficha) {
   return coherente(rv.barcos, e.tiros[otro(ficha)]);
 }
 
-// Con un amigo: ¿el estado `e` que llega de la mesa (el rival puede escribir cualquier `datos`) sigue de forma honesta
-// lo que guarda mi celular? `mio` = { barcos, sal, sellos: los fijados al verlos por primera vez, mios: mis tiros con
-// la respuesta ya aceptada, tiro: mi último tiro sin respuesta }. Comprueba que:
-// - mis tiros solo crecen, como mucho con la respuesta a `tiro`, y el rival no dispara otra vez sin responderlo;
-// - lo anotado como respuesta mía a sus tiros es lo que dice mi flota;
-// - los sellos no cambian y el rival ya selló si me toca;
-// - lo revelado a mi nombre es lo mío.
-export function cambioValido(mio, e, yo) {
+// Igualdad profunda de datos JSON (sin importar el orden de las claves).
+const igual = (a, b) => a === b || (!!a && !!b && typeof a === 'object' && typeof b === 'object' && Array.isArray(a) === Array.isArray(b)
+  && Object.keys(a).length === Object.keys(b).length && Object.keys(a).every((k) => igual(a[k], b[k])));
+const RESPUESTAS = ['a', 't', ...FLOTA.map((l) => 'h' + l)];
+
+// Con un amigo (el rival puede escribir cualquier `datos` mientras tiene el turno): ¿el estado `e` de la mesa sigue
+// de forma honesta lo que vi y escribí? `hist` = [B, ...mis escrituras]: B es el estado con el que me llegó el turno
+// y el último (W) es lo último que escribí. `e` vale solo si es exactamente:
+// - uno de ellos (algunas de mis escrituras no llegaron a la nube o se rechazaron: sigo desde ahí), o
+// - W más UNA jugada del rival: responde mi tiro (la verdad de la respuesta la revisa verificar al final), deja todo lo
+//   demás igual y me pasa el turno con un tiro nuevo; o, al final, revela su flota (si perdió, me pasa el turno; si
+//   ganó, porque yo ya revelé, cierra con su turno).
+export function siguePartida(hist, e, yo) {
   const rival = otro(yo);
-  const ahora = e.tiros?.[yo];
-  if (!Array.isArray(ahora)) return false;
-  // Sin historial guardado (formato viejo) no se sabe qué había: solo queda la revisión del final.
-  // Un tiro mío sin respuesta cuando ya me toca no es trampa: pudo no llegar a enviarse, y se vuelve a tirar.
-  const antes = mio.mios;
-  if (antes) {
-    if (ahora.length < antes.length || ahora.length > antes.length + 1) return false;
-    if (antes.some((t, k) => !Array.isArray(ahora[k]) || t[0] !== ahora[k][0] || t[1] !== ahora[k][1])) return false;
-    if (ahora.length > antes.length && ahora.at(-1)[0] !== mio.tiro) return false;
-    // Me toca, mi tiro sigue sin respuesta y el rival ya disparó otro más allá de los que yo había respondido: se negó a responder.
-    // (Si solo se perdió mi tiro, no hay pendiente; si también se perdió mi respuesta, el pendiente es el tiro ya respondido.)
-    const sinResponder = e.turno === yo && Number.isInteger(mio.tiro) && ahora.length === antes.length;
-    if (sinResponder && e.pendiente !== null && e.pendiente !== undefined && Number.isInteger(mio.suyos) && e.tiros[rival]?.length >= mio.suyos) return false;
-  }
-  if (!Array.isArray(e.tiros?.[rival]) || !coherente(mio.barcos, e.tiros[rival])) return false;
-  if (['x', 'o'].some((k) => mio.sellos?.[k] && e.sellos?.[k] !== mio.sellos[k])) return false;
-  if (e.turno === yo && !(mio.sellos?.[rival] ?? e.sellos?.[rival])) return false;
-  const rv = e.revelado?.[yo];
-  return !rv || JSON.stringify(rv) === JSON.stringify({ barcos: mio.barcos, sal: mio.sal });
+  if (hist.some((h) => igual(h, e))) return true;
+  const w = hist.at(-1);
+  const ultima = e?.tiros?.[yo]?.at?.(-1);
+  const respondo = Number.isInteger(w.pendiente);
+  const esperado = JSON.parse(JSON.stringify({ ...w, turno: e?.turno, pendiente: e?.pendiente,
+    tiros: { ...w.tiros, [yo]: respondo ? [...w.tiros[yo], [w.pendiente, ultima?.[1]]] : w.tiros[yo] },
+    sellos: { ...w.sellos, [rival]: w.sellos?.[rival] ?? e?.sellos?.[rival] },
+    revelado: { ...w.revelado, [rival]: e?.revelado?.[rival] } }));
+  if (w.turno !== rival || !igual(esperado, e) || typeof e.sellos[rival] !== 'string') return false;
+  if (respondo && !RESPUESTAS.includes(ultima[1])) return false;
+  const revelo = !!e.revelado?.[rival];
+  const fin = vencedor(e);
+  if (fin === yo) return e.turno === yo && e.pendiente === null && revelo; // perdió: revela y me pasa el turno
+  if (fin === rival) return e.turno === rival && e.pendiente === null && revelo && !!w.revelado?.[yo]; // ganó: revela y cierra
+  const p = e.pendiente;
+  return e.turno === yo && !revelo && Number.isInteger(p) && p >= 0 && p < LADO * LADO && !e.tiros[rival].some((t) => t[0] === p);
 }
 
 // Al cerrar con una rendición: si me rendí yo, no hay nada que revisar (false); si se rindió el rival, el ganador

@@ -13,7 +13,7 @@ import { reversi, contar as contarReversi } from '../games/reversi.js';
 import { tableroReversi } from './mesa-reversi.js';
 import { cajas, contar as contarCajas } from '../games/cajas.js';
 import { tableroCajas } from './mesa-cajas.js';
-import { naval, FLOTA as FLOTA_NAVAL, flotaAlAzar, nuevaSal, sellar, responder, vencedor, verificar, cambioValido, trampaPorRendicion } from '../games/naval.js';
+import { naval, FLOTA as FLOTA_NAVAL, flotaAlAzar, nuevaSal, sellar, responder, vencedor, verificar, coherente, siguePartida, trampaPorRendicion } from '../games/naval.js';
 import { colocarFlota, tableroNaval, textoRespuesta } from './mesa-naval.js';
 import { E } from './estado.js';
 import { CARA } from './juegos.js';
@@ -58,79 +58,87 @@ export const JUEGOS_MESA = [
     return o ? { barcos: { x, o } } : null;
   },
   // Con un amigo: cada celular responde solo a los tiros del rival con su flota guardada en `naval:<id>`
-  // ({ barcos, sal, sellos fijados, mios: mis tiros ya respondidos, tiro: el último sin respuesta }). El rival puede
-  // escribir cualquier `datos`: cada cambio se revisa con cambioValido y, al final, lo que revela con verificar.
-  alJugar(partida, casilla) {
+  // ({ barcos, sal, hist }). `hist` = [estado con el que me llegó el turno, ...lo que escribí después]: el rival puede
+  // escribir cualquier `datos`, así que cada estado que me devuelve el turno se revisa contra eso con siguePartida y,
+  // al final, lo que revela con verificar.
+  alJugar(partida) {
     const mio = leerNaval(partida.id);
-    // `suyos`: cuántos tiros del rival había respondido al tirar (para notar si dispara otra vez sin responder el mío).
-    if (mio) guardarNaval(partida.id, { ...mio, tiro: casilla, suyos: casilla === null ? null : partida.estado.tiros[otro(partida.yo)].length });
+    if (mio?.hist) guardarNaval(partida.id, { ...mio, hist: [...mio.hist, partida.estado] });
   },
+  alEnviado: (partida, estado) => confirmarNaval(partida.id, estado),
   async alActualizar({ partida: p, enviar, sigue }) {
     const e = p.estado;
     const yo = p.yo;
     const rival = otro(yo);
     let mio = leerNaval(p.id);
     p.misBarcos = mio?.barcos ?? null;
+    // ¿Es una continuación exacta de lo mío (sin historial, formato viejo: no se sabe) y mis respuestas son las de mi flota?
+    const cuadra = () => !mio || ((!mio.hist || siguePartida(mio.hist, e, yo)) && Array.isArray(e.tiros?.[rival]) && coherente(mio.barcos, e.tiros[rival]));
     if (p.mesa.ganador) {
       // Revisión final (una vez): rendiciones, cambios del rival y lo que reveló contra su sello y sus respuestas.
       if (p.trampaRival !== undefined) return;
       const rendido = p.mesa.rendido ?? {};
       let trampa = trampaPorRendicion(p.mesa.ganador, yo, !!rendido[p.mesa.jugadores[yo]], !!rendido[p.mesa.jugadores[rival]]);
-      if (trampa === null) trampa = (mio && !cambioValido(mio, e, yo)) || !(await verificar(e, rival));
+      if (trampa === null) trampa = !cuadra() || !(await verificar(e, rival));
       p.trampaRival = trampa;
       return;
     }
+    if (!mio && e.sellos?.[yo]) { p.sinBarcos = true; return; } // datos borrados: solo puede rendirse
+    if (e.turno !== yo) return; // turno del rival (o mi propio eco): se revisa cuando me lo devuelva
+    // Cada cosa que escribo se anota en `hist` antes de enviarla.
+    const escribir = async (est, g) => {
+      mio.hist.push(est);
+      guardarNaval(p.id, mio);
+      const ok = await enviar(est, g);
+      if (ok) confirmarNaval(p.id, est);
+      return ok;
+    };
     if (!mio) {
-      if (e.sellos?.[yo]) { p.sinBarcos = true; return; } // datos borrados: solo puede rendirse
-      if (e.turno !== yo) return;
       // Invitado que aún no coloca: coloca, sella y escribe (sigue siendo su turno).
       const barcos = await colocarFlota($('mesa-tablero-juego'), '🚢 Coloca tu flota');
       if (!sigue()) return;
       if (!barcos) { pararMesa(); return abrirMesa(); }
-      const sal = nuevaSal();
-      const sello = await sellar(barcos, sal);
-      guardarNaval(p.id, { barcos, sal, sellos: { [yo]: sello }, mios: [] });
+      mio = { barcos, sal: nuevaSal(), hist: [e] };
       p.misBarcos = barcos;
-      return enviar({ ...e, sellos: { ...e.sellos, [yo]: sello } });
+      return escribir({ ...e, sellos: { ...e.sellos, [yo]: await sellar(barcos, mio.sal) } });
     }
-    // Mi sello no llegó a la mesa (falló el envío): se vuelve a mandar antes que nada.
-    if (e.turno === yo && !e.sellos?.[yo]) {
-      const sello = mio.sellos?.[yo] ?? (await sellar(mio.barcos, mio.sal));
-      guardarNaval(p.id, { ...mio, sellos: { ...mio.sellos, [yo]: sello } });
-      return enviar({ ...e, sellos: { ...e.sellos, [yo]: sello } });
-    }
-    // Un cambio que no cuadra, o un tiro repetido o fuera del tablero: trampa. Se cierra a mi favor (si me toca) sin revelar nada.
-    const hayTiro = e.turno === yo && e.pendiente !== null && e.pendiente !== undefined;
-    const nuevo = hayTiro ? responder(e, mio.barcos) : e;
-    if (!cambioValido(mio, e, yo) || (hayTiro && nuevo === e)) {
+    // Un cambio que no cuadra, o un tiro repetido o fuera del tablero: trampa. Se cierra a mi favor sin revelar nada.
+    const nuevo = e.pendiente !== null && e.pendiente !== undefined ? responder(e, mio.barcos) : e;
+    if (!cuadra() || (nuevo === e && e.pendiente !== null && e.pendiente !== undefined)) {
       p.trampaRival = true;
-      if (e.turno === yo && !(await enviar(e, yo))) p.trampaRival = undefined; // se reintenta con la próxima actualización
+      if (!(await enviar(e, yo))) p.trampaRival = undefined; // se reintenta con la próxima actualización
       return;
     }
-    // Cambio aceptado: se fijan el sello del rival y mis tiros ya respondidos.
-    const respondido = e.tiros[yo].length > (mio.mios ?? []).length;
-    mio = { ...mio, sellos: { ...mio.sellos, ...(e.sellos?.[rival] ? { [rival]: e.sellos[rival] } : {}) }, mios: e.tiros[yo], ...(respondido || e.turno === yo ? { tiro: null, suyos: null } : {}) }; // si ya me toca y no hay respuesta, mi tiro no llegó: se vuelve a tirar
+    mio = { barcos: mio.barcos, sal: mio.sal, hist: [e] }; // aceptado: es la nueva base
     guardarNaval(p.id, mio);
-    if (e.turno !== yo) return;
-    const mostrado = { barcos: mio.barcos, sal: mio.sal }; // lo que se revela (sin lo demás que guarda el celular)
+    // Mi sello no llegó a la mesa (falló el envío): se vuelve a mandar antes que nada.
+    if (!e.sellos?.[yo]) return escribir({ ...e, sellos: { ...e.sellos, [yo]: await sellar(mio.barcos, mio.sal) } });
+    const mostrado = { barcos: mio.barcos, sal: mio.sal }; // lo que se revela
     const v = vencedor(nuevo);
     if (v && v !== yo && !nuevo.revelado?.[yo]) {
       // Perdí: revelo y paso el turno al ganador para que revele y cierre.
-      return enviar({ ...nuevo, revelado: { ...nuevo.revelado, [yo]: mostrado }, turno: v });
+      return escribir({ ...nuevo, revelado: { ...nuevo.revelado, [yo]: mostrado }, turno: v });
     }
     if (v === yo && !nuevo.revelado?.[yo]) {
       const final = { ...nuevo, revelado: { ...nuevo.revelado, [yo]: mostrado } };
       const trampa = !(await verificar(final, rival));
       if (!sigue()) return;
       p.trampaRival = trampa;
-      if (!(await enviar(final, yo))) p.trampaRival = undefined;
+      if (!(await escribir(final, yo))) p.trampaRival = undefined;
       return;
     }
-    if (nuevo !== e) return enviar(nuevo);
+    if (nuevo !== e) return escribir(nuevo);
   } },
 ];
 const leerNaval = (id) => JSON.parse(leer('naval:' + id) || 'null');
 const guardarNaval = (id, mio) => guardar('naval:' + id, JSON.stringify(mio));
+// Una escritura mía llegó a la nube: lo de antes ya no puede volver como «escritura perdida» (si vuelve, lo escribió el rival).
+// ponytail: si la app se cierra justo entre que la nube guarda y avisa, ese único paso queda sin confirmar.
+function confirmarNaval(id, estado) {
+  const mio = leerNaval(id);
+  const k = mio?.hist?.findIndex((h) => JSON.stringify(h) === JSON.stringify(estado)) ?? -1;
+  if (k > 0) guardarNaval(id, { ...mio, hist: mio.hist.slice(k) });
+}
 const aNube = (j, e) => (j.aNube ? j.aNube(e) : e);
 const deNube = (j, s) => (j.deNube ? j.deNube(s) : s);
 const juegoDe = (id) => JUEGOS_MESA.find((j) => j.id === id);
@@ -302,8 +310,8 @@ async function retarAmigo(juego, amigo, opciones = {}) {
     if (!barcos) return abrirModo(juego);
     const sal = nuevaSal();
     const sello = await sellar(barcos, sal);
-    secreto = { barcos, sal, sellos: { x: sello }, mios: [] };
     estado = { ...estado, sellos: { x: sello } };
+    secreto = { barcos, sal, hist: [estado] }; // mi primera escritura
   }
   try {
     const id = await E.nube.crearMesa({
@@ -437,9 +445,9 @@ function jugar(jugada) {
     const p = partida; // al fallar, `partida` puede ser otra
     j.alJugar?.(p, jugada);
     p.mesa = { ...p.mesa, estado: p.estado, ganador: g ?? p.mesa.ganador };
-    E.nube.jugarMesa(p.id, aNube(j, p.estado), g).catch(() => {
+    const enviado = p.estado;
+    E.nube.jugarMesa(p.id, aNube(j, enviado), g).then(() => j.alEnviado?.(p, enviado), () => {
       p.estado = antes; // no se pudo guardar: se deshace
-      j.alJugar?.(p, null);
       if (p === partida) $('mesa-estado').textContent = 'No se pudo enviar la jugada (¿sin conexión?).';
     });
   }
