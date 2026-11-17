@@ -75,7 +75,8 @@ const DIFICIL = {
 export function ia(e, nivel = 'normal', rnd = Math.random) {
   const v = validas(e);
   if (nivel === 'facil') return v[azar(v.length, rnd)];
-  if (nivel === 'dificil') return mejorJugada(e, DIFICIL, 4, rnd);
+  // ponytail: profundidad 3; con 4 pasaba de 300 ms por jugada en celulares lentos (515 ms en PC); sube a 4 si hace falta más fuerza
+  if (nivel === 'dificil') return mejorJugada(e, DIFICIL, 3, rnd);
   const max = Math.max(...v.map((i) => PESOS[i]));
   const mejores = v.filter((i) => PESOS[i] === max);
   return mejores[azar(mejores.length, rnd)];
