@@ -2104,6 +2104,29 @@ await probarAsync('naval: amigo con sello, respuesta automática y revisión', a
   assert(k >= 0 && N.coherente(bx, e.tiros.o) && !N.coherente(bx, t), 'detecta respuesta falsa');
 });
 
+probar('naval: cambioValido detecta respuestas falsas, aciertos borrados, sellos cambiados y revelado ajeno', () => {
+  const f = [{ c: 0, l: 5, v: false }, { c: 20, l: 4, v: false }, { c: 40, l: 3, v: false }, { c: 60, l: 3, v: false }, { c: 80, l: 2, v: false }];
+  const mio = { barcos: f, sal: 'ab', sellos: { x: 's1', o: 's2' }, mios: [[5, 'a']], tiro: 9 };
+  const e = { turno: 'o', tiros: { x: [[5, 'a'], [9, 't']], o: [[0, 't'], [99, 'a']] }, pendiente: null, sellos: { x: 's1', o: 's2' }, revelado: {} };
+  assert(N.cambioValido(mio, e, 'x'), 'honesto');
+  assert(N.cambioValido(mio, { ...e, tiros: { ...e.tiros, x: [[5, 'a']] } }, 'x'), 'sin respuesta aún');
+  assert(!N.cambioValido(mio, { ...e, tiros: { ...e.tiros, o: [...e.tiros.o, [33, 'h5']] } }, 'x'), 'respuesta mía inventada');
+  assert(!N.cambioValido(mio, { ...e, tiros: { ...e.tiros, o: [[0, 'a']] } }, 'x'), 'respuesta mía cambiada');
+  assert(!N.cambioValido(mio, { ...e, tiros: { ...e.tiros, x: [[9, 't']] } }, 'x'), 'acierto mío borrado');
+  assert(!N.cambioValido(mio, { ...e, tiros: { ...e.tiros, x: [[5, 'a'], [8, 'a']] } }, 'x'), 'responde a otra casilla');
+  assert(!N.cambioValido(mio, { ...e, turno: 'x', pendiente: 50, tiros: { ...e.tiros, x: [[5, 'a']] } }, 'x'), 'me pasa el turno sin responder mi tiro');
+  assert(!N.cambioValido(mio, { ...e, tiros: { ...e.tiros, x: [[5, 'a'], [9, 't'], [10, 'a']] } }, 'x'), 'dos respuestas de golpe');
+  assert(!N.cambioValido(mio, { ...e, sellos: { x: 's1', o: 'otro' } }, 'x'), 'sello del rival cambiado');
+  assert(!N.cambioValido(mio, { ...e, sellos: { o: 's2' } }, 'x'), 'mi sello borrado');
+  assert(!N.cambioValido({ ...mio, sellos: { x: 's1' } }, { ...e, turno: 'x', sellos: { x: 's1' } }, 'x'), 'me toca y el rival no selló');
+  assert(!N.cambioValido(mio, { ...e, revelado: { x: {} } }, 'x'), 'revelado a mi nombre puesto por el rival');
+  assert(N.cambioValido(mio, { ...e, revelado: { x: { barcos: f, sal: 'ab' } } }, 'x'), 'mi revelado de verdad');
+  assert(N.trampaPorRendicion('o', 'x', true, false) === false, 'me rendí');
+  assert(N.trampaPorRendicion('x', 'x', false, true) === false, 'se rindió el rival y gano yo');
+  assert(N.trampaPorRendicion('o', 'x', false, true) === true, 'el rival se rinde y se da la victoria');
+  assert(N.trampaPorRendicion('x', 'x', false, false) === null, 'sin rendición se revisa');
+});
+
 probar('naval: tiros repetidos no hacen ganar ni pasan la revisión', () => {
   const f = [{ c: 0, l: 5, v: false }, { c: 20, l: 4, v: false }, { c: 40, l: 3, v: false }, { c: 60, l: 3, v: false }, { c: 80, l: 2, v: false }];
   let e = N.inicial({ amigo: true });

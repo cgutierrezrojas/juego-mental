@@ -145,6 +145,36 @@ export async function verificar(e, ficha) {
   return coherente(rv.barcos, e.tiros[otro(ficha)]);
 }
 
+// Con un amigo: ¿el estado `e` que llega de la mesa (el rival puede escribir cualquier `datos`) sigue de forma honesta
+// lo que guarda mi celular? `mio` = { barcos, sal, sellos: los fijados al verlos por primera vez, mios: mis tiros con
+// la respuesta ya aceptada, tiro: mi último tiro sin respuesta }. Comprueba que:
+// - mis tiros solo crecen, como mucho con la respuesta a `tiro` (que no puede quedar sin respuesta si ya me toca);
+// - lo anotado como respuesta mía a sus tiros es lo que dice mi flota;
+// - los sellos no cambian y el rival ya selló si me toca;
+// - lo revelado a mi nombre es lo mío.
+export function cambioValido(mio, e, yo) {
+  const rival = otro(yo);
+  const antes = mio.mios ?? [];
+  const ahora = e.tiros?.[yo];
+  if (!Array.isArray(ahora) || ahora.length < antes.length || ahora.length > antes.length + 1) return false;
+  if (antes.some((t, k) => !Array.isArray(ahora[k]) || t[0] !== ahora[k][0] || t[1] !== ahora[k][1])) return false;
+  if (ahora.length > antes.length && ahora.at(-1)[0] !== mio.tiro) return false;
+  if (e.turno === yo && Number.isInteger(mio.tiro) && ahora.length === antes.length) return false; // me pasó el turno sin responder mi tiro
+  if (!Array.isArray(e.tiros?.[rival]) || !coherente(mio.barcos, e.tiros[rival])) return false;
+  if (['x', 'o'].some((k) => mio.sellos?.[k] && e.sellos?.[k] !== mio.sellos[k])) return false;
+  if (e.turno === yo && !(mio.sellos?.[rival] ?? e.sellos?.[rival])) return false;
+  const rv = e.revelado?.[yo];
+  return !rv || JSON.stringify(rv) === JSON.stringify({ barcos: mio.barcos, sal: mio.sal });
+}
+
+// Al cerrar con una rendición: si me rendí yo, no hay nada que revisar (false); si se rindió el rival, el ganador
+// tengo que ser yo (si no, es trampa: true). Sin rendición devuelve null: hay que revisar con verificar.
+export function trampaPorRendicion(ganador, yo, meRendi, seRindio) {
+  if (meRendi) return false;
+  if (seRindio) return ganador !== yo;
+  return null;
+}
+
 // --- Máquina: solo usa sus propios tiros y las respuestas (no mira la flota rival) ---
 
 // Casillas de barcos ya hundidos: el grupo de tocados unidos a cada 'h' (los barcos no se tocan, así que es exacto).
