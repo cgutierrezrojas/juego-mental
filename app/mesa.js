@@ -244,6 +244,7 @@ async function empezar({ juego, modo, nivel, opciones = {} }) {
   }
   partida = { juego, modo, nivel, opciones, estado: j.inicial({ ...opciones, ...extra }), yo: 'x', nombres: null, id: null, apuntada: false };
   partida.repintar = pintarTablero;
+  if (modo === 'local' && juego === 'naval') { partida.tapado = true; partida.ultimoTexto = ''; } // el celular aún está en manos de Jugador 2
   mostrar('mesa-tablero');
   pintarTablero();
   moverMaquina();

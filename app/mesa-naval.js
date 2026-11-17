@@ -60,7 +60,7 @@ function rejilla(tiros, barcos, clic) {
 // Vista de quien mira: arriba la flota rival (donde disparas), abajo la tuya con los tiros recibidos.
 export function tableroNaval({ partida, puedo, jugar }) {
   const e = partida.estado;
-  const yo = partida.modo === 'local' ? e.turno : partida.yo;
+  const yo = partida.modo === 'local' ? vencedor(e) ?? e.turno : partida.yo;
   const rival = yo === 'x' ? 'o' : 'x';
   if (partida.modo === 'local' && partida.tapado && !vencedor(e)) {
     const ya = el('button', 'color grande', '👀 Ya lo tengo');
