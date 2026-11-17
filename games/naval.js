@@ -148,18 +148,22 @@ export async function verificar(e, ficha) {
 // Con un amigo: ¿el estado `e` que llega de la mesa (el rival puede escribir cualquier `datos`) sigue de forma honesta
 // lo que guarda mi celular? `mio` = { barcos, sal, sellos: los fijados al verlos por primera vez, mios: mis tiros con
 // la respuesta ya aceptada, tiro: mi último tiro sin respuesta }. Comprueba que:
-// - mis tiros solo crecen, como mucho con la respuesta a `tiro` (que no puede quedar sin respuesta si ya me toca);
+// - mis tiros solo crecen, como mucho con la respuesta a `tiro`;
 // - lo anotado como respuesta mía a sus tiros es lo que dice mi flota;
 // - los sellos no cambian y el rival ya selló si me toca;
 // - lo revelado a mi nombre es lo mío.
 export function cambioValido(mio, e, yo) {
   const rival = otro(yo);
-  const antes = mio.mios ?? [];
   const ahora = e.tiros?.[yo];
-  if (!Array.isArray(ahora) || ahora.length < antes.length || ahora.length > antes.length + 1) return false;
-  if (antes.some((t, k) => !Array.isArray(ahora[k]) || t[0] !== ahora[k][0] || t[1] !== ahora[k][1])) return false;
-  if (ahora.length > antes.length && ahora.at(-1)[0] !== mio.tiro) return false;
-  if (e.turno === yo && Number.isInteger(mio.tiro) && ahora.length === antes.length) return false; // me pasó el turno sin responder mi tiro
+  if (!Array.isArray(ahora)) return false;
+  // Sin historial guardado (formato viejo) no se sabe qué había: solo queda la revisión del final.
+  // Un tiro mío sin respuesta cuando ya me toca no es trampa: pudo no llegar a enviarse, y se vuelve a tirar.
+  const antes = mio.mios;
+  if (antes) {
+    if (ahora.length < antes.length || ahora.length > antes.length + 1) return false;
+    if (antes.some((t, k) => !Array.isArray(ahora[k]) || t[0] !== ahora[k][0] || t[1] !== ahora[k][1])) return false;
+    if (ahora.length > antes.length && ahora.at(-1)[0] !== mio.tiro) return false;
+  }
   if (!Array.isArray(e.tiros?.[rival]) || !coherente(mio.barcos, e.tiros[rival])) return false;
   if (['x', 'o'].some((k) => mio.sellos?.[k] && e.sellos?.[k] !== mio.sellos[k])) return false;
   if (e.turno === yo && !(mio.sellos?.[rival] ?? e.sellos?.[rival])) return false;

@@ -2114,7 +2114,11 @@ probar('naval: cambioValido detecta respuestas falsas, aciertos borrados, sellos
   assert(!N.cambioValido(mio, { ...e, tiros: { ...e.tiros, o: [[0, 'a']] } }, 'x'), 'respuesta mía cambiada');
   assert(!N.cambioValido(mio, { ...e, tiros: { ...e.tiros, x: [[9, 't']] } }, 'x'), 'acierto mío borrado');
   assert(!N.cambioValido(mio, { ...e, tiros: { ...e.tiros, x: [[5, 'a'], [8, 'a']] } }, 'x'), 'responde a otra casilla');
-  assert(!N.cambioValido(mio, { ...e, turno: 'x', pendiente: 50, tiros: { ...e.tiros, x: [[5, 'a']] } }, 'x'), 'me pasa el turno sin responder mi tiro');
+  assert(N.cambioValido(mio, { ...e, turno: 'x', pendiente: null, tiros: { ...e.tiros, x: [[5, 'a']] } }, 'x'), 'mi tiro no llegó a enviarse: no es trampa');
+  assert(N.cambioValido(mio, { ...e, turno: 'x', pendiente: 50, tiros: { ...e.tiros, x: [[5, 'a']] } }, 'x'), 'tiro sin responder y me toca: se vuelve a tirar');
+  const viejo = { barcos: f, sal: 'ab' };
+  assert(N.cambioValido(viejo, { ...e, turno: 'o' }, 'x'), 'formato viejo sin historial: no se marca');
+  assert(!N.cambioValido(viejo, { ...e, tiros: { ...e.tiros, o: [[0, 'a']] } }, 'x'), 'formato viejo: mis respuestas igual se revisan');
   assert(!N.cambioValido(mio, { ...e, tiros: { ...e.tiros, x: [[5, 'a'], [9, 't'], [10, 'a']] } }, 'x'), 'dos respuestas de golpe');
   assert(!N.cambioValido(mio, { ...e, sellos: { x: 's1', o: 'otro' } }, 'x'), 'sello del rival cambiado');
   assert(!N.cambioValido(mio, { ...e, sellos: { o: 's2' } }, 'x'), 'mi sello borrado');

@@ -108,7 +108,7 @@ export const JUEGOS_MESA = [
     }
     // Cambio aceptado: se fijan el sello del rival y mis tiros ya respondidos.
     const respondido = e.tiros[yo].length > (mio.mios ?? []).length;
-    mio = { ...mio, sellos: { ...mio.sellos, ...(e.sellos?.[rival] ? { [rival]: e.sellos[rival] } : {}) }, mios: e.tiros[yo], tiro: respondido ? null : mio.tiro };
+    mio = { ...mio, sellos: { ...mio.sellos, ...(e.sellos?.[rival] ? { [rival]: e.sellos[rival] } : {}) }, mios: e.tiros[yo], tiro: respondido || e.turno === yo ? null : mio.tiro }; // si ya me toca y no hay respuesta, mi tiro no llegó: se vuelve a tirar
     guardarNaval(p.id, mio);
     if (e.turno !== yo) return;
     const mostrado = { barcos: mio.barcos, sal: mio.sal }; // lo que se revela (sin lo demás que guarda el celular)
@@ -433,12 +433,13 @@ function jugar(jugada) {
   sonar('tic');
   const g = j.ganador(partida.estado);
   if (partida.modo === 'amigo') {
-    j.alJugar?.(partida, jugada);
-    partida.mesa = { ...partida.mesa, estado: partida.estado, ganador: g ?? partida.mesa.ganador };
-    E.nube.jugarMesa(partida.id, aNube(j, partida.estado), g).catch(() => {
-      partida.estado = antes; // no se pudo guardar: se deshace
-      j.alJugar?.(partida, null);
-      $('mesa-estado').textContent = 'No se pudo enviar la jugada (¿sin conexión?).';
+    const p = partida; // al fallar, `partida` puede ser otra
+    j.alJugar?.(p, jugada);
+    p.mesa = { ...p.mesa, estado: p.estado, ganador: g ?? p.mesa.ganador };
+    E.nube.jugarMesa(p.id, aNube(j, p.estado), g).catch(() => {
+      p.estado = antes; // no se pudo guardar: se deshace
+      j.alJugar?.(p, null);
+      if (p === partida) $('mesa-estado').textContent = 'No se pudo enviar la jugada (¿sin conexión?).';
     });
   }
   pintarTablero();
