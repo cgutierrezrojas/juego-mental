@@ -7,6 +7,8 @@ import { DIFICULTADES } from '../games/modos.js';
 import { amigosDe } from '../games/amigos.js';
 import { gato } from '../games/gato.js';
 import { conecta4, COLUMNAS, FILAS } from '../games/conecta4.js';
+import { damas } from '../games/damas.js';
+import { tableroDamas } from './mesa-damas.js';
 import { E } from './estado.js';
 import { CARA } from './juegos.js';
 import { leerJSON, apuntarLogros } from './datos.js';
@@ -21,6 +23,10 @@ export const JUEGOS_MESA = [
     tablero: tableroGato, ultimaJugada: (a, d) => [...d.celdas].findIndex((c, k) => c !== a.celdas[k]) },
   { ...conecta4, icono: '🔴', reglas: 'Deja caer tus fichas y haz 4 en raya antes que tu rival.', fichas: { x: '🔴', o: '🟡' },
     tablero: tableroConecta, ultimaJugada: (a, d) => [...d.celdas].findIndex((c, k) => c !== a.celdas[k]) % COLUMNAS },
+  { ...damas, icono: '⚫', reglas: 'Damas latinas: comer es obligatorio y manda la jugada que más come. La dama vuela en diagonal.', fichas: { x: '⚪', o: '⚫' },
+    tablero: tableroDamas,
+    marcador: (e) => ({ x: `${[...e.celdas].filter((c) => c.toLowerCase() === 'x').length} pieza${[...e.celdas].filter((c) => c.toLowerCase() === 'x').length === 1 ? '' : 's'}`, o: `${[...e.celdas].filter((c) => c.toLowerCase() === 'o').length} pieza${[...e.celdas].filter((c) => c.toLowerCase() === 'o').length === 1 ? '' : 's'}` }),
+    ultimaJugada: (a, d) => [...d.celdas].findIndex((c, k) => c !== '.' && a.celdas[k] === '.') },
 ];
 const aNube = (j, e) => (j.aNube ? j.aNube(e) : e);
 const deNube = (j, s) => (j.deNube ? j.deNube(s) : s);
