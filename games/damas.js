@@ -42,7 +42,19 @@ function saltos(celdas, i, pieza, comidas, camino, salida) {
 }
 
 // Todas las jugadas legales: si se puede comer, solo las que más comen.
+const memo = new Map();
 export function jugadas(e) {
+  const clave = e.celdas + e.turno;
+  let r = memo.get(clave);
+  if (!r) {
+    r = generar(e);
+    if (memo.size > 50000) memo.clear(); // ponytail: caché simple, se vacía al llenarse
+    memo.set(clave, r);
+  }
+  return r;
+}
+
+function generar(e) {
   const capturas = [];
   const simples = [];
   for (let i = 0; i < 64; i++) {
@@ -109,10 +121,11 @@ function valorCon(posicion) {
 const NORMAL = { validas, aplicar, ganador, valor: valorCon(false) };
 const DIFICIL = { validas, aplicar, ganador, valor: valorCon(true) };
 
+// ponytail: profundidad 5 por tiempo en celular (con 6 hubo jugadas de 410 ms en finales de damas)
 export function ia(e, nivel = 'normal', rnd = Math.random) {
   const v = validas(e);
   if (nivel === 'facil' || v.length === 1) return v[azar(v.length, rnd)];
-  return nivel === 'dificil' ? mejorJugada(e, DIFICIL, 6, rnd) : mejorJugada(e, NORMAL, 2, rnd);
+  return nivel === 'dificil' ? mejorJugada(e, DIFICIL, 5, rnd) : mejorJugada(e, NORMAL, 2, rnd);
 }
 
 export const damas = { id: 'damas', nombre: 'Damas', inicial, validas, aplicar, ganador, ia };
