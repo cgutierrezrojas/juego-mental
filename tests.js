@@ -15,6 +15,13 @@ function probar(nombre, fn) {
   else console.log(linea);
 }
 
+async function probarAsync(nombre, fn) {
+  let linea;
+  try { await fn(); linea = `✅ ${nombre}`; } catch (e) { linea = `❌ ${nombre}: ${e.message}`; if (typeof process !== 'undefined') process.exitCode = 1; }
+  if (typeof document !== 'undefined') document.getElementById('resultados').textContent += linea + '\n';
+  else console.log(linea);
+}
+
 function assert(condicion, mensaje = 'falló') {
   if (!condicion) throw new Error(mensaje);
 }
@@ -2045,4 +2052,54 @@ probar('cajas: la máquina cierra, evita la tercera línea y resuelve el final',
   let p = cajas.inicial({ n: 3 });
   while (!cajas.ganador(p)) p = cajas.aplicar(p, cajas.ia(p, ['facil', 'normal', 'dificil'][p.celdas.split('-').length % 3]));
   assert(cajas.ganador(p));
+});
+
+// --- naval.js (🎲 Mesa) ---
+import * as N from './games/naval.js';
+
+probar('naval: flotas válidas, girar, mover y respuestas', () => {
+  for (let k = 0; k < 50; k++) assert(N.flotaValida(N.flotaAlAzar()), 'al azar válida');
+  const f = [{ c: 0, l: 5, v: false }, { c: 20, l: 4, v: false }, { c: 40, l: 3, v: false }, { c: 60, l: 3, v: false }, { c: 80, l: 2, v: false }];
+  assert(N.flotaValida(f));
+  assert(!N.flotaValida([...f.slice(0, 4), { c: 71, l: 2, v: false }]), 'tocando en diagonal no vale'); // 71 toca a 60-62 en diagonal
+  assert(!N.flotaValida([...f.slice(0, 4), { c: 99, l: 2, v: false }]), 'se sale');
+  assert(N.girar(f, 4) === null || N.flotaValida(N.girar(f, 4)));
+  assert(N.mover(f, 4, 88) && N.mover(f, 4, 88)[4].c === 88);
+  assert(N.mover(f, 4, 1) === null, 'encima de otro');
+  assert(N.respuesta(f, [], 9) === 'a' && N.respuesta(f, [], 80) === 't' && N.respuesta(f, [80], 81) === 'h2');
+});
+
+probar('naval: partida contra la máquina hasta el final', () => {
+  let e = N.inicial({ barcos: { x: N.flotaAlAzar(), o: N.flotaAlAzar() } });
+  assert(e.turno === 'x' && N.validas(e).length === 100);
+  let k = 0;
+  while (!N.ganador(e) && k++ < 400) e = N.aplicar(e, N.ia(e, ['facil', 'normal', 'dificil'][k % 3]));
+  assert(N.ganador(e) && N.vencedor(e) === N.ganador(e), 'termina');
+  assert(e.tiros[N.ganador(e)].filter(([, r]) => r[0] === 'h').length === 5);
+});
+
+await probarAsync('naval: amigo con sello, respuesta automática y revisión', async () => {
+  const bx = N.flotaAlAzar(), bo = N.flotaAlAzar();
+  const sx = N.nuevaSal(), so = N.nuevaSal();
+  let e = N.inicial({ amigo: true });
+  assert(e.turno === 'o' && !e.barcos && e.pendiente === null);
+  e = { ...e, sellos: { x: await N.sellar(bx, sx), o: await N.sellar(bo, so) } };
+  e = N.aplicar(e, 0); // o dispara a x
+  assert(e.pendiente === 0 && e.turno === 'x' && N.validas(e).length === 0, 'hay que responder antes');
+  e = N.responder(e, bx);
+  assert(e.pendiente === null && e.tiros.o.length === 1 && e.tiros.o[0][1] === N.respuesta(bx, [], 0) && e.turno === 'x');
+  // Juego completo: cada uno responde con su flota verdadera.
+  const flota = { x: bx, o: bo };
+  while (!N.vencedor(e)) { e = N.aplicar(e, N.ia(e, 'normal')); e = N.responder(e, flota[e.turno]); }
+  const v = N.vencedor(e);
+  assert(N.ganador(e) === null, 'sin revelar no hay ganador');
+  e = { ...e, revelado: { x: { barcos: bx, sal: sx }, o: { barcos: bo, sal: so } } };
+  assert(N.ganador(e) === v);
+  assert(await N.verificar(e, 'x') && await N.verificar(e, 'o'), 'honestos pasan');
+  // Mentira: x revela otra flota → falla el sello.
+  assert(!(await N.verificar({ ...e, revelado: { ...e.revelado, x: { barcos: N.flotaAlAzar(), sal: sx } } }, 'x')), 'detecta flota cambiada');
+  // Mentira en una respuesta (un «agua» cambiado por «tocado») → falla la coherencia.
+  const k = e.tiros.o.findIndex(([, r]) => r === 'a');
+  const t = e.tiros.o.map(([c, r], i) => [c, i === k ? 't' : r]);
+  assert(k >= 0 && N.coherente(bx, e.tiros.o) && !N.coherente(bx, t), 'detecta respuesta falsa');
 });
