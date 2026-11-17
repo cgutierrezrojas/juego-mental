@@ -148,7 +148,7 @@ export async function verificar(e, ficha) {
 // Con un amigo: ¿el estado `e` que llega de la mesa (el rival puede escribir cualquier `datos`) sigue de forma honesta
 // lo que guarda mi celular? `mio` = { barcos, sal, sellos: los fijados al verlos por primera vez, mios: mis tiros con
 // la respuesta ya aceptada, tiro: mi último tiro sin respuesta }. Comprueba que:
-// - mis tiros solo crecen, como mucho con la respuesta a `tiro`;
+// - mis tiros solo crecen, como mucho con la respuesta a `tiro`, y el rival no dispara otra vez sin responderlo;
 // - lo anotado como respuesta mía a sus tiros es lo que dice mi flota;
 // - los sellos no cambian y el rival ya selló si me toca;
 // - lo revelado a mi nombre es lo mío.
@@ -163,6 +163,10 @@ export function cambioValido(mio, e, yo) {
     if (ahora.length < antes.length || ahora.length > antes.length + 1) return false;
     if (antes.some((t, k) => !Array.isArray(ahora[k]) || t[0] !== ahora[k][0] || t[1] !== ahora[k][1])) return false;
     if (ahora.length > antes.length && ahora.at(-1)[0] !== mio.tiro) return false;
+    // Me toca, mi tiro sigue sin respuesta y el rival ya disparó otro más allá de los que yo había respondido: se negó a responder.
+    // (Si solo se perdió mi tiro, no hay pendiente; si también se perdió mi respuesta, el pendiente es el tiro ya respondido.)
+    const sinResponder = e.turno === yo && Number.isInteger(mio.tiro) && ahora.length === antes.length;
+    if (sinResponder && e.pendiente !== null && e.pendiente !== undefined && Number.isInteger(mio.suyos) && e.tiros[rival]?.length >= mio.suyos) return false;
   }
   if (!Array.isArray(e.tiros?.[rival]) || !coherente(mio.barcos, e.tiros[rival])) return false;
   if (['x', 'o'].some((k) => mio.sellos?.[k] && e.sellos?.[k] !== mio.sellos[k])) return false;

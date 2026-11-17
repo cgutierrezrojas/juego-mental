@@ -62,7 +62,8 @@ export const JUEGOS_MESA = [
   // escribir cualquier `datos`: cada cambio se revisa con cambioValido y, al final, lo que revela con verificar.
   alJugar(partida, casilla) {
     const mio = leerNaval(partida.id);
-    if (mio) guardarNaval(partida.id, { ...mio, tiro: casilla });
+    // `suyos`: cuántos tiros del rival había respondido al tirar (para notar si dispara otra vez sin responder el mío).
+    if (mio) guardarNaval(partida.id, { ...mio, tiro: casilla, suyos: casilla === null ? null : partida.estado.tiros[otro(partida.yo)].length });
   },
   async alActualizar({ partida: p, enviar, sigue }) {
     const e = p.estado;
@@ -108,7 +109,7 @@ export const JUEGOS_MESA = [
     }
     // Cambio aceptado: se fijan el sello del rival y mis tiros ya respondidos.
     const respondido = e.tiros[yo].length > (mio.mios ?? []).length;
-    mio = { ...mio, sellos: { ...mio.sellos, ...(e.sellos?.[rival] ? { [rival]: e.sellos[rival] } : {}) }, mios: e.tiros[yo], tiro: respondido || e.turno === yo ? null : mio.tiro }; // si ya me toca y no hay respuesta, mi tiro no llegó: se vuelve a tirar
+    mio = { ...mio, sellos: { ...mio.sellos, ...(e.sellos?.[rival] ? { [rival]: e.sellos[rival] } : {}) }, mios: e.tiros[yo], ...(respondido || e.turno === yo ? { tiro: null, suyos: null } : {}) }; // si ya me toca y no hay respuesta, mi tiro no llegó: se vuelve a tirar
     guardarNaval(p.id, mio);
     if (e.turno !== yo) return;
     const mostrado = { barcos: mio.barcos, sal: mio.sal }; // lo que se revela (sin lo demás que guarda el celular)
