@@ -2103,3 +2103,18 @@ await probarAsync('naval: amigo con sello, respuesta automática y revisión', a
   const t = e.tiros.o.map(([c, r], i) => [c, i === k ? 't' : r]);
   assert(k >= 0 && N.coherente(bx, e.tiros.o) && !N.coherente(bx, t), 'detecta respuesta falsa');
 });
+
+probar('naval: tiros repetidos no hacen ganar ni pasan la revisión', () => {
+  const f = [{ c: 0, l: 5, v: false }, { c: 20, l: 4, v: false }, { c: 40, l: 3, v: false }, { c: 60, l: 3, v: false }, { c: 80, l: 2, v: false }];
+  let e = N.inicial({ amigo: true });
+  e = N.aplicar(e, 80); e = N.responder(e, f);
+  e = { ...e, turno: 'o' };
+  e = N.aplicar(e, 81); e = N.responder(e, f); // h2
+  for (let k = 0; k < 4; k++) { e = { ...e, turno: 'o', pendiente: 81 }; e = N.responder({ ...e, turno: 'x' }, f); }
+  assert(e.tiros.o.length === 2, 'responder ignora el repetido');
+  const falso = [[80, 't'], [81, 'h2'], [81, 'h2'], [81, 'h2'], [81, 'h2'], [81, 'h2']];
+  assert(N.vencedor({ tiros: { x: [], o: falso } }) === null, 'repetidos no suman');
+  assert(!N.coherente(f, falso), 'coherente rechaza repetidos');
+  assert(!N.coherente(f, [[100, 'a']]) && !N.coherente(f, [[1.5, 'a']]), 'fuera de rango');
+  assert(N.aplicar(N.inicial({ barcos: { x: f, o: f } }), 100).tiros.x.length === 0, 'aplicar ignora lo inválido');
+});

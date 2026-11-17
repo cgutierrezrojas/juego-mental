@@ -86,7 +86,9 @@ export function validas(e) {
   return [...Array(LADO * LADO).keys()].filter((i) => !hechos.has(i));
 }
 
+// Un tiro que no es válido (repetido, fuera del tablero, o con respuesta pendiente) no cambia nada.
 export function aplicar(e, casilla) {
+  if (!validas(e).includes(casilla)) return e;
   const rival = otro(e.turno);
   if (e.barcos) {
     const r = respuesta(e.barcos[rival], e.tiros[e.turno].map((t) => t[0]), casilla);
@@ -96,13 +98,17 @@ export function aplicar(e, casilla) {
 }
 
 // Con un amigo: quien tiene el turno responde al tiro pendiente del rival con su flota (el turno no cambia).
+// Si no hay tiro pendiente, o está repetido o fuera del tablero, devuelve e sin cambios (evita el truco de repetir un hundido).
 export function responder(e, misBarcos) {
   const tirador = otro(e.turno);
+  const p = e.pendiente;
+  if (!Number.isInteger(p) || p < 0 || p >= LADO * LADO || e.tiros[tirador].some((t) => t[0] === p)) return e;
   const r = respuesta(misBarcos, e.tiros[tirador].map((t) => t[0]), e.pendiente);
   return { ...e, tiros: { ...e.tiros, [tirador]: [...e.tiros[tirador], [e.pendiente, r]] }, pendiente: null };
 }
 
-const hundidos = (tiros) => tiros.filter(([, r]) => r[0] === 'h').length;
+// Casillas distintas con respuesta de hundido: un tiro repetido no suma.
+const hundidos = (tiros) => new Set(tiros.filter(([, r]) => r[0] === 'h').map((t) => t[0])).size;
 export const vencedor = (e) => ['x', 'o'].find((j) => hundidos(e.tiros[j]) === FLOTA.length) ?? null;
 
 export function ganador(e) {
@@ -116,6 +122,7 @@ export function ganador(e) {
 export function coherente(barcos, tirosDelRival) {
   const recibidas = [];
   for (const [c, r] of tirosDelRival) {
+    if (!Number.isInteger(c) || c < 0 || c >= LADO * LADO || recibidas.includes(c)) return false;
     if (respuesta(barcos, recibidas, c) !== r) return false;
     recibidas.push(c);
   }
@@ -133,7 +140,7 @@ export async function sellar(barcos, sal) {
 // ¿Lo que reveló `ficha` coincide con su sello y con todas las respuestas que dio?
 export async function verificar(e, ficha) {
   const rv = e.revelado?.[ficha];
-  if (!rv || !flotaValida(rv.barcos)) return false;
+  if (!rv || typeof rv.sal !== 'string' || !flotaValida(rv.barcos)) return false;
   if ((await sellar(rv.barcos, rv.sal)) !== e.sellos?.[ficha]) return false;
   return coherente(rv.barcos, e.tiros[otro(ficha)]);
 }
@@ -159,7 +166,7 @@ function analizar(tiros) {
   }
   const vivos = [...tocados].filter((i) => !hundidas.has(i));
   const restantes = [...FLOTA];
-  for (const l of largosHundidos) restantes.splice(restantes.indexOf(l), 1);
+  for (const l of largosHundidos) { const k = restantes.indexOf(l); if (k >= 0) restantes.splice(k, 1); }
   return { resp, hundidas, vivos, restantes };
 }
 
