@@ -9,6 +9,8 @@ import { gato } from '../games/gato.js';
 import { conecta4, COLUMNAS, FILAS } from '../games/conecta4.js';
 import { damas } from '../games/damas.js';
 import { tableroDamas } from './mesa-damas.js';
+import { reversi, contar as contarReversi } from '../games/reversi.js';
+import { tableroReversi } from './mesa-reversi.js';
 import { E } from './estado.js';
 import { CARA } from './juegos.js';
 import { leerJSON, apuntarLogros } from './datos.js';
@@ -26,6 +28,10 @@ export const JUEGOS_MESA = [
   { ...damas, icono: '⚫', reglas: 'Damas latinas: comer es obligatorio y manda la jugada que más come. La dama vuela en diagonal.', fichas: { x: '⚪', o: '⚫' },
     tablero: tableroDamas,
     marcador: (e) => ({ x: `${[...e.celdas].filter((c) => c.toLowerCase() === 'x').length} pieza${[...e.celdas].filter((c) => c.toLowerCase() === 'x').length === 1 ? '' : 's'}`, o: `${[...e.celdas].filter((c) => c.toLowerCase() === 'o').length} pieza${[...e.celdas].filter((c) => c.toLowerCase() === 'o').length === 1 ? '' : 's'}` }),
+    ultimaJugada: (a, d) => [...d.celdas].findIndex((c, k) => c !== '.' && a.celdas[k] === '.') },
+  { ...reversi, icono: '⚪', reglas: 'Encierra las fichas del rival entre dos tuyas para darlas vuelta. Gana quien tenga más al final.', fichas: { x: '⚫', o: '⚪' },
+    tablero: tableroReversi,
+    marcador: (e) => { const n = contarReversi(e); const f = (k) => `${k} ficha${k === 1 ? '' : 's'}`; return { x: f(n.x), o: f(n.o) }; },
     ultimaJugada: (a, d) => [...d.celdas].findIndex((c, k) => c !== '.' && a.celdas[k] === '.') },
 ];
 const aNube = (j, e) => (j.aNube ? j.aNube(e) : e);
@@ -263,6 +269,8 @@ function jugar(jugada) {
   const antes = partida.estado;
   partida.estado = j.aplicar(antes, jugada);
   partida.ultima = jugada;
+  // Reversi: si quien juega repite turno, el rival no tenía jugadas.
+  partida.paso = partida.juego === 'reversi' && partida.estado.turno === antes.turno ? 'Tu rival no puede jugar: sigues' : null;
   sonar('tic');
   const g = j.ganador(partida.estado);
   if (partida.modo === 'amigo') {
@@ -286,7 +294,9 @@ function moverMaquina() {
   setTimeout(() => {
     if (partida !== esta) return;
     esta.ultima = j.ia(esta.estado, esta.nivel);
-    esta.estado = j.aplicar(esta.estado, esta.ultima);
+    const antes = esta.estado;
+    esta.estado = j.aplicar(antes, esta.ultima);
+    esta.paso = esta.juego === 'reversi' && esta.estado.turno === antes.turno ? 'No puedes jugar: sigue la máquina' : null;
     esta.pensando = false;
     sonar('tic');
     pintarTablero();
@@ -344,6 +354,7 @@ function pintarTablero() {
   else if (partida.pensando) estado = '🤖 Piensa la máquina…';
   else if (partida.modo === 'local') estado = `Turno de ${nombreDe(partida.estado.turno)} ${j.fichas[partida.estado.turno]}`;
   else estado = partida.estado.turno === partida.yo ? `▶ Tu turno ${j.fichas[partida.yo]}` : `⏳ Turno de ${nombreDe(partida.estado.turno)}`;
+  if (!g && partida.paso) estado = `${partida.paso} · ${estado}`;
   if (partida.modo === 'amigo' && !g && partida.estado.turno !== partida.yo) estado += ' (puedes salir: te avisaremos en ⚔️)';
   $('mesa-estado').textContent = estado;
 

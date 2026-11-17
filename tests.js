@@ -1955,6 +1955,43 @@ probar('damas: la máquina juega válido en los 3 niveles', () => {
   assert(jugadasDamas(damas.inicial()).every((j) => j.comidas.length === 0));
 });
 
+// --- reversi.js (🎲 Mesa) ---
+import { reversi, contar as contarReversi } from './games/reversi.js';
+
+probar('reversi: salida, volteo, pase y final', () => {
+  const ini = reversi.inicial();
+  assert(ini.turno === 'x' && ini.celdas[27] === 'o' && ini.celdas[28] === 'x' && ini.celdas[35] === 'x' && ini.celdas[36] === 'o');
+  assert(reversi.validas(ini).sort((a, b) => a - b).join() === '19,26,37,44', `salida: ${reversi.validas(ini)}`);
+  const e = reversi.aplicar(ini, 19);
+  assert(e.celdas[19] === 'x' && e.celdas[27] === 'x' && e.turno === 'o' && contarReversi(e).x === 4 && contarReversi(e).o === 1);
+  // Volteo en dos direcciones a la vez: x juega en 0 con o en 1 y 9, x en 2 y 18.
+  const vacio = '.'.repeat(64).split('');
+  const tab = (piezas, turno) => { const c = [...vacio]; for (const [i, p] of Object.entries(piezas)) c[i] = p; return { celdas: c.join(''), turno }; };
+  let t = reversi.aplicar(tab({ 1: 'o', 2: 'x', 9: 'o', 18: 'x', 63: 'o' }, 'x'), 0);
+  assert(t.celdas[1] === 'x' && t.celdas[9] === 'x', 'voltea en las dos direcciones');
+  // Pase: después de la jugada, o no tiene jugadas pero x sí → sigue x.
+  t = reversi.aplicar(tab({ 0: 'x', 1: 'o', 3: 'o', 4: 'x' }, 'x'), 2);
+  assert(t.turno === 'x' || reversi.ganador(t), 'pase o final');
+  // Final: tablero sin jugadas para nadie → gana quien tiene más.
+  const lleno = tab({ 0: 'x', 1: 'x', 2: 'x' }, 'x');
+  assert(reversi.validas(lleno).length === 0 && reversi.ganador(lleno) === 'x');
+  assert(reversi.ganador(tab({ 0: 'x', 63: 'o' }, 'x')) === 'empate');
+  assert(reversi.ganador(ini) === null);
+});
+
+probar('reversi: la máquina juega válido y toma esquinas', () => {
+  let e = reversi.inicial();
+  for (let k = 0; k < 10 && !reversi.ganador(e); k++) {
+    const j = reversi.ia(e, ['facil', 'normal', 'dificil'][k % 3]);
+    assert(reversi.validas(e).includes(j));
+    e = reversi.aplicar(e, j);
+  }
+  const vacio = '.'.repeat(64).split('');
+  vacio[9] = 'o'; vacio[18] = 'x'; vacio[10] = 'o'; vacio[11] = 'x';
+  const e2 = { celdas: vacio.join(''), turno: 'x' };
+  assert(reversi.validas(e2).includes(0) && reversi.ia(e2, 'normal') === 0, 'esquina');
+});
+
 // --- sw.js: VERSION es la huella de los archivos; si alguno cambia, hay que ponerla al día para que llegue a todos ---
 if (globalThis.process?.versions?.node) {
   const { readFileSync } = await import('node:fs');
