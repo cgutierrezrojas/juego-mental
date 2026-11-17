@@ -2005,3 +2005,44 @@ if (globalThis.process?.versions?.node) {
     assert(sw.includes(`const VERSION = '${huella}';`), `pon const VERSION = '${huella}'; en sw.js`);
   });
 }
+
+// --- cajas.js (🎲 Mesa) ---
+import { cajas, lineas as lineasCajas, ladosDe, contar as contarCajas } from './games/cajas.js';
+
+probar('cajas: líneas, turno extra, doble cierre y final', () => {
+  assert(lineasCajas(3) === 24 && lineasCajas(4) === 40 && lineasCajas(5) === 60);
+  const ini = cajas.inicial({ n: 3 });
+  assert(ini.n === 3 && ini.celdas.length === 24 + 9 && ini.turno === 'x' && cajas.validas(ini).length === 24);
+  assert(cajas.inicial({}).n === 4, 'por defecto 4');
+  // Caja (0,0) en 3×3: lados top 0, bottom 3, left 12, right 13.
+  assert(ladosDe(3, 0, 0).join() === '0,3,12,13', ladosDe(3, 0, 0).join());
+  let e = ini;
+  for (const l of [0, 3, 12]) e = cajas.aplicar(e, l); // x, o, x
+  assert(e.turno === 'o');
+  e = cajas.aplicar(e, 13); // o cierra la caja → sigue o
+  assert(e.celdas[24] === 'o' && e.turno === 'o' && contarCajas(e).o === 1);
+  // Doble cierre: cajas (0,0) y (0,1) comparten la línea 13.
+  let d = cajas.inicial({ n: 3 });
+  for (const l of [0, 3, 12, 1, 4, 14]) d = cajas.aplicar(d, l);
+  const quien = d.turno;
+  d = cajas.aplicar(d, 13);
+  assert(d.celdas[24] === quien && d.celdas[25] === quien && d.turno === quien, 'cierra dos');
+  // Final.
+  let f = cajas.inicial({ n: 3 });
+  while (!cajas.ganador(f)) f = cajas.aplicar(f, cajas.validas(f)[0]);
+  const n = contarCajas(f);
+  assert(n.x + n.o === 9 && cajas.ganador(f) === (n.x > n.o ? 'x' : 'o'));
+});
+
+probar('cajas: la máquina cierra, evita la tercera línea y resuelve el final', () => {
+  let e = cajas.inicial({ n: 3 });
+  for (const l of [0, 3, 12]) e = cajas.aplicar(e, l); // turno o, caja (0,0) con 3 lados
+  assert(cajas.ia(e, 'normal') === 13, 'cierra');
+  let s = cajas.inicial({ n: 3 });
+  s = cajas.aplicar(s, 0); s = cajas.aplicar(s, 3); // caja (0,0) con 2 lados
+  const j = cajas.ia(s, 'normal');
+  assert(j !== 12 && j !== 13, 'no da la tercera línea');
+  let p = cajas.inicial({ n: 3 });
+  while (!cajas.ganador(p)) p = cajas.aplicar(p, cajas.ia(p, ['facil', 'normal', 'dificil'][p.celdas.split('-').length % 3]));
+  assert(cajas.ganador(p));
+});

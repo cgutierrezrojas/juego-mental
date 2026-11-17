@@ -1608,3 +1608,17 @@ button.seccion {
 .con-avatar > .avatar { grid-row: span 2; }
 .con-avatar > span:not(.avatar) { overflow-wrap: anywhere; grid-column: 2; }
 .nivel-chico { grid-column: 2; opacity: 0.7; font-size: 0.75rem; white-space: nowrap; }
+
+/* ✏️ Puntos y cajas: columnas finas para puntos y líneas, anchas para cajas */
+.tablero-cajas { --g: 16px; display: grid; grid-template-columns: repeat(var(--n), var(--g) 1fr) var(--g); grid-template-rows: repeat(var(--n), var(--g) 1fr) var(--g); width: min(100%, 380px); aspect-ratio: 1; margin: 0 auto; }
+.punto-cajas { background: var(--texto); border-radius: 50%; margin: 3px; }
+.linea-cajas { padding: 0; border: none; border-radius: 4px; box-shadow: none; background: color-mix(in srgb, var(--texto) 10%, transparent); }
+.linea-cajas.horizontal { margin: 2px 0; }
+.linea-cajas.vertical { margin: 0 2px; }
+.linea-cajas:not(:disabled):hover { background: color-mix(in srgb, var(--texto) 30%, transparent); }
+.linea-cajas.trazada { background: var(--texto); opacity: 1; }
+.linea-cajas.ultima { background: var(--acento); }
+.linea-cajas:disabled { cursor: default; }
+.caja-cajas { display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.caja-cajas.de-x { background: rgba(31, 79, 216, 0.25); }
+.caja-cajas.de-o { background: rgba(216, 31, 31, 0.25); }

@@ -11,6 +11,8 @@ import { damas } from '../games/damas.js';
 import { tableroDamas } from './mesa-damas.js';
 import { reversi, contar as contarReversi } from '../games/reversi.js';
 import { tableroReversi } from './mesa-reversi.js';
+import { cajas, contar as contarCajas } from '../games/cajas.js';
+import { tableroCajas } from './mesa-cajas.js';
 import { E } from './estado.js';
 import { CARA } from './juegos.js';
 import { leerJSON, apuntarLogros } from './datos.js';
@@ -33,6 +35,11 @@ export const JUEGOS_MESA = [
     tablero: tableroReversi,
     marcador: (e) => { const n = contarReversi(e); const f = (k) => `${k} ficha${k === 1 ? '' : 's'}`; return { x: f(n.x), o: f(n.o) }; },
     ultimaJugada: (a, d) => [...d.celdas].findIndex((c, k) => c !== '.' && a.celdas[k] === '.') },
+  { ...cajas, icono: '✏️', reglas: 'Traza una línea por turno. Si cierras una caja es tuya y vuelves a jugar. Gana quien tenga más cajas.', fichas: { x: '🟦', o: '🟥' },
+    opciones: [{ clave: 'n', nombre: 'Tamaño', valores: [[3, '3×3'], [4, '4×4'], [5, '5×5']], defecto: 4 }],
+    tablero: tableroCajas,
+    marcador: (e) => { const c = contarCajas(e); const f = (k) => `${k} caja${k === 1 ? '' : 's'}`; return { x: f(c.x), o: f(c.o) }; },
+    ultimaJugada: (a, d) => [...d.celdas].findIndex((c, k) => c === '-' && a.celdas[k] === '.') },
 ];
 const aNube = (j, e) => (j.aNube ? j.aNube(e) : e);
 const deNube = (j, s) => (j.deNube ? j.deNube(s) : s);
@@ -237,7 +244,7 @@ async function abrirPartidaAmigo(id) {
     const estado = deNube(j, mesa.estado);
     const nueva = partida.estado && JSON.stringify(estado) !== JSON.stringify(partida.estado);
     if (nueva && j.ultimaJugada) partida.ultima = j.ultimaJugada(partida.estado, estado); // la jugada del rival (para animarla)
-    Object.assign(partida, { juego: mesa.juego, estado, mesa, yo: mesa.jugadores.x === E.usuario.uid ? 'x' : 'o' });
+    Object.assign(partida, { juego: mesa.juego, estado, mesa, opciones: Object.fromEntries((j.opciones ?? []).filter((o) => estado[o.clave] !== undefined).map((o) => [o.clave, estado[o.clave]])), yo: mesa.jugadores.x === E.usuario.uid ? 'x' : 'o' });
     if (nueva) sonar('tic');
     pintarTablero();
   });
