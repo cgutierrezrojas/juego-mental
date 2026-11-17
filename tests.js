@@ -1899,6 +1899,62 @@ probar('perfil: avance de misiones', () => {
   assert(avanzar(r2, 'partida', 1, 'mesa', '2099-W01').registro.secciones.join() === 'mesa');
 });
 
+// --- damas.js (🎲 Mesa) ---
+import { damas, jugadas as jugadasDamas } from './games/damas.js';
+
+probar('damas: salida, comer obligatorio y máximo', () => {
+  const ini = damas.inicial();
+  assert(ini.celdas.length === 64 && ini.turno === 'x' && ini.sinComer === 0);
+  assert([...ini.celdas].filter((c) => c === 'x').length === 12 && [...ini.celdas].filter((c) => c === 'o').length === 12);
+  assert(damas.validas(ini).length === 7, `salida: ${damas.validas(ini).length}`);
+  // Tablero a medida: '.' vacía. Pieza x en 45 (fila 5, col 5); o en 36 (fila 4, col 4) → debe comer 45-27.
+  const vacio = '.'.repeat(64).split('');
+  const tab = (piezas, turno = 'x') => { const c = [...vacio]; for (const [i, p] of Object.entries(piezas)) c[i] = p; return { celdas: c.join(''), turno, sinComer: 0 }; };
+  let e = tab({ 45: 'x', 36: 'o', 1: 'o', 62: 'x' });
+  assert(damas.validas(e).join() === '45-27', `obligatorio: ${damas.validas(e)}`);
+  // Mayoría: x en 61 puede comer 1 (54, cae en 47) o x en 45 puede comer 2 (36 y luego 20) → solo la de 2.
+  e = tab({ 61: 'x', 54: 'o', 45: 'x', 36: 'o', 20: 'o', 3: 'o' });
+  assert(damas.validas(e).join() === '45-27-13', `máximo: ${damas.validas(e)}`);
+  const d = damas.aplicar(e, '45-27-13');
+  assert(d.celdas[13] === 'x' && d.celdas[36] === '.' && d.celdas[20] === '.' && d.celdas[45] === '.' && d.turno === 'o');
+  // Peón no come hacia atrás: x en 27, o en 36 (detrás) → no hay captura.
+  e = tab({ 27: 'x', 36: 'o', 7: 'o' });
+  assert(!damas.validas(e).some((j) => j.startsWith('27-45')), 'peón come atrás');
+});
+
+probar('damas: dama voladora, coronar y final', () => {
+  const vacio = '.'.repeat(64).split('');
+  const tab = (piezas, turno = 'x', sinComer = 0) => { const c = [...vacio]; for (const [i, p] of Object.entries(piezas)) c[i] = p; return { celdas: c.join(''), turno, sinComer }; };
+  // Dama en 63 con o en 27 (misma diagonal, lejos) → puede comer cayendo en 18, 9 o 0.
+  let e = tab({ 63: 'X', 27: 'o', 7: 'o' });
+  assert(damas.validas(e).sort().join() === '63-0,63-18,63-9', `voladora: ${damas.validas(e)}`);
+  // Corona al terminar en la fila 0.
+  e = tab({ 10: 'x', 60: 'o' });
+  const c = damas.aplicar(e, '10-1');
+  assert(c.celdas[1] === 'X', 'corona');
+  // Sin piezas o sin jugadas: gana el otro.
+  assert(damas.ganador(tab({ 10: 'x' }, 'o')) === 'x');
+  // Empate: 30 jugadas seguidas solo de damas sin comer.
+  e = tab({ 63: 'X', 0: 'O' }, 'x', 29);
+  assert(damas.ganador(e) === null);
+  const m = damas.aplicar(e, damas.validas(e)[0]);
+  assert(m.sinComer === 30 && damas.ganador(m) === 'empate', `sinComer ${m.sinComer}`);
+  // Mover un peón reinicia el contador.
+  e = tab({ 45: 'x', 63: 'X', 0: 'O' }, 'x', 20);
+  assert(damas.aplicar(e, '45-36').sinComer === 0);
+});
+
+probar('damas: la máquina juega válido en los 3 niveles', () => {
+  let e = damas.inicial();
+  for (let k = 0; k < 12 && !damas.ganador(e); k++) {
+    const nivel = ['facil', 'normal', 'dificil'][k % 3];
+    const j = damas.ia(e, nivel);
+    assert(damas.validas(e).includes(j), `${nivel}: ${j}`);
+    e = damas.aplicar(e, j);
+  }
+  assert(jugadasDamas(damas.inicial()).every((j) => j.comidas.length === 0));
+});
+
 // --- sw.js: VERSION es la huella de los archivos; si alguno cambia, hay que ponerla al día para que llegue a todos ---
 if (globalThis.process?.versions?.node) {
   const { readFileSync } = await import('node:fs');
