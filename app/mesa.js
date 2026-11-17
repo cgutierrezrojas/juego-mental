@@ -1,4 +1,4 @@
-// 🎲 Mesa: juegos por turnos (Gato y 4 en línea) contra la máquina, a dos en un celular o contra un amigo.
+// 🎲 Mesa: juegos por turnos (ver JUEGOS_MESA) contra la máquina, a dos en un celular o contra un amigo.
 // Con un amigo, la misma partida sirve en vivo y por turnos: se guarda en la Realtime Database (`mesas/{id}`).
 // Cada juego (games/gato.js, games/conecta4.js) define sus reglas y su máquina; aquí se pinta y se juega.
 import { el, leer, guardar } from '../games/comun.js';
@@ -17,16 +17,20 @@ import { finDePartida } from './anuncios.js';
 import { asegurarDuelista } from './duelos.js';
 
 export const JUEGOS_MESA = [
-  { ...gato, icono: '⭕', reglas: 'Haz 3 en raya (fila, columna o diagonal) antes que tu rival.', fichas: { x: '❌', o: '⭕' } },
-  { ...conecta4, icono: '🔴', reglas: 'Deja caer tus fichas y haz 4 en raya antes que tu rival.', fichas: { x: '🔴', o: '🟡' } },
+  { ...gato, icono: '⭕', reglas: 'Haz 3 en raya (fila, columna o diagonal) antes que tu rival.', fichas: { x: '❌', o: '⭕' },
+    tablero: tableroGato, ultimaJugada: (a, d) => [...d.celdas].findIndex((c, k) => c !== a.celdas[k]) },
+  { ...conecta4, icono: '🔴', reglas: 'Deja caer tus fichas y haz 4 en raya antes que tu rival.', fichas: { x: '🔴', o: '🟡' },
+    tablero: tableroConecta, ultimaJugada: (a, d) => [...d.celdas].findIndex((c, k) => c !== a.celdas[k]) % COLUMNAS },
 ];
+const aNube = (j, e) => (j.aNube ? j.aNube(e) : e);
+const deNube = (j, s) => (j.deNube ? j.deNube(s) : s);
 const juegoDe = (id) => JUEGOS_MESA.find((j) => j.id === id);
 const CADUCA = 7 * 24 * 60 * 60 * 1000; // una partida sin movimientos en 7 días se da por perdida para todos
 const otro = (f) => (f === 'x' ? 'o' : 'x');
 
 // Partida abierta: { juego, modo: 'maquina' | 'local' | 'amigo', nivel, estado, yo, nombres, id, parar, apuntada }
 let partida = null;
-let elegido = { juego: null, nivel: 'normal' }; // pantalla de elegir modo
+let elegido = { juego: null, nivel: 'normal', opciones: {} }; // pantalla de elegir modo
 
 export function pararMesa() {
   partida?.parar?.();
@@ -103,9 +107,25 @@ export function resultadoMesa(mesa, mia) {
 // --- Elegir modo ---
 
 function abrirModo(id) {
-  elegido = { ...elegido, juego: id };
+  const j = juegoDe(id);
+  elegido = { ...elegido, juego: id, opciones: Object.fromEntries((j.opciones ?? []).map((o) => [o.clave, o.defecto])) };
   mostrar('mesa-modo');
   pintarModo();
+}
+
+function selectoresOpciones(j) {
+  return (j.opciones ?? []).flatMap((o) => {
+    const grupo = el('div', 'opciones-duelo');
+    grupo.setAttribute('role', 'group');
+    grupo.setAttribute('aria-label', o.nombre);
+    for (const [valor, texto] of o.valores) {
+      const b = el('button', '', texto);
+      b.setAttribute('aria-pressed', elegido.opciones[o.clave] === valor);
+      b.onclick = () => { elegido.opciones[o.clave] = valor; pintarModo(); };
+      grupo.append(b);
+    }
+    return [el('h3', 'categoria', o.nombre), grupo];
+  });
 }
 
 async function pintarModo() {
@@ -133,12 +153,13 @@ async function pintarModo() {
   const amigos = el('div', 'opciones-duelo');
   const partes = [
     el('p', 'sin-datos', j.reglas),
+    ...selectoresOpciones(j),
     el('h3', 'categoria', '🤖 Contra la máquina'),
     niveles,
     el('p', 'sin-datos', `Contra la máquina (${DIFICULTADES[elegido.nivel]}): ${record.v} victorias · ${record.e} empates · ${record.d} derrotas`),
-    boton('▶ Jugar contra la máquina', 'grande color', () => empezar({ juego: j.id, modo: 'maquina', nivel: elegido.nivel })),
+    boton('▶ Jugar contra la máquina', 'grande color', () => empezar({ juego: j.id, modo: 'maquina', nivel: elegido.nivel, opciones: elegido.opciones })),
     el('h3', 'categoria', '📱 Dos en este celular'),
-    boton('▶ Jugar a dos (pasándoos el celular)', '', () => empezar({ juego: j.id, modo: 'local' })),
+    boton('▶ Jugar a dos (pasándoos el celular)', '', () => empezar({ juego: j.id, modo: 'local', opciones: elegido.opciones })),
     el('h3', 'categoria', '👥 Contra un amigo'),
     amigos,
   ];
@@ -150,20 +171,20 @@ async function pintarModo() {
   try {
     const { amigos: lista } = amigosDe(await E.nube.misSolicitudes(E.usuario.uid), E.usuario.uid);
     if (!lista.length) return amigos.replaceChildren(el('span', 'sin-datos', 'Aún no tienes amigos: agrégalos en 👥 Amigos.'));
-    amigos.replaceChildren(...lista.map((a) => boton(`👥 ${a.apodo}`, '', () => retarAmigo(j.id, a))));
+    amigos.replaceChildren(...lista.map((a) => boton(`👥 ${a.apodo}`, '', () => retarAmigo(j.id, a, elegido.opciones))));
   } catch {
     amigos.replaceChildren(el('span', 'sin-datos', 'No se pudieron cargar tus amigos (¿sin conexión?).'));
   }
 }
 
-async function retarAmigo(juego, amigo) {
+async function retarAmigo(juego, amigo, opciones = {}) {
   if (!(await asegurarDuelista())) return;
   try {
     const id = await E.nube.crearMesa({
       juego,
       jugadores: { x: E.usuario.uid, o: amigo.uid },
       nombres: { [E.usuario.uid]: leer('nube:apodo'), [amigo.uid]: amigo.apodo },
-      estado: juegoDe(juego).inicial(),
+      estado: aNube(juegoDe(juego), juegoDe(juego).inicial(opciones)),
     });
     abrirPartidaAmigo(id);
   } catch {
@@ -173,11 +194,19 @@ async function retarAmigo(juego, amigo) {
 
 // --- Partida ---
 
-function empezar({ juego, modo, nivel }) {
+async function empezar({ juego, modo, nivel, opciones = {} }) {
   pararMesa();
-  partida = { juego, modo, nivel, estado: juegoDe(juego).inicial(), yo: 'x', nombres: null, id: null, apuntada: false };
+  const j = juegoDe(juego);
+  let extra = {};
+  if (j.preparar) {
+    mostrar('mesa-tablero');
+    extra = await j.preparar({ modo, contenedor: $('mesa-tablero-juego') });
+    if (!extra) return abrirModo(juego); // canceló
+  }
+  partida = { juego, modo, nivel, opciones, estado: j.inicial({ ...opciones, ...extra }), yo: 'x', nombres: null, id: null, apuntada: false };
   mostrar('mesa-tablero');
   pintarTablero();
+  moverMaquina();
 }
 
 async function abrirPartidaAmigo(id) {
@@ -192,12 +221,11 @@ async function abrirPartidaAmigo(id) {
       $('mesa-estado').textContent = 'Esta partida ya no existe.';
       return;
     }
-    const nueva = partida.estado && mesa.estado.celdas !== partida.estado.celdas;
-    if (nueva) {
-      const i = [...mesa.estado.celdas].findIndex((c, k) => c !== partida.estado.celdas[k]);
-      partida.ultima = mesa.juego === 'conecta4' ? i % COLUMNAS : i; // la jugada del rival (para animarla)
-    }
-    Object.assign(partida, { juego: mesa.juego, estado: mesa.estado, mesa, yo: mesa.jugadores.x === E.usuario.uid ? 'x' : 'o' });
+    const j = juegoDe(mesa.juego);
+    const estado = deNube(j, mesa.estado);
+    const nueva = partida.estado && JSON.stringify(estado) !== JSON.stringify(partida.estado);
+    if (nueva && j.ultimaJugada) partida.ultima = j.ultimaJugada(partida.estado, estado); // la jugada del rival (para animarla)
+    Object.assign(partida, { juego: mesa.juego, estado, mesa, yo: mesa.jugadores.x === E.usuario.uid ? 'x' : 'o' });
     if (nueva) sonar('tic');
     pintarTablero();
   });
@@ -233,24 +261,31 @@ function jugar(jugada) {
   const g = j.ganador(partida.estado);
   if (partida.modo === 'amigo') {
     partida.mesa = { ...partida.mesa, estado: partida.estado, ganador: g ?? partida.mesa.ganador };
-    E.nube.jugarMesa(partida.id, partida.estado, g).catch(() => {
+    E.nube.jugarMesa(partida.id, aNube(j, partida.estado), g).catch(() => {
       partida.estado = antes; // no se pudo guardar: se deshace
       $('mesa-estado').textContent = 'No se pudo enviar la jugada (¿sin conexión?).';
     });
   }
   pintarTablero();
-  if (!g && partida.modo === 'maquina') {
-    partida.pensando = true;
+  moverMaquina();
+}
+
+// La máquina juega mientras sea su turno (Reversi y Cajas pueden darle varias jugadas seguidas).
+function moverMaquina() {
+  const esta = partida;
+  const j = juegoDe(esta.juego);
+  if (esta.modo !== 'maquina' || j.ganador(esta.estado) || esta.estado.turno === esta.yo) return;
+  esta.pensando = true;
+  pintarTablero();
+  setTimeout(() => {
+    if (partida !== esta) return;
+    esta.ultima = j.ia(esta.estado, esta.nivel);
+    esta.estado = j.aplicar(esta.estado, esta.ultima);
+    esta.pensando = false;
+    sonar('tic');
     pintarTablero();
-    setTimeout(() => {
-      if (!partida || partida.modo !== 'maquina') return;
-      partida.ultima = j.ia(partida.estado, partida.nivel);
-      partida.estado = j.aplicar(partida.estado, partida.ultima);
-      partida.pensando = false;
-      sonar('tic');
-      pintarTablero();
-    }, 450);
-  }
+    moverMaquina();
+  }, 450);
 }
 
 // Resultado de una partida con un amigo (Mesa o Ruleta): se apunta una sola vez por partida.
@@ -292,6 +327,7 @@ function pintarTablero() {
   const jugadores = ['x', 'o'].map((f) => {
     const d = el('div', `jugador-mesa${!g && partida.estado.turno === f ? ' turno' : ''}`);
     d.append(el('span', 'ficha-mesa', j.fichas[f]), el('span', '', nombreDe(f)));
+    if (j.marcador) d.append(el('small', 'marcador-mesa', j.marcador(partida.estado)[f]));
     return d;
   });
   $('mesa-jugadores').replaceChildren(jugadores[0], el('span', 'vs', 'vs'), jugadores[1]);
@@ -305,7 +341,7 @@ function pintarTablero() {
   if (partida.modo === 'amigo' && !g && partida.estado.turno !== partida.yo) estado += ' (puedes salir: te avisaremos en ⚔️)';
   $('mesa-estado').textContent = estado;
 
-  $('mesa-tablero-juego').replaceChildren(j.id === 'gato' ? tableroGato(j, g) : tableroConecta(j, g));
+  $('mesa-tablero-juego').replaceChildren(j.tablero({ partida, j, g, puedo: puedoJugar(), jugar }));
 
   const boton = (texto, clase, alPulsar) => {
     const b = el('button', clase, texto);
@@ -318,7 +354,7 @@ function pintarTablero() {
     botones.push(boton(partida.modo === 'amigo' ? '🔄 Revancha' : '🔄 Otra partida', 'color', () => {
       if (partida.modo !== 'amigo') return empezar(partida);
       const rival = partida.mesa.jugadores[otro(partida.yo)];
-      retarAmigo(partida.juego, { uid: rival, apodo: partida.mesa.nombres?.[rival] ?? 'Rival' });
+      retarAmigo(partida.juego, { uid: rival, apodo: partida.mesa.nombres?.[rival] ?? 'Rival' }, partida.opciones ?? {});
     }));
   } else if (partida.modo === 'amigo') {
     botones.push(boton('🏳️ Rendirse', '', async () => {
@@ -330,13 +366,13 @@ function pintarTablero() {
   $('mesa-botones').replaceChildren(...botones);
 }
 
-function tableroGato(j, g) {
+function tableroGato({ partida, j, puedo, jugar }) {
   const rejilla = el('div', 'tablero-gato');
   rejilla.setAttribute('role', 'group');
   rejilla.setAttribute('aria-label', 'Tablero del gato');
   [...partida.estado.celdas].forEach((c, i) => {
     const b = el('button', c === '.' ? '' : `ficha-${c}`, c === '.' ? '' : j.fichas[c]);
-    b.disabled = c !== '.' || !puedoJugar();
+    b.disabled = c !== '.' || !puedo;
     b.setAttribute('aria-label', `Fila ${Math.floor(i / 3) + 1}, columna ${(i % 3) + 1}, ${c === '.' ? 'vacía' : j.fichas[c]}`);
     b.onclick = () => jugar(i);
     rejilla.append(b);
@@ -344,14 +380,14 @@ function tableroGato(j, g) {
   return rejilla;
 }
 
-function tableroConecta(j) {
+function tableroConecta({ partida, j, puedo, jugar }) {
   const rejilla = el('div', 'tablero-conecta');
   rejilla.setAttribute('role', 'group');
   rejilla.setAttribute('aria-label', 'Tablero de 4 en línea: elige una columna');
   for (let c = 0; c < COLUMNAS; c++) {
     const columna = el('button', 'columna-conecta');
     const libres = [...Array(FILAS).keys()].filter((f) => partida.estado.celdas[f * COLUMNAS + c] === '.').length;
-    columna.disabled = !libres || !puedoJugar();
+    columna.disabled = !libres || !puedo;
     columna.setAttribute('aria-label', `Columna ${c + 1}, ${libres} hueco${libres === 1 ? '' : 's'}`);
     for (let f = 0; f < FILAS; f++) {
       const v = partida.estado.celdas[f * COLUMNAS + c];
