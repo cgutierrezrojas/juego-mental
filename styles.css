@@ -1622,3 +1622,15 @@ button.seccion {
 .caja-cajas { display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
 .caja-cajas.de-x { background: rgba(31, 79, 216, 0.25); }
 .caja-cajas.de-o { background: rgba(216, 31, 31, 0.25); }
+
+/* 🚢 Batalla naval */
+.naval { display: flex; flex-direction: column; gap: 6px; }
+.tablero-naval { display: grid; grid-template-columns: repeat(10, 1fr); gap: 1px; width: min(70%, 240px); margin: 0 auto; background: #0b4f8a; padding: 2px; border-radius: 6px; }
+.tablero-naval.grande { width: min(100%, 380px); }
+.casilla-naval { aspect-ratio: 1; padding: 0; border: none; border-radius: 2px; box-shadow: none; background: #4fa3e0; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900; color: #fff; }
+.casilla-naval.barco { background: #5c6670; }
+.casilla-naval.elegido { background: #ffd23f; }
+.casilla-naval.tiro-a { background: #8cc6ef; color: #0b4f8a; }
+.casilla-naval.tiro-t, .casilla-naval.tiro-h { background: #e2462f; }
+.casilla-naval:disabled { cursor: default; opacity: 1; }
+.tapa-naval { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 40px 12px; }

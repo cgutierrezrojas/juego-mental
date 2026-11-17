@@ -13,6 +13,8 @@ import { reversi, contar as contarReversi } from '../games/reversi.js';
 import { tableroReversi } from './mesa-reversi.js';
 import { cajas, contar as contarCajas } from '../games/cajas.js';
 import { tableroCajas } from './mesa-cajas.js';
+import { naval, FLOTA as FLOTA_NAVAL, flotaAlAzar } from '../games/naval.js';
+import { colocarFlota, tableroNaval, textoRespuesta } from './mesa-naval.js';
 import { E } from './estado.js';
 import { CARA } from './juegos.js';
 import { leerJSON, apuntarLogros } from './datos.js';
@@ -40,6 +42,21 @@ export const JUEGOS_MESA = [
     tablero: tableroCajas,
     marcador: (e) => { const c = contarCajas(e); const f = (k) => `${k} caja${k === 1 ? '' : 's'}`; return { x: f(c.x), o: f(c.o) }; },
     ultimaJugada: (a, d) => [...d.celdas].findIndex((c, k) => c === '-' && a.celdas[k] === '.') },
+  { ...naval, icono: '🚢', reglas: 'Coloca tus 5 barcos (no pueden tocarse) y hunde la flota rival disparando por turnos.', fichas: { x: '🚢', o: '⛴️' },
+  soloPorTurnos: true,
+  tablero: tableroNaval,
+  marcador: (e) => ({ x: `${e.tiros.x.filter(([, r]) => r[0] === 'h').length}/${FLOTA_NAVAL.length} hundidos`, o: `${e.tiros.o.filter(([, r]) => r[0] === 'h').length}/${FLOTA_NAVAL.length} hundidos` }),
+  aNube: (e) => ({ turno: e.turno, datos: JSON.stringify(e) }),
+  deNube: (s) => JSON.parse(s.datos),
+  async preparar({ modo, contenedor }) {
+    const x = await colocarFlota(contenedor, modo === 'local' ? '🚢 Jugador 1: coloca tu flota' : '🚢 Coloca tu flota');
+    if (!x) return null;
+    if (modo !== 'local') return { barcos: { x, o: flotaAlAzar() } };
+    contenedor.replaceChildren(el('h3', '', '📱 Pasa el celular a Jugador 2'));
+    await new Promise((r) => { const b = el('button', 'color grande', '👀 Ya lo tengo'); b.onclick = r; contenedor.append(b); });
+    const o = await colocarFlota(contenedor, '⛴️ Jugador 2: coloca tu flota');
+    return o ? { barcos: { x, o } } : null;
+  } },
 ];
 const aNube = (j, e) => (j.aNube ? j.aNube(e) : e);
 const deNube = (j, s) => (j.deNube ? j.deNube(s) : s);
@@ -213,16 +230,20 @@ async function retarAmigo(juego, amigo, opciones = {}) {
 
 // --- Partida ---
 
+let empezando = 0; // cuenta de intentos: si el jugador se va mientras se prepara, no se crea la partida
 async function empezar({ juego, modo, nivel, opciones = {} }) {
   pararMesa();
+  const mio = ++empezando;
   const j = juegoDe(juego);
   let extra = {};
   if (j.preparar) {
     mostrar('mesa-tablero');
     extra = await j.preparar({ modo, contenedor: $('mesa-tablero-juego') });
+    if (mio !== empezando || $('mesa-tablero').hidden) return; // se fue o empezó otra
     if (!extra) return abrirModo(juego); // canceló
   }
   partida = { juego, modo, nivel, opciones, estado: j.inicial({ ...opciones, ...extra }), yo: 'x', nombres: null, id: null, apuntada: false };
+  partida.repintar = pintarTablero;
   mostrar('mesa-tablero');
   pintarTablero();
   moverMaquina();
@@ -276,6 +297,10 @@ function jugar(jugada) {
   const antes = partida.estado;
   partida.estado = j.aplicar(antes, jugada);
   partida.ultima = jugada;
+  if (partida.modo === 'local' && partida.juego === 'naval') {
+    partida.ultimoTexto = textoRespuesta(partida.estado.tiros[antes.turno].at(-1)[1]);
+    partida.tapado = true;
+  }
   // Reversi: si quien juega repite turno, el rival no tenía jugadas.
   partida.paso = partida.juego === 'reversi' && partida.estado.turno === antes.turno ? 'Tu rival no puede jugar: sigues' : null;
   sonar('tic');
