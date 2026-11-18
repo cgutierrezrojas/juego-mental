@@ -6,6 +6,8 @@ import { PINTAS } from '../games/dados.js';
 import { boton } from './cartas.js';
 import { dado } from './dados.js';
 
+// Con el nombre «Tú» el verbo va en segunda persona: yo(nombre, 'pierdes', 'pierde').
+const yo = (nombre, tu, otro) => (nombre === 'Tú' ? tu : otro);
 const nomPinta = (n) => PINTAS[n - 1].nombre;
 
 // La máquina decide con su nivel; si algo fallara (no debería), duda o apuesta la mínima.
@@ -54,11 +56,11 @@ function pintar(e, quien, miTurno, actuar, { nombres, repintar }) {
 
   const ap = e.apuesta;
   const apuesta = el('div', 'apuesta-cacho');
-  if (ap) apuesta.append(el('small', '', `Apuesta de ${nombres[ap.de]}`), el('strong', '', `${ap.n} ×`), dado(ap.pinta), el('span', '', nomPinta(ap.pinta)));
+  if (ap) apuesta.append(el('small', '', ap.de === quien ? 'Tu apuesta' : `Apuesta de ${nombres[ap.de]}`), el('strong', '', `${ap.n} ×`), dado(ap.pinta), el('span', '', nomPinta(ap.pinta)));
   else apuesta.append(el('small', '', 'Nadie ha apostado: abre la ronda'));
 
   const aviso = e.obligo !== null
-    ? el('p', 'aviso-obligo', `¡Obligo! ${nombres[e.obligo]} juega con un solo dado: pinta fija, los ases no son comodín.`)
+    ? el('p', 'aviso-obligo', `¡Obligo! ${nombres[e.obligo]} ${yo(nombres[e.obligo], 'juegas', 'juega')} con un solo dado: pinta fija, los ases no son comodín.`)
     : el('p', 'ultimo-cartas', miTurno ? `▶ ${nombre === 'Tú' ? 'Tu turno' : `Turno de ${nombre}`}` : `⏳ Turno de ${nombre}`);
 
   const tapete = [rivales, el('p', 'sin-datos', `Tus dados (toca para ${ui.tapado ? 'destapar' : 'tapar'})`), mio, apuesta, aviso];
@@ -94,10 +96,10 @@ function pintar(e, quien, miTurno, actuar, { nombres, repintar }) {
 // Fin de ronda: todos los dados destapados, los que cuentan resaltados.
 function resumen(e, nombres) {
   const r = e.resumen, cuenta = (d) => d === r.apuesta.pinta || (!r.obligo && r.apuesta.pinta !== 1 && d === 1);
-  const cab = el('p', 'turno-trivia', `${nombres[r.por]} ${r.tipo === 'dudo' ? 'duda' : 'calza'}: ${r.apuesta.n} × ${nomPinta(r.apuesta.pinta)}`);
+  const cab = el('p', 'turno-trivia', `${nombres[r.por]} ${r.tipo === 'dudo' ? yo(nombres[r.por], 'dudas', 'duda') : yo(nombres[r.por], 'calzas', 'calza')}: ${r.apuesta.n} × ${nomPinta(r.apuesta.pinta)}`);
   const cuantos = el('p', 'ultimo-cartas', `Había ${r.total}${r.obligo ? ' (obligo: sin comodín)' : ''}.`);
   const quien = nombres[r.quien];
-  const efecto = el('p', 'turno-trivia', r.delta < 0 ? `${quien} pierde un dado` : r.delta > 0 ? `🎯 ¡Calzó! ${quien} gana un dado` : `🎯 ¡Calzó! ${quien} ya tiene 5 dados`);
+  const efecto = el('p', 'turno-trivia', r.delta < 0 ? `${quien} ${yo(quien, 'pierdes', 'pierde')} un dado` : r.delta > 0 ? `🎯 ${yo(quien, '¡Calzaste!', '¡Calzó!')} ${quien} ${yo(quien, 'ganas', 'gana')} un dado` : `🎯 ${yo(quien, '¡Calzaste!', '¡Calzó!')} ${quien} ${yo(quien, 'ya tienes', 'ya tiene')} 5 dados`);
   const lista = el('div', 'rivales-cacho');
   r.dados.forEach((ds, i) => {
     const f = el('div', 'rival-cacho');
@@ -115,7 +117,7 @@ export const CACHO = {
   id: 'cacho', nombre: 'Cacho', icono: '🥤', seccion: 'dados', niveles: ['facil', 'normal', 'dificil'], maxMaquinas: 5, maxLocal: 6, pausa: 1100,
   verTexto: '▶ Ya lo tengo',
   reglas: 'Cada uno tiene 5 dados bajo su cacho. Por turnos se apuesta cuántos dados de una pinta hay entre todos y se sube la apuesta (más dados, o los mismos con una pinta mayor). Los ases son comodines. Si no crees la apuesta anterior, dudas: quien se equivoca pierde un dado. Calzar es decir que la apuesta es exacta: si aciertas ganas un dado (hasta 5). Con un solo dado, una vez, se juega «obligo». Gana el último con dados.',
-  nueva: (n) => C.nueva(n),
+  nueva: (n) => { ui.clave = ''; return C.nueva(n); }, // partida nueva: sin tapado ni selector de la anterior
   maquina,
   pintar,
   resumen,
