@@ -149,12 +149,12 @@ function listo(e, nivel, rnd) {
   const ap = e.apuesta, exacta = nivel === 'dificil';
   // La Difícil deduce que su pinta abunda donde los rivales apostaron (hasta +2).
   const deduce = (p) => (exacta ? Math.min(2, 0.5 * e.apuestas.filter((x) => x.de !== e.turno && x.pinta === p).length) : 0);
-  // ponytail: afinado a mano con simulaciones (Difícil ~58 % contra Normal). Normal calza con P(exacto) > 0,4 y no 0,2 como pedía la spec: con 0,2 perdía casi siempre contra Fácil.
+  // ponytail: afinado a mano con simulaciones (Difícil ~62 % contra Normal y ~52 % contra Fácil; sube con la apuesta más baja a 0,3 de la mejor probabilidad y farolea un 40 %; con más margen gana más a Normal pero pierde contra Fácil). Normal calza con P(exacto) > 0,4 y no 0,2 como pedía la spec: con 0,2 perdía casi siempre contra Fácil.
   const v = validas(e);
   let mejor = null, pm = -1;
   const ps = v.map((a) => prob(e, a, exacta, deduce(a.pinta)).mayor);
   ps.forEach((p, i) => { if (p > pm + 1e-9) [mejor, pm] = [v[i], p]; });
-  if (exacta) { const i = ps.findIndex((p) => p >= pm - 0.15); if (i >= 0) mejor = v[i]; }
+  if (exacta) { const i = ps.findIndex((p) => p >= pm - 0.3); if (i >= 0) mejor = v[i]; }
   if (ap) {
     const pr = prob(e, ap, exacta, deduce(ap.pinta));
     // Difícil: duda si es más probable que la apuesta sea falsa que la mejor subida verdadera (con un margen).
@@ -162,7 +162,7 @@ function listo(e, nivel, rnd) {
     if (ap.de !== e.turno && Math.abs(ap.n - pr.esperado) < 0.5 && pr.igual > (exacta ? 0.3 : 0.4)) return { tipo: 'calzar' };
   }
   if (!mejor) return { tipo: 'dudar' };
-  if (exacta && rnd() < 0.15) { // farol: una apuesta mínima cualquiera
+  if (exacta && rnd() < 0.4) { // farol: una apuesta mínima cualquiera
     const m = v.filter((a) => a.n === v[0].n), a = m[Math.floor(rnd() * m.length)];
     return { tipo: 'apostar', n: a.n, pinta: a.pinta };
   }
