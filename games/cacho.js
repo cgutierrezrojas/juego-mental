@@ -141,7 +141,7 @@ function facil(e, rnd) {
   // Su pinta más repetida (sin contar ases): la apuesta mínima en ella, o la mínima que haya.
   let mejor = 2;
   for (const p of PINTAS_ORDEN) if (contar(mis, p) >= contar(mis, mejor)) mejor = p;
-  const a = v.find((x) => x.pinta === mejor) ?? v[0];
+  const a = rnd() < 0.3 ? v[Math.floor(rnd() * Math.min(v.length, 6))] : (v.find((x) => x.pinta === mejor) ?? v[0]);
   return { tipo: 'apostar', n: a.n, pinta: a.pinta };
 }
 
@@ -149,7 +149,7 @@ function listo(e, nivel, rnd) {
   const ap = e.apuesta, exacta = nivel === 'dificil';
   // La Difícil deduce que su pinta abunda donde los rivales apostaron (hasta +2).
   const deduce = (p) => (exacta ? Math.min(2, 0.5 * e.apuestas.filter((x) => x.de !== e.turno && x.pinta === p).length) : 0);
-  // ponytail: afinado a mano con simulaciones (Difícil ~62 % contra Normal y ~52 % contra Fácil; sube con la apuesta más baja a 0,3 de la mejor probabilidad y farolea un 40 %; con más margen gana más a Normal pero pierde contra Fácil). Normal calza con P(exacto) > 0,4 y no 0,2 como pedía la spec: con 0,2 perdía casi siempre contra Fácil.
+  // ponytail: afinado con simulaciones (Difícil > Normal > Fácil, ~62 % cada una contra la anterior). Normal calza con P(exacto) > 0,4 (con 0,2 perdía contra Fácil); Difícil con 0,3.
   const v = validas(e);
   let mejor = null, pm = -1;
   const ps = v.map((a) => prob(e, a, exacta, deduce(a.pinta)).mayor);
@@ -162,7 +162,7 @@ function listo(e, nivel, rnd) {
     if (ap.de !== e.turno && Math.abs(ap.n - pr.esperado) < 0.5 && pr.igual > (exacta ? 0.3 : 0.4)) return { tipo: 'calzar' };
   }
   if (!mejor) return { tipo: 'dudar' };
-  if (exacta && rnd() < 0.4) { // farol: una apuesta mínima cualquiera
+  if (exacta && rnd() < 0.3) { // farol: una apuesta mínima cualquiera
     const m = v.filter((a) => a.n === v[0].n), a = m[Math.floor(rnd() * m.length)];
     return { tipo: 'apostar', n: a.n, pinta: a.pinta };
   }

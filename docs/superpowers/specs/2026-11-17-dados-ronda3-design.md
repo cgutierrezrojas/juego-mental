@@ -132,12 +132,16 @@ Se implementa 3a primero y 3b después, en la misma rama.
 ## 🤖 Máquinas
 
 **Cacho.**
-- **Fácil:** sube con la apuesta mínima válida usando su pinta más repetida. Duda al azar cuando la apuesta supera el doble de lo esperado.
-- **Normal:** calcula lo esperado de una pinta como sus dados de esa pinta (con ases si cuentan) más los dados ocultos por 1/3 (por 1/6 en obligo o si la pinta es As).
+- **Fácil:** sube con la apuesta mínima válida usando su pinta más repetida; el 30 % de las veces sube con una apuesta al azar entre las 6 primeras válidas. Duda al azar cuando la apuesta supera el doble de lo esperado.
+- **Normal:** calcula lo esperado de una pinta como sus dados de esa pinta (con ases si cuentan) más los dados ocultos por 1/3 (por 1/6 en obligo o si la pinta es As), con aproximación normal.
   - Duda si la apuesta supera lo esperado + 1.
-  - Calza si la apuesta está a menos de 0,5 de lo esperado y la probabilidad de acierto supera el 20 %.
+  - Calza si la apuesta está a menos de 0,5 de lo esperado y la probabilidad de acierto supera el 40 % (con 20 % perdía contra Fácil).
   - Si no, sube a la apuesta válida con mayor probabilidad de ser cierta.
-- **Difícil:** igual que Normal, pero usa la probabilidad binomial exacta y deduce de las apuestas de los demás que su pinta probablemente abunda (suma +0,5 por cada apuesta rival en esa pinta). Farolea en un 15 % de las veces.
+- **Difícil:** usa la probabilidad binomial exacta y deduce de las apuestas de los demás que su pinta probablemente abunda (suma +0,5 por cada apuesta rival en esa pinta, hasta +2).
+  - Sube con la apuesta más baja cuya probabilidad esté a 0,3 de la mejor.
+  - Duda si P(cierta) + 0,8 de la mejor subida < 0,5.
+  - Calza con probabilidad de acierto > 30 %.
+  - Farolea en un 30 % de las veces (apuesta mínima en una pinta al azar).
 
 **Generala.**
 - **Fácil:** guarda la pinta más repetida y anota en la casilla de mayor puntaje disponible.
