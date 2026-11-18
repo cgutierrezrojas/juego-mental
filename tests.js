@@ -2486,6 +2486,8 @@ async function partidaAmigo(M, jugar) {
     if (s.k === e.k + 1) log[s.k] = { cuando: (ahora += 1234), g: J.mascara(s.guardados), j: FICHAS[t] };
     else assert(s.k === e.k, 'k sube de a 1');
     e = jsn(s);
+    assert(JSON.stringify(e).length < 8000, 'datos de la mesa < 8000 caracteres');
+    assert(JSON.stringify(e).length < 8000, 'datos de la mesa < 8000 (tamaño ' + JSON.stringify(e).length + ')');
     if (e.turno !== t) {
       base[t] = e;
       if (base[e.turno]) llegadas.push([base[e.turno], e, e.turno]);

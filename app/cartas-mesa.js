@@ -322,7 +322,7 @@ async function abrirAmigo(id, seccion = 'cartas') {
       Object.assign(q, { J, yo, nombres: [nombre(0), nombre(1)] });
       AMIGO.alCambiar(q, mesa);
       if (primera && q.e) q.visto = q.e.resumen?.ronda ?? 0;
-      return AMIGO.correr(q, J.amigo, () => p === q && !!q.dejar, pintar);
+      return AMIGO.correr(q, J.amigo, () => p === q && q.dejar !== null, pintar);
     }
     let e;
     try {
@@ -343,7 +343,7 @@ const ganador = () => (p.modo === 'amigo' && p.mesa?.ganador ? (p.mesa.ganador =
 function actuar(nuevo) {
   if (p.modo === 'amigo' && p.J.amigo) {
     const q = p;
-    return sonar(AMIGO.jugar(q, q.J.amigo, nuevo, () => p === q && !!q.dejar, pintar) ? 'tic' : 'fallo');
+    return sonar(AMIGO.jugar(q, q.J.amigo, nuevo, () => p === q && q.dejar !== null, pintar) ? 'tic' : 'fallo');
   }
   if (!nuevo) return sonar('fallo');
   p.e = nuevo;

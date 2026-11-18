@@ -162,7 +162,7 @@
         "log": {
           "$k": {
             ".write": "auth != null && !data.exists() && root.child('mesas').child($id).child('jugadores').child(root.child('mesas').child($id).child('estado').child('turno').val()).val() === auth.uid && !root.child('mesas').child($id).child('ganador').exists()",
-            ".validate": "newData.hasChildren(['cuando', 'g', 'j']) && $k !== '0' && newData.parent().parent().child('estado').child('k').val() + '' === $k",
+            ".validate": "newData.hasChildren(['cuando', 'g', 'j']) && newData.parent().parent().child('juego').val().matches(/^(cacho|generala)$/) && $k !== '0' && newData.parent().parent().child('estado').child('k').val() + '' === $k",
             "cuando": {
               ".validate": "newData.val() === now"
             },

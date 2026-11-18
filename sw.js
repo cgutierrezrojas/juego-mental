@@ -1,6 +1,6 @@
 // Service worker: guarda los archivos para poder jugar sin conexión.
 // VERSION es una huella de todos los archivos: tests.js avisa si cambió algo y no se actualizó.
-const VERSION = 'aa7f0ac383';
+const VERSION = 'c77fd14d9a';
 const CACHE = 'pal-rato-' + VERSION;
 const ARCHIVOS = [
   './', 'index.html', 'styles.css', 'main.js', 'manifest.json', 'icon.svg', 'apple-touch-icon.png',

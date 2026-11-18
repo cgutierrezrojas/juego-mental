@@ -61,7 +61,7 @@ function pintar(e, quien, miTurno, actuar, { nombres, repintar }) {
 
   const aviso = e.obligo !== null
     ? el('p', 'aviso-obligo', `¡Obligo! ${nombres[e.obligo]} ${yo(nombres[e.obligo], 'juegas', 'juega')} con un solo dado: pinta fija, los ases no son comodín.`)
-    : el('p', 'ultimo-cartas', miTurno ? `▶ ${nombre === 'Tú' ? 'Tu turno' : `Turno de ${nombre}`}` : `⏳ Turno de ${nombre}`);
+    : el('p', 'ultimo-cartas', miTurno ? `▶ ${nombre === 'Tú' ? 'Tu turno' : `Turno de ${nombre}`}` : nombre === 'Tú' ? '⏳ Un momento…' : `⏳ Turno de ${nombre}`);
 
   const tapete = [rivales, el('p', 'sin-datos', `Tus dados (toca para ${ui.tapado ? 'destapar' : 'tapar'})`), mio, apuesta, aviso];
   const botones = [];

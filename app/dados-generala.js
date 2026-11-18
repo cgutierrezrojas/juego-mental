@@ -79,7 +79,7 @@ function pintar(e, quien, miTurno, actuar, { nombres, nivel }) {
   const nombre = nombres[e.turno];
   const aviso = miTurno
     ? e.tiradas === 0 ? `▶ ${nombre === 'Tú' ? 'Tu turno' : `Turno de ${nombre}`}: tira los dados` : e.tiradas < 3 ? 'Toca los dados que quieras guardar, o anota en una casilla' : 'Sin tiradas: anota en una casilla'
-    : `⏳ Turno de ${nombre}`;
+    : nombre === 'Tú' ? (e.pide ? '🎲 Tirando…' : '⏳ Un momento…') : `⏳ Turno de ${nombre}`;
   return {
     marcador: [el('span', '', '🎲 Generala'), el('span', '', `${nombres[quien]}: ${G.total(e.jugadores[quien])}`)],
     tapete: [dados, el('p', 'ultimo-cartas', aviso), caja],

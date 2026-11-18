@@ -162,9 +162,10 @@ Se implementa 3a primero y 3b después, en la misma rama.
    - Después, x publica su número público `r_x`.
    - Así cada número público se elige cuando la semilla secreta del otro ya está sellada.
 2. **Tiradas con la hora del servidor** (decisión del usuario del 2026-11-18). Con solo `(s_yo, r_rival, k)` el dueño podría calcular de antemano todas sus tiradas y elegir qué guardar sabiendo lo que va a salir. Por eso cada tirada incorpora una hora que pone el servidor y que nadie conoce antes de escribir:
-   - **Contador y registro.** La mesa lleva un contador global de tiradas `estado.k` (entero) y un registro de solo escritura `mesas/$id/log/$k = { cuando }`.
+   - **Contador y registro.** La mesa lleva un contador global de tiradas `estado.k` (entero) y un registro de solo escritura `mesas/$id/log/$k = { cuando, g, j }`.
      - Para pedir la tirada k, quien tiene el turno escribe en una sola actualización `estado.k = k` (exactamente el anterior + 1) y `log/k.cuando = now`, junto con su decisión: qué dados guarda en la Generala o el inicio de ronda en el Cacho.
-     - Las reglas de RTDB garantizan que `cuando` es la hora real del servidor y que `log/k` no se puede reescribir.
+     - `g` es la máscara de 5 caracteres `[01]` de los dados guardados al pedir la tirada (`00000` en el Cacho) y `j` es quien tira (`x` u `o`, el que tiene el turno al escribir).
+     - Las reglas de RTDB garantizan que `cuando` es la hora real del servidor, que `g` y `j` tienen ese formato y que `j` es el turno, que `log/k` no se puede reescribir ni borrar, que `log/0` no existe, que `k` coincide con `estado.k` y que solo hay `log` en mesas de `cacho` o `generala`.
      - Las reglas también exigen que `estado.k` solo se mantenga, o suba de a 1 escribiendo a la vez `log/<nuevo k>`.
    - **Dados.** Los dados de la tirada k salen de `dadosDe(s_yo, r_rival + ':' + log[k].cuando, k, cuantos)`.
      - Solo se pueden calcular después de que el servidor guardó `cuando`, y la decisión ya quedó fija.
@@ -185,7 +186,7 @@ Se implementa 3a primero y 3b después, en la misma rama.
    - Cada celular comprueba el sello del rival y recalcula todas sus tiradas: en el Cacho, sus revelaciones; en la Generala, cada tirada.
    - Si algo no cuadra, se muestra «⚠️ Tu rival hizo trampa» y para ese jugador cuenta como victoria.
 6. **Transiciones.**
-   - Como en la Batalla naval, cada celular guarda localmente en `dados:<idMesa>` su semilla y el historial de lo que escribió.
+   - Como en la Batalla naval, cada celular guarda localmente en `dadosjusto:<idMesa>` su semilla y el historial de lo que escribió.
    - Al llegar un cambio, comprueba que sea exactamente una jugada legítima del rival a partir de su última escritura, o un prefijo de sus propias escrituras si alguna se perdió.
    - Se reutiliza el patrón de `siguePartida` y `confirmarNaval` de `games/naval.js` y `app/mesa.js`. Si conviene, se extrae a una función común.
 7. **Reglas de RTDB.**

@@ -164,6 +164,11 @@ async function revisar(q, A, sigue) {
     // Antes de revelar, reviso mis propias tiradas con el registro de la nube: si no cuadran (no debería pasar), mejor
     // avisar que dejar que el rival me marque trampa sin saber por qué.
     const log = (await E.nube.leerMesa(q.id).catch(() => null))?.log;
+    if (!log) { // no se pudo leer la mesa: no es trampa, es conexión; se reintenta
+      q.aviso = '📶 Sin conexión con la mesa: se reintenta en un momento.';
+      if (!q.reintento) q.reintento = setTimeout(() => { q.reintento = null; q.reintentar?.(); }, 1500);
+      return false;
+    }
     if (!(await J.rivalHonesto(final, yo, log, M.tiradasAmigo(final, log)))) {
       q.aviso = '⚠️ Tus tiradas no cuadran con el registro de la mesa: aún no se revela tu semilla. Vuelve a abrir la partida más tarde.';
       return false;
