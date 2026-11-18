@@ -467,7 +467,10 @@ export const crearMesa = (mesa) => conRed(async () => {
 
 export const verMesa = (id, alCambiar) => escuchando(rt.onValue(rt.ref(base, `mesas/${id}`), (d) => alCambiar(d.val()), () => alCambiar(null)));
 export const leerMesa = async (id) => (await conRed(() => rt.get(rt.ref(base, `mesas/${id}`)))).val();
-export const jugarMesa = (id, estado, ganador) => conRed(() => rt.update(rt.ref(base, `mesas/${id}`), { estado, ...(ganador ? { ganador } : {}), actualizada: rt.serverTimestamp() }));
+// `tirada` (Cacho y Generala con un amigo): en la misma escritura se anota `log/<tirada>` con la hora del servidor.
+export const jugarMesa = (id, estado, ganador, tirada = null) => conRed(() => rt.update(rt.ref(base, `mesas/${id}`), {
+  estado, ...(ganador ? { ganador } : {}), ...(tirada ? { [`log/${tirada}`]: { cuando: rt.serverTimestamp() } } : {}), actualizada: rt.serverTimestamp(),
+}));
 export const rendirseMesa = (id, uid, ganador) => conRed(() => rt.update(rt.ref(base, `mesas/${id}`), { [`rendido/${uid}`]: true, ganador, actualizada: rt.serverTimestamp() }));
 export const misMesasDe = async (uid) => (rt ? (await conRed(() => rt.get(rt.ref(base, `misMesas/${uid}`)))).val() ?? {} : {});
 export const quitarDeMisMesas = (uid, id) => conRed(() => rt.remove(rt.ref(base, `misMesas/${uid}/${id}`))).catch(() => {});

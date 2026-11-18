@@ -123,4 +123,18 @@ export const CACHO = {
   resumen,
   metaTexto: (e) => `${C.totalDados(e)} dados en juego`,
   puntos: (e) => e.jugadores.map((j) => j.dados.length),
+  // Con un amigo (app/dados-amigo.js): en la mesa solo está cuántos dados tiene cada uno; los míos se calculan aquí
+  // con mi semilla (q.misDados) y se revelan solos al dudar o calzar.
+  amigo: {
+    M: C,
+    mios: true,
+    limpiar: C.ocultar,
+    async auto(e, misDados) {
+      if (e.k < e.ronda) return C.empezarRonda(e);
+      if (!e.revelar || e.revelar.dados[e.turno]) return null;
+      const d = await misDados(e.k, e.jugadores[e.turno].dados.length);
+      return d && C.revelar(e, d);
+    },
+    vista: (q) => (q.misDados?.k === q.e.k ? { ...q.e, jugadores: q.e.jugadores.map((j, i) => (i === q.yo ? { ...j, dados: q.misDados.d } : j)) } : q.e),
+  },
 };

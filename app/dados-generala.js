@@ -94,4 +94,14 @@ export const GENERALA = {
   nueva: (n) => G.nueva(n),
   maquina,
   pintar,
+  // Con un amigo (app/dados-amigo.js): tirar solo pide la tirada; los dados se publican solos cuando llega la hora del servidor.
+  amigo: {
+    M: G,
+    async auto(e, misDados) {
+      if (!e.pide) return null;
+      const d = await misDados(e.k, G.sueltos(e).filter(Boolean).length);
+      return d && G.publicar(e, d);
+    },
+    vista: (q) => (q.guardados ? { ...q.e, guardados: q.guardados } : q.e), // lo guardado aún sin tirar vive aquí
+  },
 };

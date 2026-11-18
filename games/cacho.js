@@ -4,6 +4,7 @@
 // Los ases (pinta 1) son comodines, salvo en obligo. La resolución (resolver) recibe los dados de todos explícitos: en el modo amigo se reutiliza con los dados revelados.
 import { tirar as tirarDados, contar } from './dados.js';
 import { generador, semillaNueva } from './semilla.js';
+import { esDados } from './justo.js';
 
 const copia = (e) => structuredClone(e);
 const PINTAS_ORDEN = [2, 3, 4, 5, 6, 1];
@@ -24,7 +25,7 @@ export function nueva(n, semilla = semillaNueva()) {
 
 // ¿Es válida `a` = { n, pinta } como siguiente apuesta?
 export function esValida(e, a) {
-  if (e.ganador !== null || !a || !Number.isInteger(a.n) || !Number.isInteger(a.pinta) || a.pinta < 1 || a.pinta > 6 || a.n < 1 || a.n > totalDados(e)) return false;
+  if (e.ganador !== null || e.revelar || (e.amigo && e.k !== e.ronda) || !a || !Number.isInteger(a.n) || !Number.isInteger(a.pinta) || a.pinta < 1 || a.pinta > 6 || a.n < 1 || a.n > totalDados(e)) return false;
   const p = e.apuesta;
   if (!p) return a.pinta !== 1 || e.jugadores[e.turno].dados.length === 1; // apertura: no en ases salvo con un solo dado
   if (e.obligo !== null) return a.pinta === p.pinta && a.n > p.n; // obligo: pinta fija y solo sube la cantidad
@@ -78,7 +79,7 @@ function cerrar(e, tipo) {
   s.apuesta = null; s.apuestas = []; s.ronda++;
   s.ganador = r.ganador;
   s.turno = r.obligo ?? r.empieza;
-  if (s.ganador === null) repartir(s);
+  if (s.ganador === null && s.g) repartir(s);
   return s;
 }
 
@@ -90,14 +91,62 @@ export function apostar(e, a) {
   return s;
 }
 
-export const dudar = (e) => (e.ganador === null && e.apuesta ? cerrar(e, 'dudo') : null);
-export const calzar = (e) => (e.ganador === null && e.apuesta && e.apuesta.de !== e.turno ? cerrar(e, 'calzo') : null);
+// Con un amigo no se ven los dados: se pasa a revelarlos (ver revelar).
+const fin = (e, tipo) => (e.amigo ? aRevelar(e, tipo) : cerrar(e, tipo));
+export const dudar = (e) => (e.ganador === null && e.apuesta && !e.revelar ? fin(e, 'dudo') : null);
+export const calzar = (e) => (e.ganador === null && e.apuesta && !e.revelar && e.apuesta.de !== e.turno ? fin(e, 'calzo') : null);
 export const ganador = (e) => e.ganador;
 
 // Acción de la máquina o del jugador: { tipo: 'apostar', n, pinta } | { tipo: 'dudar' } | { tipo: 'calzar' }.
 export function accion(e, a) {
   if (!a) return null;
   return a.tipo === 'apostar' ? apostar(e, a) : a.tipo === 'dudar' ? dudar(e) : a.tipo === 'calzar' ? calzar(e) : null;
+}
+
+// --- Con un amigo («dados justos», games/justo.js) ---
+// Además de lo común (amigo, k, sellos, r, s): los dados de cada uno no van en la mesa (`dados` son ceros, solo dicen
+// cuántos tiene) y salen de su semilla con la tirada k = ronda. Al dudar o calzar, `revelar` = { tipo, por, dados: [x, o] }:
+// revela primero quien no hizo la jugada y luego el otro, que cierra la ronda. reveladas[k - 1] = los dados de la ronda k.
+export const ocultar = (e) => ({ ...e, jugadores: e.jugadores.map((j) => ({ ...j, dados: j.dados.map(() => 0) })) });
+export const nuevaAmigo = (sello) => ocultar({ ...nueva(2), g: null, turno: 1, amigo: true, k: 0, revelar: null, reveladas: [], sellos: { x: sello }, r: {}, s: {} });
+
+function aRevelar(e, tipo) {
+  const s = copia(e);
+  s.revelar = { tipo, por: e.turno, dados: e.jugadores.map(() => null) };
+  s.turno = e.apuesta.de;
+  return s;
+}
+
+// Empieza la ronda: se pide la tirada k (la hora del servidor de `log/k` decide los dados de los dos).
+export const empezarRonda = (e) => (e.amigo && e.ganador === null && !e.revelar && e.k === e.ronda - 1 ? { ...copia(e), k: e.k + 1 } : null);
+
+// Quien tiene el turno revela sus dados de la ronda; si ya revelaron todos, se cierra la ronda con ellos.
+export function revelar(e, dados) {
+  const t = e.turno;
+  if (!e.revelar || e.revelar.dados[t] || !esDados(dados, e.jugadores[t].dados.length)) return null;
+  const s = copia(e);
+  s.revelar.dados[t] = [...dados];
+  if (s.revelar.dados.some((d) => !d)) {
+    s.turno = s.revelar.dados.findIndex((d) => !d);
+    return s;
+  }
+  const r = cerrar({ ...s, turno: s.revelar.por, jugadores: s.jugadores.map((j, i) => ({ ...j, dados: s.revelar.dados[i] })) }, s.revelar.tipo);
+  return ocultar({ ...r, revelar: null, reveladas: [...s.reveladas, s.revelar.dados] });
+}
+
+// Pasos del juego de quien tiene el turno (ver jugadaRival en games/justo.js), con lo que eligió tomado de `e`.
+export function pasosAmigo(w, e) {
+  if (w.k < w.ronda) return [empezarRonda(w)];
+  const t = w.turno, misma = e.ronda === w.ronda;
+  if (w.revelar) return [revelar(w, misma ? e.revelar?.dados?.[t] : e.reveladas?.[w.ronda - 1]?.[t])];
+  const a = misma ? e.apuestas?.[w.apuestas.length] : null;
+  return [a && apostar(w, { n: a.n, pinta: a.pinta }), dudar(w), calzar(w)];
+}
+
+// Revisión final: los dados revelados de cada uno ({ k, j, d }), o null si alguna ronda (k) no tiene su revelación.
+export function tiradasAmigo(e) {
+  if (!Array.isArray(e.reveladas) || e.revelar || e.k !== e.reveladas.length || !e.reveladas.every((ds) => Array.isArray(ds) && ds.length === 2)) return null;
+  return e.reveladas.flatMap((ds, i) => ds.map((d, j) => ({ k: i + 1, j, d })));
 }
 
 // --- Máquinas ---

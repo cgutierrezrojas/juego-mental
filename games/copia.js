@@ -1,7 +1,7 @@
 // Copia de seguridad del progreso: qué claves son del juego y cómo se escribe y se lee el archivo. Todo puro.
 
 // El dominio (cgutierrezrojas.github.io) lo comparten otras webs: solo se copian las claves con estos prefijos.
-const PREFIJOS = ['record:', 'historial:', 'estrellas:', 'niveles:', 'diarios:', 'eleccion:', 'ajuste:', 'contador:', 'ayuda:', 'logros:', 'duelos:', 'liga:', 'mesa:', 'trivia:', 'cartas:', 'dados:', 'arcade:', 'palabra:', 'perfil:', 'naval:'];
+const PREFIJOS = ['record:', 'historial:', 'estrellas:', 'niveles:', 'diarios:', 'eleccion:', 'ajuste:', 'contador:', 'ayuda:', 'logros:', 'duelos:', 'liga:', 'mesa:', 'trivia:', 'cartas:', 'dados:', 'arcade:', 'palabra:', 'perfil:', 'naval:', 'dadosjusto:'];
 
 export const esClaveDelJuego = (clave) => PREFIJOS.some((p) => clave.startsWith(p));
 
@@ -26,20 +26,20 @@ export function leerCopia(texto) {
 }
 
 // Lo que queda guardado al restaurar `nuevos` (copia o nube) sobre `actuales` (ambos { clave: valor }).
-// Las flotas de 🚢 Batalla naval con amigos (`naval:<id>`) que ya están en este celular no se tocan; las que llegan de
-// fuera se guardan sin `hist`: puede ser de un turno ya pasado y haría ver trampa a un rival honesto (sin él solo se
-// revisan sus respuestas y, al final, lo que revela).
+// Los secretos de las partidas con amigos (la flota de 🚢 Batalla naval en `naval:<id>`, la semilla de 🎲 Cacho y Generala
+// en `dadosjusto:<id>`) que ya están en este celular no se tocan; los que llegan de fuera se guardan sin `hist`: puede ser
+// de un turno ya pasado y haría ver trampa a un rival honesto (sin él solo se revisa lo que el rival revela al final).
 export function restaurado(actuales, nuevos) {
-  const esNaval = (clave) => clave.startsWith('naval:');
-  const r = Object.fromEntries(Object.entries(actuales).filter(([clave]) => esNaval(clave)));
+  const esSecreto = (clave) => clave.startsWith('naval:') || clave.startsWith('dadosjusto:');
+  const r = Object.fromEntries(Object.entries(actuales).filter(([clave]) => esSecreto(clave)));
   for (const [clave, valor] of Object.entries(nuevos)) {
-    if (!esNaval(clave)) r[clave] = valor;
+    if (!esSecreto(clave)) r[clave] = valor;
     else if (!(clave in r)) {
       try {
-        const { hist, ...flota } = JSON.parse(valor);
-        if (flota.barcos) r[clave] = JSON.stringify(flota);
+        const { hist, ...secreto } = JSON.parse(valor);
+        if (secreto.barcos || secreto.s) r[clave] = JSON.stringify(secreto);
       } catch {
-        // flota rota: no se trae
+        // secreto roto: no se trae
       }
     }
   }

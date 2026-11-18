@@ -3,6 +3,7 @@
 // turno, dados: [5] (0 = sin tirar), guardados: [bool×5], tiradas (0..3), g: { s }, puntos: [], ganador: índice | 'empate' | null }.
 import { tirar as tirarDados, contar } from './dados.js';
 import { generador, semillaNueva } from './semilla.js';
+import { esDados } from './justo.js';
 
 export const CASILLAS = ['1', '2', '3', '4', '5', '6', 'escalera', 'full', 'poker', 'generala', 'doble'];
 // Para tachar: primero lo que menos vale.
@@ -38,7 +39,9 @@ export function posibles(e) {
 }
 
 export function tirar(e) {
-  if (e.tiradas >= 3 || e.ganador !== null || (e.tiradas > 0 && e.guardados.every(Boolean))) return null;
+  if (e.tiradas >= 3 || e.ganador !== null || e.pide || (e.tiradas > 0 && e.guardados.every(Boolean))) return null;
+  // Con un amigo solo se pide la tirada k + 1 (con lo guardado fijo); los dados llegan después con publicar.
+  if (e.amigo) return { ...copia(e), k: e.k + 1, pide: true, guardados: e.tiradas === 0 ? NADA() : e.guardados.map(Boolean) };
   const s = copia(e);
   const suelto = s.dados.map((_, i) => s.tiradas === 0 || !s.guardados[i]);
   const r = tirarDados(s.g, suelto.filter(Boolean).length);
@@ -50,7 +53,7 @@ export function tirar(e) {
 }
 
 export function alternarGuardado(e, i) {
-  if (e.tiradas === 0 || e.tiradas >= 3 || !(i >= 0 && i < 5)) return null;
+  if (e.pide || e.tiradas === 0 || e.tiradas >= 3 || !(i >= 0 && i < 5)) return null;
   const s = copia(e);
   s.guardados[i] = !s.guardados[i];
   return s;
@@ -59,7 +62,7 @@ export function alternarGuardado(e, i) {
 export const total = (j) => Object.values(j.tabla).reduce((a, b) => a + (b ?? 0), 0);
 
 export function anotar(e, casilla) {
-  if (e.tiradas === 0 || e.ganador !== null || !CASILLAS.includes(casilla) || e.jugadores[e.turno].tabla[casilla] !== null) return null;
+  if (e.pide || e.tiradas === 0 || e.ganador !== null || !CASILLAS.includes(casilla) || e.jugadores[e.turno].tabla[casilla] !== null) return null;
   const s = copia(e);
   const servida = e.tiradas === 1 && Math.max(...cuentas(e.dados)) === 5;
   s.jugadores[s.turno].tabla[casilla] = posibles(e)[casilla];
@@ -77,6 +80,49 @@ export function anotar(e, casilla) {
 }
 
 export const ganador = (e) => e.ganador;
+
+// --- Con un amigo («dados justos», games/justo.js) ---
+// Además de lo común (amigo, k, sellos, r, s): pide (la tirada k está pedida y aún sin dados) y hechas: [{ j, t, g, d }],
+// donde hechas[k - 1] es la tirada k: de quién, cuál del turno (1–3), qué guardó y cómo quedaron los 5 dados.
+export const nuevaAmigo = (sello) => ({ ...nueva(2), g: null, turno: 1, amigo: true, k: 0, pide: false, hechas: [], sellos: { x: sello }, r: {}, s: {} });
+
+// Qué dados se tiran en la tirada pedida (todos en la primera del turno).
+export const sueltos = (e) => e.dados.map((_, i) => e.tiradas === 0 || !e.guardados[i]);
+
+// Los dados que salieron (`nuevos`, uno por cada suelto) se ponen en la mesa.
+export function publicar(e, nuevos) {
+  const suelto = sueltos(e);
+  if (!e.pide || !esDados(nuevos, suelto.filter(Boolean).length)) return null;
+  const s = copia(e);
+  let j = 0;
+  s.dados = s.dados.map((d, i) => (suelto[i] ? nuevos[j++] : d));
+  s.tiradas++;
+  s.pide = false;
+  s.hechas.push({ j: e.turno, t: s.tiradas, g: [...e.guardados], d: [...s.dados] });
+  return s;
+}
+
+// Pasos del juego de quien tiene el turno (ver jugadaRival en games/justo.js), con lo que eligió tomado de `e`.
+export function pasosAmigo(w, e) {
+  const h = e.hechas?.[w.hechas.length];
+  if (w.pide) return h && Array.isArray(h.d) ? [publicar(w, h.d.filter((_, i) => sueltos(w)[i]))] : [];
+  const r = CASILLAS.map((c) => anotar(w, c));
+  if (h && Array.isArray(h.g) && h.g.length === 5) r.push(tirar({ ...w, guardados: h.g }));
+  return r;
+}
+
+// Revisión final: las tiradas de cada uno ({ k, j, d: los dados que salieron de su semilla }), o null si el registro
+// no cuadra (una k sin su tirada, o dados guardados que cambiaron).
+export function tiradasAmigo(e) {
+  if (!Array.isArray(e.hechas) || e.pide || e.k !== e.hechas.length) return null;
+  const r = [];
+  for (const [i, h] of e.hechas.entries()) {
+    const antes = e.hechas[i - 1];
+    if (!esDados(h?.d, 5) || !Array.isArray(h.g) || ![0, 1].includes(h.j) || ![1, 2, 3].includes(h.t) || (h.t > 1 && (antes?.j !== h.j || antes.t !== h.t - 1 || h.g.some((g, x) => g && h.d[x] !== antes.d[x])))) return null;
+    r.push({ k: i + 1, j: h.j, d: h.d.filter((_, x) => h.t === 1 || !h.g[x]) });
+  }
+  return r;
+}
 
 // Aplica una acción de la máquina: { tipo: 'tirar', guardar: [bool×5] } | { tipo: 'anotar', casilla }.
 export function accion(e, a) {

@@ -663,6 +663,11 @@ probar('copia: al restaurar, las flotas de Batalla naval de este celular se qued
   assert(r['naval:m2'] === JSON.stringify({ barcos: [9], sal: 'b' }), 'la traída llega sin hist');
   assert(!('naval:m4' in r) && !('naval:m5' in r), 'descarta flotas rotas');
   assert(r['record:y'] === '2' && !('record:x' in r), 'el resto se sustituye como antes');
+  // Igual con la semilla de los dados (`dadosjusto:<id>`), que no se confunde con los récords `dados:<juego>`.
+  const semilla = JSON.stringify({ s: 'a1', hist: [{ k: 1 }] });
+  const r2 = restaurado({ 'dadosjusto:m1': semilla, 'dados:cacho': '{}' }, { 'dadosjusto:m1': '{"s":"b2"}', 'dadosjusto:m2': JSON.stringify({ s: 'c3', hist: [] }), 'dadosjusto:m3': '{}', 'dados:generala': '{}' });
+  assert(r2['dadosjusto:m1'] === semilla && r2['dadosjusto:m2'] === '{"s":"c3"}' && !('dadosjusto:m3' in r2), 'semillas de los dados');
+  assert(r2['dados:generala'] === '{}' && !('dados:cacho' in r2) && esClaveDelJuego('dadosjusto:m1'));
 });
 
 // --- sincro.js ---
@@ -2455,4 +2460,144 @@ probar('justo: siguePartida acepta mis escrituras o una jugada legítima del riv
   const h2 = J.recortar(hist, W2);
   assert(J.igual(h2, [W2]) && J.recortar(hist, B) === hist && J.recortar(hist, { n: 9 }) === hist && J.recortar(undefined, B) === undefined);
   assert(!J.siguePartida(h2, B, 'x', suma) && J.siguePartida(h2, { n: 3, turno: 'x' }, 'x', suma));
+});
+
+// --- Cacho y Generala con un amigo: dados justos con la hora del servidor (log/k) ---
+const jsn = (x) => JSON.parse(JSON.stringify(x));
+const FICHAS = ['x', 'o'];
+// Una partida honesta entre dos celulares, sin red: `jugar(e, t, dadosDe)` da la siguiente escritura del juego de `t`.
+// Devuelve el final, el registro y cada llegada de turno: [W (lo último que escribió quien recibe), e, quien].
+async function partidaAmigo(M, jugar) {
+  const semillas = [J.nuevaSemilla(), J.nuevaSemilla()], log = {};
+  let ahora = 1700000000000, e = jsn(M.nuevaAmigo(await J.sellar(semillas[0])));
+  const base = [e, null], llegadas = [];
+  const dadosDe = (t, k, n) => J.dadosDe(semillas[t], e.r[FICHAS[1 - t]] + ':' + log[k].cuando, k, n);
+  for (let n = 0; !(e.ganador !== null && e.s.x && e.s.o); n++) {
+    if (n > 3000) throw new Error('no termina');
+    const t = e.turno, F = FICHAS[t];
+    let s;
+    if (!e.sellos.o) s = { ...e, sellos: { ...e.sellos, o: await J.sellar(semillas[1]) }, r: { o: J.nuevaSemilla() }, turno: 0 };
+    else if (!e.r.x) s = { ...e, r: { ...e.r, x: J.nuevaSemilla() } };
+    else if (e.ganador !== null) s = { ...e, s: { ...e.s, [F]: semillas[t] }, turno: 1 - t };
+    else s = await jugar(e, t, dadosDe);
+    if (!s) throw new Error('jugada nula: ' + JSON.stringify(e).slice(0, 300));
+    if (s.k === e.k + 1) log[s.k] = { cuando: (ahora += 1234) };
+    else assert(s.k === e.k, 'k sube de a 1');
+    e = jsn(s);
+    if (e.turno !== t) {
+      base[t] = e;
+      if (base[e.turno]) llegadas.push([base[e.turno], e, e.turno]);
+    }
+  }
+  return { e, log, llegadas, semillas };
+}
+const jugarGenerala = async (e, t, dadosDe) => {
+  if (e.pide) return gen.publicar(e, await dadosDe(t, e.k, gen.sueltos(e).filter(Boolean).length));
+  const a = gen.maquina(e, 'normal');
+  return gen.accion(e, a) ?? gen.anotar(e, Object.keys(gen.posibles(e))[0]);
+};
+const vistaCacho = async (e, t, dadosDe) => ({ ...e, jugadores: await Promise.all(e.jugadores.map(async (j, i) => (i === t ? { ...j, dados: await dadosDe(t, e.k, j.dados.length) } : j))) });
+const jugarCacho = async (e, t, dadosDe) => {
+  if (e.k < e.ronda) return cacho.empezarRonda(e);
+  const v = await vistaCacho(e, t, dadosDe);
+  if (e.revelar) return cacho.revelar(e, v.jugadores[t].dados);
+  return cacho.ocultar(cacho.accion(v, cacho.maquina(v, 'normal')) ?? cacho.dudar(v));
+};
+const honestos = async (M, { e, log }) => [await J.rivalHonesto(e, 0, log, M.tiradasAmigo(e)), await J.rivalHonesto(e, 1, log, M.tiradasAmigo(e))];
+
+await probarAsync('generala amigo: partidas honestas; cada vuelta de turno es una jugada legítima y al final todo cuadra', async () => {
+  for (let i = 0; i < 4; i++) {
+    const p = await partidaAmigo(gen, jugarGenerala);
+    assert(p.llegadas.every(([w, e, yo]) => J.jugadaRival(w, e, yo, gen.pasosAmigo)), 'una vuelta de turno no cuadra');
+    assert((await honestos(gen, p)).every(Boolean), 'final honesto');
+    assert(p.e.k === p.e.hechas.length && p.e.hechas.length >= 2 && Object.keys(p.log).length === p.e.k, 'una k por tirada');
+  }
+});
+
+await probarAsync('generala amigo: se notan dados cambiados, k quemada, volver a tirar, sello cambiado, tabla alterada y hora falsa', async () => {
+  let p;
+  do p = await partidaAmigo(gen, jugarGenerala); while (p.llegadas.length < 6); // (sin generala servida al principio)
+  const [w, e, yo] = p.llegadas.find(([, e]) => e.ganador === null && e.hechas.length > 2);
+  const rival = 1 - yo;
+  assert(J.jugadaRival(w, e, yo, gen.pasosAmigo), 'honesta');
+  assert(!J.jugadaRival(w, { ...e, k: e.k + 1 }, yo, gen.pasosAmigo), 'k quemada (sin su tirada)');
+  const otraVez = jsn(e); otraVez.k++; otraVez.hechas.push({ ...otraVez.hechas.at(-1), t: 1 }); // «vuelve a tirar» la última
+  assert(!J.jugadaRival(w, otraVez, yo, gen.pasosAmigo), 'volver a tirar');
+  assert(!J.jugadaRival(w, { ...e, sellos: { ...e.sellos, [FICHAS[rival]]: 'a'.repeat(64) } }, yo, gen.pasosAmigo), 'sello cambiado');
+  const tabla = jsn(e); tabla.jugadores[yo].tabla['1'] = 99;
+  assert(!J.jugadaRival(w, tabla, yo, gen.pasosAmigo), 'mi tabla alterada');
+  assert(!J.jugadaRival(w, { ...e, r: { ...e.r, [FICHAS[yo]]: 'b'.repeat(32) } }, yo, gen.pasosAmigo), 'mi número cambiado');
+  // Al final: un dado tirado que no salió de la semilla, una hora falsa o una semilla que no es la del sello.
+  const k = p.e.hechas.findIndex((h) => h.j === 1 && h.t === 1);
+  const dado = jsn(p.e); dado.hechas[k].d[0] = (dado.hechas[k].d[0] % 6) + 1;
+  assert(!(await J.rivalHonesto(dado, 1, p.log, gen.tiradasAmigo(dado))), 'dado cambiado');
+  assert(await J.rivalHonesto(p.e, 0, p.log, gen.tiradasAmigo(p.e)), 'el otro sigue honesto');
+  const hora = { ...p.log, [k + 1]: { cuando: p.log[k + 1].cuando + 1 } };
+  assert(!(await J.rivalHonesto(p.e, 1, hora, gen.tiradasAmigo(p.e))), 'hora distinta');
+  assert(!(await J.rivalHonesto({ ...p.e, s: { ...p.e.s, o: J.nuevaSemilla() } }, 1, p.log, gen.tiradasAmigo(p.e))), 'semilla falsa');
+  assert(gen.tiradasAmigo({ ...p.e, k: p.e.k + 1 }) === null, 'k sin tirada al final');
+  const guardado = jsn(p.e), h2 = guardado.hechas.findIndex((h) => h.t > 1 && h.g.some(Boolean));
+  if (h2 >= 0) { const x = guardado.hechas[h2].g.indexOf(true); guardado.hechas[h2].d[x] = (guardado.hechas[h2].d[x] % 6) + 1; assert(gen.tiradasAmigo(guardado) === null, 'dado guardado cambiado'); }
+});
+
+probar('generala amigo: tirar solo pide (k + 1), publicar pone los sueltos y no se anota ni se guarda con la tirada pedida', () => {
+  let e = { ...gen.nuevaAmigo('s'), turno: 0, sellos: { x: 's', o: 's' }, r: { x: 'a', o: 'b' } };
+  const p1 = gen.tirar(e);
+  assert(p1.k === 1 && p1.pide && p1.tiradas === 0 && !gen.tirar(p1) && !gen.anotar(p1, '1') && !gen.alternarGuardado(p1, 0));
+  assert(!gen.publicar(p1, [1, 2, 3]) && !gen.publicar(p1, [1, 2, 3, 4, 7]), 'cinco dados de 1 a 6');
+  e = gen.publicar(p1, [1, 2, 3, 4, 5]);
+  assert(e.tiradas === 1 && !e.pide && J.igual(e.hechas, [{ j: 0, t: 1, g: [false, false, false, false, false], d: [1, 2, 3, 4, 5] }]));
+  const p2 = gen.tirar(gen.alternarGuardado(e, 4));
+  assert(p2.k === 2 && J.igual(gen.sueltos(p2), [true, true, true, true, false]));
+  e = gen.publicar(p2, [6, 6, 6, 6]);
+  assert(J.igual(e.dados, [6, 6, 6, 6, 5]) && e.hechas[1].t === 2 && J.igual(gen.tiradasAmigo(e), [{ k: 1, j: 0, d: [1, 2, 3, 4, 5] }, { k: 2, j: 0, d: [6, 6, 6, 6] }]));
+});
+
+await probarAsync('cacho amigo: partidas honestas; cada vuelta de turno es una jugada legítima y al final todo cuadra', async () => {
+  const ganadores = new Set();
+  for (let i = 0; i < 6; i++) {
+    const p = await partidaAmigo(cacho, jugarCacho);
+    ganadores.add(p.e.ganador);
+    assert(p.llegadas.every(([w, e, yo]) => J.jugadaRival(w, e, yo, cacho.pasosAmigo)), 'una vuelta de turno no cuadra');
+    assert((await honestos(cacho, p)).every(Boolean), 'final honesto');
+    assert(p.e.k === p.e.reveladas.length && p.e.k === p.e.ronda - 1, 'una k por ronda');
+    assert(p.llegadas.every(([, e]) => e.jugadores.every((j) => j.dados.every((d) => d === 0))), 'los dados nunca van en la mesa');
+  }
+  assert(ganadores.size === 2, 'gana cada uno alguna vez');
+});
+
+await probarAsync('cacho amigo: se notan una revelación falsa, k quemada, cuántos dados cambiados y el sello cambiado', async () => {
+  const p = await partidaAmigo(cacho, jugarCacho);
+  // Una vuelta en que el rival reveló y cerró la ronda (y quizá empezó la siguiente y apostó).
+  const [w, e, yo] = p.llegadas.find(([w, e]) => w.revelar && e.ronda > w.ronda && e.ganador === null);
+  const rival = 1 - yo;
+  assert(J.jugadaRival(w, e, yo, cacho.pasosAmigo), 'honesta');
+  assert(!J.jugadaRival(w, { ...e, k: e.k + 1 }, yo, cacho.pasosAmigo), 'k quemada');
+  const cuantos = jsn(e); cuantos.jugadores[yo].dados.pop();
+  assert(!J.jugadaRival(w, cuantos, yo, cacho.pasosAmigo), 'me quita un dado');
+  const corto = jsn(e); corto.reveladas[w.ronda - 1][rival] = corto.reveladas[w.ronda - 1][rival].slice(1);
+  assert(!J.jugadaRival(w, corto, yo, cacho.pasosAmigo), 'revela menos dados de los que tiene');
+  assert(!J.jugadaRival(w, { ...e, sellos: { ...e.sellos, [FICHAS[rival]]: 'a'.repeat(64) } }, yo, cacho.pasosAmigo), 'sello cambiado');
+  const [w2, e2, yo2] = p.llegadas.find(([, e]) => e.apuesta && !e.revelar);
+  const ap = jsn(e2); ap.apuesta.n += 50; ap.apuestas[ap.apuestas.length - 1].n += 50;
+  assert(!J.jugadaRival(w2, ap, yo2, cacho.pasosAmigo), 'apuesta imposible');
+  // Revelación falsa: pasa la revisión de cada turno (no hay cómo saberlo), pero no la del final.
+  const falsa = jsn(p.e); falsa.reveladas[0][1] = falsa.reveladas[0][1].map((d) => (d % 6) + 1);
+  assert(!(await J.rivalHonesto(falsa, 1, p.log, cacho.tiradasAmigo(falsa))) && await J.rivalHonesto(falsa, 0, p.log, cacho.tiradasAmigo(falsa)), 'revelación falsa');
+  assert(cacho.tiradasAmigo({ ...p.e, k: p.e.k + 1 }) === null, 'k sin ronda al final');
+});
+
+probar('cacho amigo: dudar pasa a revelar (primero quien apostó) y la ronda se cierra con los dados revelados', () => {
+  let e = { ...cacho.nuevaAmigo('s'), turno: 0, sellos: { x: 's', o: 's' }, r: { x: 'a', o: 'b' } };
+  assert(!cacho.apostar(e, { n: 2, pinta: 3 }), 'sin empezar la ronda no se apuesta');
+  e = cacho.empezarRonda(e);
+  assert(e.k === 1 && !cacho.empezarRonda(e));
+  e = cacho.dudar(cacho.apostar(e, { n: 3, pinta: 4 }));
+  assert(e.revelar.tipo === 'dudo' && e.revelar.por === 1 && e.turno === 0 && !cacho.apostar(e, { n: 4, pinta: 4 }) && !cacho.dudar(e));
+  assert(!cacho.revelar(e, [1, 2, 3]), 'cinco dados');
+  e = cacho.revelar(e, [4, 4, 2, 2, 2]);
+  assert(e.turno === 1 && J.igual(e.revelar.dados, [[4, 4, 2, 2, 2], null]));
+  e = cacho.revelar(e, [1, 5, 5, 5, 5]); // hay 3 (con el as): la apuesta era cierta, pierde quien dudó
+  assert(e.revelar === null && e.resumen.total === 3 && e.jugadores[1].dados.length === 4 && J.igual(e.jugadores[1].dados, [0, 0, 0, 0]));
+  assert(e.ronda === 2 && e.k === 1 && e.turno === 1 && J.igual(cacho.tiradasAmigo(e), [{ k: 1, j: 0, d: [4, 4, 2, 2, 2] }, { k: 1, j: 1, d: [1, 5, 5, 5, 5] }]));
 });

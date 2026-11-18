@@ -6,6 +6,7 @@
 // `maquinas` ([[cuántas, texto]]), `nombres(n)` de los jugadores contra la máquina y `equipos(nombres)` si los puntos son por equipo.
 // También `seccion` ('cartas' por defecto o 'dados': a dónde vuelve, a qué cuenta y la clave del récord), `niveles` (['normal', 'dificil']
 // por defecto; los dados usan también 'facil') y `maxLocal` (cuántos pueden jugar en un celular; 2 por defecto).
+// Los dados con un amigo dan `amigo` (ver app/dados-amigo.js): sus dados salen de semillas selladas, no del estado.
 import { el, leer, guardar } from '../games/comun.js';
 import { sonar } from '../games/efectos.js';
 import { esRoja } from '../games/cartas.js';
@@ -26,6 +27,7 @@ import { CARIOCA } from './carioca.js';
 import { GENERALA } from './dados-generala.js';
 import { CACHO } from './dados-cacho.js';
 import { BURAKO } from './burako.js';
+import * as AMIGO from './dados-amigo.js';
 
 const FICHA = ['x', 'o'];
 
@@ -286,13 +288,15 @@ function empezar(J, modo, n) {
 async function retarAmigo(J, amigo) {
   if (!(await asegurarDuelista())) return;
   try {
-    const e = J.nueva(2);
+    const justo = J.amigo ? await AMIGO.crear(J.amigo.M) : null;
+    const e = justo?.e ?? J.nueva(2);
     const id = await E.nube.crearMesa({
       juego: J.id,
       jugadores: { x: E.usuario.uid, o: amigo.uid },
       nombres: { [E.usuario.uid]: leer('nube:apodo'), [amigo.uid]: amigo.apodo },
-      estado: { turno: FICHA[e.turno], datos: JSON.stringify(e) },
+      estado: justo ? AMIGO.aNube(e) : { turno: FICHA[e.turno], datos: JSON.stringify(e) },
     });
+    if (justo) AMIGO.guardarNueva(id, justo.mio);
     abrirAmigo(id, secDe(J));
   } catch {
     $('cartas-aviso').textContent = `No se pudo crear la partida. ¿${amigo.apodo} sigue siendo tu amigo y hay conexión?`;
@@ -311,6 +315,15 @@ async function abrirAmigo(id, seccion = 'cartas') {
     const yo = mesa.jugadores.x === E.usuario.uid ? 0 : 1;
     const nombre = (i) => (i === yo ? 'Tú' : mesa.nombres?.[mesa.jugadores[FICHA[i]]] ?? 'Rival');
     const primera = !p.e;
+    const J = juegoDe(mesa.juego);
+    if (J?.amigo) {
+      // Dados con un amigo: se revisa y se escribe lo automático antes de pintar.
+      const q = p;
+      Object.assign(q, { J, yo, nombres: [nombre(0), nombre(1)] });
+      AMIGO.alCambiar(q, mesa);
+      if (primera && q.e) q.visto = q.e.resumen?.ronda ?? 0;
+      return AMIGO.correr(q, J.amigo, () => p === q && !!q.dejar, pintar);
+    }
     let e;
     try {
       e = JSON.parse(mesa.estado.datos);
@@ -328,6 +341,10 @@ async function abrirAmigo(id, seccion = 'cartas') {
 const ganador = () => (p.modo === 'amigo' && p.mesa?.ganador ? (p.mesa.ganador === 'empate' ? 'empate' : FICHA.indexOf(p.mesa.ganador)) : p.e.ganador);
 
 function actuar(nuevo) {
+  if (p.modo === 'amigo' && p.J.amigo) {
+    const q = p;
+    return sonar(AMIGO.jugar(q, q.J.amigo, nuevo, () => p === q && !!q.dejar, pintar) ? 'tic' : 'fallo');
+  }
   if (!nuevo) return sonar('fallo');
   p.e = nuevo;
   sonar('tic');
@@ -342,9 +359,13 @@ function actuar(nuevo) {
 
 function pintar() {
   clearTimeout(p.timer);
-  const { e, J } = p;
+  const { J } = p;
+  const justo = p.modo === 'amigo' && J.amigo; // dados con un amigo
+  if (justo && !p.e) return pant([], [el('p', 'sin-datos', 'Esta partida tiene datos dañados.')], [boton('Volver', '', volver)]);
+  const e = justo ? J.amigo.vista(p) : p.e;
   const g = ganador();
-  if (g !== null && (g >= 0 || g === 'empate')) return pintarFin(g);
+  // (con los dados, el final se muestra cuando terminó la revisión de trampas)
+  if (g !== null && (g >= 0 || g === 'empate') && !(justo && p.trampaRival === undefined)) return pintarFin(g);
   if (e.resumen && e.resumen.ronda > p.visto) return pintarResumen();
   // A dos en un celular: antes de cada turno, una pantalla para pasarlo sin ver las cartas del otro.
   if (p.modo === 'local' && p.vista !== e.turno) {
@@ -358,11 +379,13 @@ function pintar() {
   }
   const quien = p.modo === 'local' ? e.turno : p.yo;
   const humano = p.modo !== 'maquina' || e.turno === p.yo;
-  const vista = J.pintar(e, quien, humano && e.turno === quien, actuar, { nombres: p.nombres, repintar: pintar, nivel: p.modo === 'maquina' ? p.nivel : null });
+  const vista = J.pintar(e, quien, justo ? AMIGO.puedo(p) : humano && e.turno === quien, actuar, { nombres: p.nombres, repintar: pintar, nivel: p.modo === 'maquina' ? p.nivel : null });
   const botones = [...vista.botones];
   if (p.modo === 'amigo') botones.push(boton('🏳️ Rendirse', '', rendirse));
   botones.push(boton('Salir', '', salirMesa));
-  pant(vista.marcador, vista.tapete, botones);
+  let aviso = '';
+  if (justo) aviso = p.trampaRival ? '⚠️ Tu rival hizo trampa' : p.sinSemilla ? 'No tienes tu semilla de esta partida en este celular. Solo puedes rendirte.' : p.aviso ?? (e.ganador !== null && e.ganador !== undefined ? '🔎 Revisando los dados…' : '');
+  pant(vista.marcador, vista.tapete, botones, aviso);
   $('cartas-tapete').className = 'tapete-mesa';
   if (!humano) p.timer = setTimeout(() => actuar(J.maquina(p.e, p.nivel)), J.pausa ?? 900);
 }
@@ -397,16 +420,19 @@ function pintarResumen() {
 }
 
 function pintarFin(g) {
-  const empate = g === 'empate';
-  const gane = !empate && (p.modo === 'local' || g === p.yo);
+  const trampa = !!p.trampaRival; // dados con un amigo: cuenta como victoria mía
+  const empate = g === 'empate' && !trampa;
+  const gane = trampa || (!empate && (p.modo === 'local' || g === p.yo));
   if (!p.apuntada) {
     p.apuntada = true;
     if (p.modo === 'maquina') {
       const r = leerJSON(claveRecord(p.J.id, p.nivel, secP()));
       guardar(claveRecord(p.J.id, p.nivel, secP()), JSON.stringify({ partidas: (r.partidas ?? 0) + 1, ganadas: (r.ganadas ?? 0) + (gane ? 1 : 0) }));
     }
-    if (p.modo === 'amigo') apuntarResultadoAmigo(p.id, empate ? 'e' : gane ? 'v' : 'd', secP());
-    else {
+    if (p.modo === 'amigo') {
+      apuntarResultadoAmigo(p.id, empate ? 'e' : gane ? 'v' : 'd', secP());
+      if (p.J.amigo) AMIGO.borrarMio(p.id); // la semilla ya no hace falta
+    } else {
       ligaAnotar('partida', 1, secP());
       if (p.modo === 'maquina' && gane) anotarPerfil('victoria', 1, secP());
       finDePartida();
@@ -417,7 +443,7 @@ function pintarFin(g) {
     }
   }
   const rendido = p.mesa?.rendido?.[E.usuario?.uid];
-  const titulo = empate ? '🤝 Empate' : p.modo === 'local' || g !== p.yo ? (rendido ? 'Te rendiste.' : `🏆 Gana ${conPuntos()[g]}`) : '🏆 ¡Ganaste!';
+  const titulo = trampa ? '⚠️ Tu rival hizo trampa: cuenta como victoria tuya' : empate ? '🤝 Empate' : p.modo === 'local' || g !== p.yo ? (rendido ? 'Te rendiste.' : `🏆 Gana ${conPuntos()[g]}`) : '🏆 ¡Ganaste!';
   pant([el('span', '', `${p.J.icono} ${p.J.nombre}`)], [el('p', 'turno-trivia', titulo), tablaPuntos(p.e)], [
     boton(p.modo === 'amigo' ? '🔄 Revancha' : '🔄 Otra partida', 'color', () => {
       if (p.modo !== 'amigo') return empezar(p.J, p.modo, p.e.n);
