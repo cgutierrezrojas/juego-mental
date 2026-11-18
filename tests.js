@@ -2402,3 +2402,57 @@ probar('naval: tiros repetidos no hacen ganar ni pasan la revisión', () => {
   assert(!N.coherente(f, [[100, 'a']]) && !N.coherente(f, [[1.5, 'a']]), 'fuera de rango');
   assert(N.aplicar(N.inicial({ barcos: { x: f, o: f } }), 100).tiros.x.length === 0, 'aplicar ignora lo inválido');
 });
+
+// --- justo.js: dados justos con un amigo ---
+import * as J from './games/justo.js';
+
+await probarAsync('justo: mismos dados con la misma semilla y número; otros con otra k, otro número u otra semilla', async () => {
+  const s = J.nuevaSemilla(), r = J.nuevaSemilla();
+  assert(/^[0-9a-f]{32}$/.test(s) && s !== r, 'semilla de 16 bytes en hex');
+  const a = await J.dadosDe(s, r, 3, 5), b = await J.dadosDe(s, r, 3, 5);
+  assert(a.length === 5 && a.every((d) => Number.isInteger(d) && d >= 1 && d <= 6) && J.igual(a, b), JSON.stringify([a, b]));
+  const otros = [await J.dadosDe(s, r, 4, 5), await J.dadosDe(s, J.nuevaSemilla(), 3, 5), await J.dadosDe(J.nuevaSemilla(), r, 3, 5)];
+  assert(otros.some((o) => !J.igual(o, a)), 'cambia con k, número o semilla');
+  // Vector fijo: el resultado no puede cambiar entre versiones (las partidas guardadas se recalculan al final).
+  // HMAC('00', 'ff:1') empieza 29 71 c8 6b 23; el de 'ff:3', ff 7c 0d 51 ad 08: el ff (≥ 252) se descarta.
+  assert(J.igual(await J.dadosDe('00', 'ff', 1, 5), [6, 6, 3, 6, 6]) && J.igual(await J.dadosDe('00', 'ff', 3, 5), [5, 2, 4, 6, 3]), 'vectores fijos');
+  assert(await J.sellar('abc') === 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad', 'SHA-256 de «abc»');
+  // Muchos dados: se pasa de los 32 bytes de un HMAC y se sigue con el contador, sin repetir el bloque.
+  const muchos = await J.dadosDe(s, r, 0, 80);
+  assert(muchos.length === 80 && !J.igual(muchos.slice(0, 30), muchos.slice(30, 60)), 'extiende con contador');
+  assert(J.igual(muchos.slice(0, 5), await J.dadosDe(s, r, 0, 5)), 'los primeros no dependen de cuántos');
+});
+
+await probarAsync('justo: 10.000 dados, cada cara entre 15 % y 18,5 %', async () => {
+  const s = J.nuevaSemilla(), r = J.nuevaSemilla(), cuenta = [0, 0, 0, 0, 0, 0, 0];
+  for (let k = 0; k < 2000; k++) for (const d of await J.dadosDe(s, r, k, 5)) cuenta[d]++;
+  for (let c = 1; c <= 6; c++) assert(cuenta[c] >= 1500 && cuenta[c] <= 1850, `cara ${c}: ${cuenta[c]}`);
+});
+
+await probarAsync('justo: el sello detecta una semilla cambiada y un sello falso', async () => {
+  const s = J.nuevaSemilla(), sello = await J.sellar(s);
+  assert(/^[0-9a-f]{64}$/.test(sello) && sello === await J.sellar(s));
+  assert(await J.verificarSemilla(sello, s), 'honesto');
+  assert(!(await J.verificarSemilla(sello, J.nuevaSemilla())), 'otra semilla');
+  assert(!(await J.verificarSemilla(await J.sellar(J.nuevaSemilla()), s)), 'sello falso');
+  assert(!(await J.verificarSemilla(sello, undefined)) && !(await J.verificarSemilla(undefined, s)), 'faltan datos');
+  // Un dado publicado que no cuadra con la semilla revelada se nota al recalcular.
+  const r = J.nuevaSemilla(), publicados = await J.dadosDe(s, r, 2, 5);
+  const cambiado = publicados.map((d, i) => (i ? d : (d % 6) + 1));
+  assert(J.igual(await J.dadosDe(s, r, 2, 5), publicados) && !J.igual(await J.dadosDe(s, r, 2, 5), cambiado), 'dado cambiado');
+});
+
+probar('justo: siguePartida acepta mis escrituras o una jugada legítima del rival, y nada más', () => {
+  // Juego de juguete: el rival suma 1 a `n` y me pasa el turno.
+  const suma = (w, e, yo) => w.turno !== yo && J.igual(e, { ...w, n: w.n + 1, turno: yo });
+  const B = { n: 0, turno: 'x' }, W1 = { n: 1, turno: 'x' }, W2 = { n: 2, turno: 'o' }, hist = [B, W1, W2];
+  assert(J.siguePartida(hist, { turno: 'x', n: 3 }, 'x', suma), 'jugada legítima (orden de claves aparte)');
+  assert(hist.every((h) => J.siguePartida(hist, h, 'x', suma)), 'mis escrituras (alguna perdida)');
+  assert(!J.siguePartida(hist, { n: 4, turno: 'x' }, 'x', suma), 'dos jugadas');
+  assert(!J.siguePartida(hist, { n: 3, turno: 'x', extra: 1 }, 'x', suma), 'campo de más');
+  assert(!J.siguePartida([B, W1], { n: 2, turno: 'x' }, 'x', suma), 'no era su turno');
+  // Al confirmar W2 se recorta el historial: volver a B ya no vale.
+  const h2 = J.recortar(hist, W2);
+  assert(J.igual(h2, [W2]) && J.recortar(hist, B) === hist && J.recortar(hist, { n: 9 }) === hist && J.recortar(undefined, B) === undefined);
+  assert(!J.siguePartida(h2, B, 'x', suma) && J.siguePartida(h2, { n: 3, turno: 'x' }, 'x', suma));
+});

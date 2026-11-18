@@ -14,6 +14,7 @@ import { tableroReversi } from './mesa-reversi.js';
 import { cajas, contar as contarCajas } from '../games/cajas.js';
 import { tableroCajas } from './mesa-cajas.js';
 import { naval, FLOTA as FLOTA_NAVAL, flotaAlAzar, nuevaSal, sellar, responder, vencedor, verificar, coherente, siguePartida, trampaPorRendicion, igual } from '../games/naval.js';
+import { recortar } from '../games/justo.js';
 import { colocarFlota, tableroNaval, textoRespuesta } from './mesa-naval.js';
 import { E } from './estado.js';
 import { CARA } from './juegos.js';
@@ -146,8 +147,8 @@ const guardarNaval = (id, mio) => guardar('naval:' + id, JSON.stringify(mio));
 // ponytail: si la app se cierra justo entre que la nube guarda y avisa, ese único paso queda sin confirmar.
 function confirmarNaval(id, estado) {
   const mio = leerNaval(id);
-  const k = mio?.hist?.findIndex((h) => igual(h, estado)) ?? -1;
-  if (k > 0) guardarNaval(id, { ...mio, hist: mio.hist.slice(k) });
+  const hist = recortar(mio?.hist, estado);
+  if (hist !== mio?.hist) guardarNaval(id, { ...mio, hist });
 }
 const aNube = (j, e) => (j.aNube ? j.aNube(e) : e);
 const deNube = (j, s) => (j.deNube ? j.deNube(s) : s);

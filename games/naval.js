@@ -5,6 +5,9 @@
 // al final se revelan y cada celular comprueba el sello y todas las respuestas (verificar).
 // ponytail: la trampa se detecta al final, no se impide; para impedirla, este archivo puede correr en un servidor (Blaze).
 import { azar } from './comun.js';
+import { nuevaSemilla, igual, siguePartida as sigue } from './justo.js';
+
+export { igual };
 
 export const LADO = 10;
 export const FLOTA = [5, 4, 3, 3, 2];
@@ -129,7 +132,7 @@ export function coherente(barcos, tirosDelRival) {
   return true;
 }
 
-export const nuevaSal = () => [...globalThis.crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join('');
+export const nuevaSal = nuevaSemilla;
 
 export async function sellar(barcos, sal) {
   const datos = new TextEncoder().encode(JSON.stringify(barcos) + sal);
@@ -145,9 +148,6 @@ export async function verificar(e, ficha) {
   return coherente(rv.barcos, e.tiros[otro(ficha)]);
 }
 
-// Igualdad profunda de datos JSON (sin importar el orden de las claves).
-export const igual = (a, b) => a === b || (!!a && !!b && typeof a === 'object' && typeof b === 'object' && Array.isArray(a) === Array.isArray(b)
-  && Object.keys(a).length === Object.keys(b).length && Object.keys(a).every((k) => igual(a[k], b[k])));
 const RESPUESTAS = ['a', 't', ...FLOTA.map((l) => 'h' + l)];
 
 // Con un amigo (el rival puede escribir cualquier `datos` mientras tiene el turno): ¿el estado `e` de la mesa sigue
@@ -157,10 +157,11 @@ const RESPUESTAS = ['a', 't', ...FLOTA.map((l) => 'h' + l)];
 // - W más UNA jugada del rival: responde mi tiro (la verdad de la respuesta la revisa verificar al final), deja todo lo
 //   demás igual y me pasa el turno con un tiro nuevo; o, al final, revela su flota (si perdió, me pasa el turno; si
 //   ganó, porque yo ya revelé, cierra con su turno).
-export function siguePartida(hist, e, yo) {
+export const siguePartida = (hist, e, yo) => sigue(hist, e, yo, jugadaRival);
+
+// ¿`e` es exactamente `w` más una jugada honesta del rival? (ver siguePartida)
+function jugadaRival(w, e, yo) {
   const rival = otro(yo);
-  if (hist.some((h) => igual(h, e))) return true;
-  const w = hist.at(-1);
   const ultima = e?.tiros?.[yo]?.at?.(-1);
   const respondo = Number.isInteger(w.pendiente);
   const esperado = JSON.parse(JSON.stringify({ ...w, turno: e?.turno, pendiente: e?.pendiente,
