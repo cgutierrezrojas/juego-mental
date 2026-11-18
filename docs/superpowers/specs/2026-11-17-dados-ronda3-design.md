@@ -161,9 +161,17 @@ Se implementa 3a primero y 3b después, en la misma rama.
    - El invitado (o) genera `s_o`. En su primera escritura publica `sello_o` y un número público `r_o` de 16 bytes aleatorios.
    - Después, x publica su número público `r_x`.
    - Así cada número público se elige cuando la semilla secreta del otro ya está sellada.
-2. **Tiradas.** Los dados de un jugador en la tirada k (ronda en el Cacho, tirada en la Generala) salen de `HMAC-SHA-256(s_yo, r_rival + ':' + k)`, convertidos en valores de 1 a 6 sin sesgo.
-   - Solo el dueño de la semilla puede calcularlos.
-   - No puede elegirlos, porque su semilla ya estaba sellada y `r_rival` lo fijó el rival.
+2. **Tiradas con la hora del servidor** (decisión del usuario del 2026-11-18). Con solo `(s_yo, r_rival, k)` el dueño podría calcular de antemano todas sus tiradas y elegir qué guardar sabiendo lo que va a salir. Por eso cada tirada incorpora una hora que pone el servidor y que nadie conoce antes de escribir:
+   - **Contador y registro.** La mesa lleva un contador global de tiradas `estado.k` (entero) y un registro de solo escritura `mesas/$id/log/$k = { cuando }`.
+     - Para pedir la tirada k, quien tiene el turno escribe en una sola actualización `estado.k = k` (exactamente el anterior + 1) y `log/k.cuando = now`, junto con su decisión: qué dados guarda en la Generala o el inicio de ronda en el Cacho.
+     - Las reglas de RTDB garantizan que `cuando` es la hora real del servidor y que `log/k` no se puede reescribir.
+     - Las reglas también exigen que `estado.k` solo se mantenga, o suba de a 1 escribiendo a la vez `log/<nuevo k>`.
+   - **Dados.** Los dados de la tirada k salen de `dadosDe(s_yo, r_rival + ':' + log[k].cuando, k, cuantos)`.
+     - Solo se pueden calcular después de que el servidor guardó `cuando`, y la decisión ya quedó fija.
+     - No se puede «volver a tirar»: cada k se usa una sola vez y el historial de la partida debe usar todos los k consecutivos. Un k gastado sin su tirada correspondiente es trampa.
+   - **Publicación.** En la Generala, una segunda escritura publica los dados calculados. En el Cacho, los dados de la ronda quedan ocultos hasta revelarlos.
+   - **Revisión al final.** Usa `log[k].cuando`, que es infalsificable, para recalcular cada tirada.
+   - **Límite.** Un tramposo solo podría intentar adivinar la hora exacta en milisegundos de su propia escritura. Con la latencia de la red eso no es práctico.
 3. **Cacho.**
    - Los dados de cada jugador no se suben a la mesa.
    - Al dudar o calzar, la ronda pasa a fase «revelar»: cada jugador, en su turno, publica sus dados de esa ronda.
@@ -182,6 +190,9 @@ Se implementa 3a primero y 3b después, en la misma rama.
    - Se reutiliza el patrón de `siguePartida` y `confirmarNaval` de `games/naval.js` y `app/mesa.js`. Si conviene, se extrae a una función común.
 7. **Reglas de RTDB.**
    - Se agregan `'cacho'` y `'generala'` a la lista de juegos con `datos` (como mucho 8000 caracteres) en `database.rules.json`.
+   - Se agrega `estado/k`, un entero que se mantiene o sube de a 1, y solo si en la misma actualización existe `log/<k>`.
+   - Se agrega `log/$k`: lo escribe una sola vez quien tiene el turno, con `cuando === now` y `$k` igual al nuevo `estado/k`. Lo leen los dos jugadores, como el resto de la mesa.
+   - Se prueban en el emulador: reescribir el log, saltar k o poner una hora falsa debe ser rechazado.
    - El usuario las publica.
 8. **Prueba real.** Con dos cuentas, igual que en la ronda 2: una partida honesta de cada juego y una con trampa (dados que no cuadran con la semilla).
 
