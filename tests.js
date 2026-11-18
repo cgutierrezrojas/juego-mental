@@ -2010,6 +2010,112 @@ probar('reversi: la máquina juega válido y toma esquinas', () => {
   assert(reversi.validas(e2).includes(0) && reversi.ia(e2, 'normal') === 0, 'esquina');
 });
 
+// --- dados.js y generala.js (🎲 Dados) ---
+import { tirar as tirarDados, contar as contarDados, PINTAS } from './games/dados.js';
+import * as gen from './games/generala.js';
+
+probar('dados: tirar con la misma semilla repite, no modifica el generador y cuenta', () => {
+  const g = { s: 5 };
+  const a = tirarDados(g, 5), b = tirarDados({ s: 5 }, 5);
+  assert(g.s === 5 && a.g !== g && a.dados.length === 5 && a.dados.every((d) => d >= 1 && d <= 6), 'forma');
+  assert(a.dados.join() === b.dados.join(), 'repetible');
+  assert(contarDados([1, 2, 2, 6, 2], 2) === 3 && PINTAS.length === 6 && PINTAS[0].nombre === 'As' && PINTAS[5].n === 6);
+});
+
+// Estado de Generala con una mano fija (tirada nº `t`) para el jugador 0; `tabla` pone casillas ya anotadas.
+const conMano = (dados, t = 2, tabla = {}) => {
+  const e = gen.nueva(2, 1);
+  e.dados = dados; e.tiradas = t;
+  Object.assign(e.jugadores[0].tabla, tabla);
+  return e;
+};
+
+probar('generala: puntajes de cada casilla, servidas, doble y tachar', () => {
+  const p = (d, t, tabla) => gen.posibles(conMano(d, t, tabla));
+  assert(gen.CASILLAS.length === 11);
+  const a = p([3, 3, 1, 3, 6], 2);
+  assert(a['3'] === 9 && a['1'] === 1 && a['6'] === 6 && a['2'] === 0 && a.escalera === 0 && a.full === 0 && a.poker === 0 && a.generala === 0 && a.doble === 0, 'sueltos');
+  assert(p([1, 2, 3, 4, 5], 2).escalera === 20 && p([6, 2, 3, 4, 5], 2).escalera === 20 && p([1, 2, 3, 4, 6], 2).escalera === 0, 'escalera');
+  assert(p([1, 2, 3, 4, 5], 1).escalera === 25 && p([2, 3, 4, 5, 6], 1).escalera === 25, 'escalera servida');
+  assert(p([2, 2, 5, 5, 5], 2).full === 30 && p([2, 2, 5, 5, 5], 1).full === 35 && p([2, 2, 2, 2, 5], 2).full === 0 && p([4, 4, 4, 4, 4], 2).full === 0, 'full');
+  assert(p([2, 2, 5, 2, 2], 3).poker === 40 && p([2, 2, 5, 2, 2], 1).poker === 45 && p([2, 2, 5, 2, 3], 3).poker === 0, 'póker');
+  assert(p([4, 4, 4, 4, 4], 3).generala === 50 && p([4, 4, 4, 4, 4], 3).poker === 40, 'generala');
+  assert(p([4, 4, 4, 4, 4], 3).doble === 0, 'doble sin generala anotada');
+  assert(p([4, 4, 4, 4, 4], 3, { generala: 0 }).doble === 0, 'doble con la generala tachada');
+  assert(p([4, 4, 4, 4, 4], 3, { generala: 50 }).doble === 100 && !('generala' in p([4, 4, 4, 4, 4], 3, { generala: 50 })), 'doble con generala en 50');
+  assert(!('1' in p([1, 1, 1, 1, 2], 2, { 1: 3 })), 'solo las libres');
+  assert(Object.keys(gen.posibles(conMano([0, 0, 0, 0, 0], 0))).length === 0, 'antes de tirar no hay');
+  // Tachar vale 0 y pasa el turno.
+  const e = gen.anotar(conMano([1, 2, 4, 4, 6], 3), 'full');
+  assert(e.jugadores[0].tabla.full === 0 && e.turno === 1 && e.tiradas === 0 && e.dados.every((d) => d === 0) && e.ganador === null, 'tachar');
+});
+
+probar('generala: la generala servida gana al instante', () => {
+  const e = gen.anotar(conMano([3, 3, 3, 3, 3], 1), 'generala');
+  assert(e.ganador === 0 && gen.ganador(e) === 0 && e.jugadores[0].tabla.generala === 50);
+  const g = conMano([3, 3, 3, 3, 3], 1);
+  g.turno = 1;
+  assert(gen.anotar(g, 'generala').ganador === 1, 'gana el que la sirve');
+  assert(gen.anotar(conMano([3, 3, 3, 3, 3], 2), 'generala').ganador === null, 'no servida: sigue');
+});
+
+probar('generala: 3 tiradas como máximo y guardar solo después de tirar', () => {
+  let e = gen.nueva(2, 3);
+  assert(gen.alternarGuardado(e, 0) === null, 'no se guarda antes de tirar');
+  assert(gen.anotar(e, '1') === null, 'no se anota antes de tirar');
+  e = gen.tirar(e);
+  assert(e.tiradas === 1 && e.dados.every((d) => d >= 1 && d <= 6));
+  e = gen.alternarGuardado(e, 1); e = gen.alternarGuardado(e, 2);
+  const d1 = e.dados.slice();
+  e = gen.tirar(e);
+  assert(e.dados[1] === d1[1] && e.dados[2] === d1[2] && e.tiradas === 2, 'lo guardado se conserva');
+  e = gen.tirar(e);
+  assert(e.tiradas === 3 && gen.tirar(e) === null && gen.alternarGuardado(e, 0) === null, 'a la tercera se acaba');
+  const sin = gen.tirar(gen.nueva(2, 4));
+  assert(gen.tirar({ ...sin, guardados: [true, true, true, true, true] }) === null, 'con todos guardados no se tira');
+});
+
+probar('generala: casilla repetida, desconocida y entrada intacta', () => {
+  const e = conMano([1, 2, 4, 4, 6], 2);
+  const copia = JSON.stringify(e);
+  const s = gen.anotar(e, '4');
+  assert(s.jugadores[0].tabla['4'] === 8 && s.puntos[0] === 8, 'puntos');
+  gen.tirar(e); gen.alternarGuardado(e, 0); gen.posibles(e); gen.accion(e, { tipo: 'tirar', guardar: [true, false, false, false, false] });
+  assert(JSON.stringify(e) === copia, 'nada modifica la entrada');
+  assert(gen.anotar(conMano([1, 2, 4, 4, 6], 2, { 4: 8 }), '4') === null && gen.anotar(e, 'zzz') === null, 'inválidas');
+});
+
+probar('generala: el final con ganador y con empate', () => {
+  const casi = (pts0, pts1) => {
+    const e = conMano([1, 1, 2, 3, 4], 2);
+    for (const c of gen.CASILLAS) { e.jugadores[0].tabla[c] = c === '1' ? null : 0; e.jugadores[1].tabla[c] = 0; }
+    e.jugadores[0].tabla.doble = pts0;
+    e.jugadores[1].tabla.doble = pts1;
+    return e;
+  };
+  const gana = gen.anotar(casi(10, 0), '1'); // el jugador 0 suma 2 + 10
+  assert(gana.ganador === 0 && gen.ganador(gana) === 0 && gana.puntos[0] === 12 && gana.puntos[1] === 0, 'gana el de más puntos');
+  assert(gen.anotar(casi(0, 20), '1').ganador === 1, 'gana el otro');
+  assert(gen.anotar(casi(10, 12), '1').ganador === 'empate', 'misma suma: empate');
+  assert(gen.anotar(conMano([1, 1, 2, 3, 4], 2), '1').ganador === null, 'sigue si faltan casillas');
+});
+
+probar('generala: la máquina siempre hace una acción válida en los 3 niveles, de 1 a 4 jugadores', () => {
+  for (const nv of ['facil', 'normal', 'dificil']) {
+    for (const n of [1, 2, 3, 4]) {
+      if (nv === 'dificil' && n > 2) continue; // la Difícil tarda más; con 1 y 2 ya se cubre
+      let e = gen.nueva(n, 100 + n), pasos = 0;
+      while (e.ganador === null) {
+        const a = gen.maquina(e, nv, Math.random);
+        e = gen.accion(e, a);
+        assert(e, `${nv}/${n}: acción inválida ${JSON.stringify(a)}`);
+        assert(++pasos < 2000, 'no termina');
+      }
+      assert(e.ganador === 'empate' || (e.ganador >= 0 && e.ganador < n), 'ganador');
+    }
+  }
+});
+
 // --- sw.js: VERSION es la huella de los archivos; si alguno cambia, hay que ponerla al día para que llegue a todos ---
 if (globalThis.process?.versions?.node) {
   const { readFileSync } = await import('node:fs');
