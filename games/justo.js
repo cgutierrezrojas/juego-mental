@@ -52,6 +52,10 @@ export function recortar(hist, estado) {
 // `turno` es 0 (x) o 1 (o): quien puede escribir. Arranca en 1: o sella y publica su número; luego x publica el suyo.
 const FICHA = ['x', 'o'];
 const hexDe = (t, n) => typeof t === 'string' && t.length === n && /^[0-9a-f]+$/.test(t);
+// La decisión de cada tirada queda en `log/k` (de solo escritura) junto con la hora: `g` = lo guardado como '0'/'1' por dado
+// (en el Cacho, que no guarda nada, '00000') y `j` = quién la pidió ('x' | 'o').
+export const mascara = (g) => (Array.isArray(g) && g.length === 5 ? g : [0, 0, 0, 0, 0]).map((x) => (x ? '1' : '0')).join('');
+export const logCuadra = (log, k, j, g) => log?.[k]?.j === FICHA[j] && log[k].g === g;
 export const esDados = (d, n) => Array.isArray(d) && d.length === n && d.every((x) => Number.isInteger(x) && x >= 1 && x <= 6);
 
 // Los pasos del protocolo (no del juego) que puede dar quien tiene el turno en `w`, con lo que eligió tomado de `e`.

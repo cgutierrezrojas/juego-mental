@@ -4,7 +4,7 @@
 // Los ases (pinta 1) son comodines, salvo en obligo. La resolución (resolver) recibe los dados de todos explícitos: en el modo amigo se reutiliza con los dados revelados.
 import { tirar as tirarDados, contar } from './dados.js';
 import { generador, semillaNueva } from './semilla.js';
-import { esDados } from './justo.js';
+import { esDados, logCuadra } from './justo.js';
 
 const copia = (e) => structuredClone(e);
 const PINTAS_ORDEN = [2, 3, 4, 5, 6, 1];
@@ -135,8 +135,9 @@ export function revelar(e, dados) {
 }
 
 // Pasos del juego de quien tiene el turno (ver jugadaRival en games/justo.js), con lo que eligió tomado de `e`.
-export function pasosAmigo(w, e) {
-  if (w.k < w.ronda) return [empezarRonda(w)];
+// `log`: el registro de la mesa (cada ronda la empieza quien tiene el turno, con g = '00000').
+export function pasosAmigo(w, e, log) {
+  if (w.k < w.ronda) return logCuadra(log, w.k + 1, w.turno, '00000') ? [empezarRonda(w)] : [];
   const t = w.turno, misma = e.ronda === w.ronda;
   if (w.revelar) return [revelar(w, misma ? e.revelar?.dados?.[t] : e.reveladas?.[w.ronda - 1]?.[t])];
   const a = misma ? e.apuestas?.[w.apuestas.length] : null;
@@ -144,8 +145,8 @@ export function pasosAmigo(w, e) {
 }
 
 // Revisión final: los dados revelados de cada uno ({ k, j, d }), o null si alguna ronda (k) no tiene su revelación.
-export function tiradasAmigo(e) {
-  if (!Array.isArray(e.reveladas) || e.revelar || e.k !== e.reveladas.length || !e.reveladas.every((ds) => Array.isArray(ds) && ds.length === 2)) return null;
+export function tiradasAmigo(e, log) {
+  if (!Array.isArray(e.reveladas) || e.revelar || e.k !== e.reveladas.length || !e.reveladas.every((ds, i) => Array.isArray(ds) && ds.length === 2 && log?.[i + 1]?.g === '00000')) return null;
   return e.reveladas.flatMap((ds, i) => ds.map((d, j) => ({ k: i + 1, j, d })));
 }
 

@@ -30,7 +30,8 @@ export function aNube(e) {
 function deNube(estado) {
   try {
     const e = JSON.parse(estado.datos);
-    return e?.amigo === true && Number.isInteger(estado.k) && (e.turno === 0 || e.turno === 1) ? { ...e, k: estado.k } : null;
+    // (el turno de la mesa, que es el que miran las reglas, debe ser el del estado)
+    return e?.amigo === true && Number.isInteger(estado.k) && (e.turno === 0 || e.turno === 1) && FICHA[e.turno] === estado.turno ? { ...e, k: estado.k } : null;
   } catch {
     return null;
   }
@@ -66,16 +67,19 @@ export function puedo(q) {
   return !!(e.sellos?.o && e.r?.x && e.r?.o) && !e.pide && !e.revelar && !(e.k < e.ronda);
 }
 
-// La hora del servidor de la tirada k. Se lee de la nube (no de la copia local, que en una escritura mía recién hecha
-// puede traer la hora estimada por el celular) y se recuerda.
+// La hora del servidor de la tirada k. En una escritura mía, el evento local trae primero la hora estimada por el celular;
+// la del servidor llega antes de la confirmación. Por eso (ya confirmada la escritura) se lee de la nube y debe coincidir
+// con la última foto de la mesa que llegó al oyente; si no, se espera a la siguiente (o se reintenta en un rato).
+// Solo se recuerda cuando coinciden.
 async function cuandoDe(q, k) {
-  q.cuandos ??= {};
-  if (q.cuandos[k] === undefined) {
-    const c = (await E.nube.leerMesa(q.id))?.log?.[k]?.cuando;
-    if (typeof c !== 'number') return null;
-    q.cuandos[k] = c;
+  if (q.cuandos?.[k] !== undefined) return q.cuandos[k];
+  const c = (await E.nube.leerMesa(q.id).catch(() => null))?.log?.[k]?.cuando;
+  if (typeof c !== 'number' || c !== q.mesa?.log?.[k]?.cuando) {
+    if (!q.reintento) q.reintento = setTimeout(() => { q.reintento = null; q.reintentar?.(); }, 1500);
+    return null;
   }
-  return q.cuandos[k];
+  (q.cuandos ??= {})[k] = c;
+  return c;
 }
 // Mis dados de la tirada k (n dados), o null si aún no hay hora.
 async function misDados(q, mio, k, n) {
@@ -87,11 +91,13 @@ async function misDados(q, mio, k, n) {
 async function escribir(q, est, g = null) {
   const mio = leerMio(q.id);
   est = json(est);
-  mio.hist.push(est);
+  (mio.hist ??= []).push(est); // (una semilla traída de una copia llega sin hist)
   guardarMio(q.id, mio);
   const k0 = q.mesa?.estado?.k ?? 0;
+  // Con cada tirada nueva, en log/k quedan también lo guardado y quién tira: después ya no se puede cambiar.
+  const tirada = est.k > k0 ? { k: est.k, g: J.mascara(est.guardados), j: FICHA[q.yo] } : null;
   try {
-    await E.nube.jugarMesa(q.id, aNube(est), g, est.k > k0 ? est.k : null);
+    await E.nube.jugarMesa(q.id, aNube(est), g, tirada);
   } catch {
     q.aviso = 'No se pudo enviar (¿sin conexión?).';
     return false;
@@ -118,13 +124,13 @@ async function cerrarPorTrampa(q) {
 async function revisar(q, A, sigue) {
   const { M } = A, yo = q.yo, rival = 1 - yo, F = FICHA[yo], mesa = q.mesa, e = q.e;
   let mio = leerMio(q.id);
-  const cuadra = () => !mio?.hist || J.siguePartida(mio.hist, e, yo, (w, x, y) => J.jugadaRival(w, x, y, M.pasosAmigo));
+  const cuadra = () => !mio?.hist || J.siguePartida(mio.hist, e, yo, (w, x, y) => J.jugadaRival(w, x, y, (a, b) => M.pasosAmigo(a, b, mesa.log)));
   if (mesa.ganador) {
     // Revisión final (una vez): rendiciones, el último cambio del rival, quién ganó y sus dados contra su semilla.
     if (q.trampaRival !== undefined) return false;
     const rendido = mesa.rendido ?? {};
     let trampa = trampaPorRendicion(mesa.ganador, F, !!rendido[mesa.jugadores[F]], !!rendido[mesa.jugadores[FICHA[rival]]]);
-    if (trampa === null) trampa = q.ilegible || !e || !cuadra() || mesa.ganador !== esperado(e) || !(await J.rivalHonesto(e, rival, mesa.log, M.tiradasAmigo(e)));
+    if (trampa === null) trampa = q.ilegible || !e || !cuadra() || mesa.ganador !== esperado(e) || !(await J.rivalHonesto(e, rival, mesa.log, M.tiradasAmigo(e, mesa.log)));
     q.trampaRival = trampa;
     return false;
   }
@@ -147,7 +153,7 @@ async function revisar(q, A, sigue) {
     return escribir(q, { ...e, sellos: { ...e.sellos, o: await J.sellar(mio.s) }, r: { ...e.r, o: J.nuevaSemilla() }, turno: 0 });
   }
   if (!cuadra()) return cerrarPorTrampa(q);
-  mio.hist = mio.hist.some((h) => J.igual(h, e)) ? J.recortar(mio.hist, e) : [e]; // aceptado: es la nueva base
+  mio.hist = mio.hist?.some((h) => J.igual(h, e)) ? J.recortar(mio.hist, e) : [e]; // aceptado: es la nueva base
   guardarMio(q.id, mio);
   // Mi sello o mi número no llegaron a la mesa (falló el envío): se vuelven a mandar antes que nada.
   if (!e.sellos?.[F]) return escribir(q, { ...e, sellos: { ...e.sellos, o: await J.sellar(mio.s) }, r: { ...e.r, o: e.r?.o ?? J.nuevaSemilla() }, turno: 0 });
@@ -155,9 +161,16 @@ async function revisar(q, A, sigue) {
   if (e.ganador !== null) {
     if (e.s?.[F]) return false;
     const final = { ...e, s: { ...e.s, [F]: mio.s }, turno: rival };
+    // Antes de revelar, reviso mis propias tiradas con el registro de la nube: si no cuadran (no debería pasar), mejor
+    // avisar que dejar que el rival me marque trampa sin saber por qué.
+    const log = (await E.nube.leerMesa(q.id).catch(() => null))?.log;
+    if (!(await J.rivalHonesto(final, yo, log, M.tiradasAmigo(final, log)))) {
+      q.aviso = '⚠️ Tus tiradas no cuadran con el registro de la mesa: aún no se revela tu semilla. Vuelve a abrir la partida más tarde.';
+      return false;
+    }
     if (!e.s?.[FICHA[rival]]) return escribir(q, final); // revelo primero y le paso el turno para que cierre
     // Cierro yo: reviso su semilla y todas sus tiradas.
-    const honesto = await J.rivalHonesto(final, rival, mesa.log, M.tiradasAmigo(final));
+    const honesto = await J.rivalHonesto(final, rival, log, M.tiradasAmigo(final, log));
     if (!sigue()) return false;
     if (!honesto) return cerrarPorTrampa(q);
     q.trampaRival = false;
@@ -176,6 +189,7 @@ export async function correr(q, A, sigue, pintar, jugada = null) {
     return;
   }
   q.ocupado = true;
+  q.reintentar = () => correr(q, A, sigue, pintar);
   try {
     if (jugada) {
       pintar();

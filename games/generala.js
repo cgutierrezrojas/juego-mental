@@ -3,7 +3,7 @@
 // turno, dados: [5] (0 = sin tirar), guardados: [bool×5], tiradas (0..3), g: { s }, puntos: [], ganador: índice | 'empate' | null }.
 import { tirar as tirarDados, contar } from './dados.js';
 import { generador, semillaNueva } from './semilla.js';
-import { esDados } from './justo.js';
+import { esDados, mascara, logCuadra } from './justo.js';
 
 export const CASILLAS = ['1', '2', '3', '4', '5', '6', 'escalera', 'full', 'poker', 'generala', 'doble'];
 // Para tachar: primero lo que menos vale.
@@ -103,22 +103,24 @@ export function publicar(e, nuevos) {
 }
 
 // Pasos del juego de quien tiene el turno (ver jugadaRival en games/justo.js), con lo que eligió tomado de `e`.
-export function pasosAmigo(w, e) {
+// `log`: el registro de la mesa; lo guardado en cada tirada debe ser lo que quedó en log/k al pedirla.
+export function pasosAmigo(w, e, log) {
   const h = e.hechas?.[w.hechas.length];
-  if (w.pide) return h && Array.isArray(h.d) ? [publicar(w, h.d.filter((_, i) => sueltos(w)[i]))] : [];
+  if (w.pide) return h && Array.isArray(h.d) && logCuadra(log, w.k, w.turno, mascara(w.guardados)) ? [publicar(w, h.d.filter((_, i) => sueltos(w)[i]))] : [];
   const r = CASILLAS.map((c) => anotar(w, c));
-  if (h && Array.isArray(h.g) && h.g.length === 5) r.push(tirar({ ...w, guardados: h.g }));
+  const t = h && Array.isArray(h.g) && h.g.length === 5 && tirar({ ...w, guardados: h.g });
+  if (t && logCuadra(log, t.k, w.turno, mascara(t.guardados))) r.push(t);
   return r;
 }
 
 // Revisión final: las tiradas de cada uno ({ k, j, d: los dados que salieron de su semilla }), o null si el registro
-// no cuadra (una k sin su tirada, o dados guardados que cambiaron).
-export function tiradasAmigo(e) {
+// no cuadra (una k sin su tirada, dados guardados que cambiaron, o lo guardado o quién tiró distinto de log/k).
+export function tiradasAmigo(e, log) {
   if (!Array.isArray(e.hechas) || e.pide || e.k !== e.hechas.length) return null;
   const r = [];
   for (const [i, h] of e.hechas.entries()) {
     const antes = e.hechas[i - 1];
-    if (!esDados(h?.d, 5) || !Array.isArray(h.g) || ![0, 1].includes(h.j) || ![1, 2, 3].includes(h.t) || (h.t > 1 && (antes?.j !== h.j || antes.t !== h.t - 1 || h.g.some((g, x) => g && h.d[x] !== antes.d[x])))) return null;
+    if (!esDados(h?.d, 5) || !Array.isArray(h.g) || ![0, 1].includes(h.j) || !logCuadra(log, i + 1, h.j, mascara(h.g)) || ![1, 2, 3].includes(h.t) || (h.t > 1 && (antes?.j !== h.j || antes.t !== h.t - 1 || h.g.some((g, x) => g && h.d[x] !== antes.d[x])))) return null;
     r.push({ k: i + 1, j: h.j, d: h.d.filter((_, x) => h.t === 1 || !h.g[x]) });
   }
   return r;
