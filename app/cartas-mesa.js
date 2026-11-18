@@ -24,6 +24,7 @@ import { naipe, pantalla, boton, abrirCartas, alSalir, temblar } from './cartas.
 import { abrirDados } from './dados.js';
 import { CARIOCA } from './carioca.js';
 import { GENERALA } from './dados-generala.js';
+import { CACHO } from './dados-cacho.js';
 import { BURAKO } from './burako.js';
 
 const FICHA = ['x', 'o'];
@@ -85,7 +86,7 @@ const ESCOBA = {
     return [el('p', 'turno-trivia', `🧹 Fin de la ronda ${r.ronda}`), tabla];
   },
 };
-export const JUEGOS_MESA_CARTAS = [OCHO, ESCOBA, CARIOCA, BURAKO, GENERALA];
+export const JUEGOS_MESA_CARTAS = [OCHO, ESCOBA, CARIOCA, BURAKO, GENERALA, CACHO];
 const juegoDe = (id) => JUEGOS_MESA_CARTAS.find((j) => j.id === id);
 
 function pintarOcho(e, quien, miTurno, actuar) {
@@ -376,7 +377,7 @@ const conPuntos = () => p.J.equipos?.(p.nombres) ?? p.nombres;
 
 const tablaPuntos = (e) => {
   const lista = el('ul', 'puntos-cartas');
-  e.puntos.map((pts, i) => [pts, i]).sort((a, b) => (p.J.menosGana ? a[0] - b[0] : b[0] - a[0])).forEach(([pts, i]) => lista.append(el('li', '', `${conPuntos()[i]}: ${pts}`)));
+  (p.J.puntos?.(e) ?? e.puntos).map((pts, i) => [pts, i]).sort((a, b) => (p.J.menosGana ? a[0] - b[0] : b[0] - a[0])).forEach(([pts, i]) => lista.append(el('li', '', `${conPuntos()[i]}: ${pts}`)));
   return lista;
 };
 

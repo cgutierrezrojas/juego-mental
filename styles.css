@@ -1703,3 +1703,26 @@ button.seccion {
 .casilla-generala.cero { border-color: color-mix(in srgb, var(--texto) 35%, transparent); background: none; opacity: 0.75; }
 .posible { opacity: 0.7; font-weight: 700; }
 .posible.plan { opacity: 1; padding: 1px 6px; border-radius: 8px; outline: 3px solid var(--amarillo); }
+
+/* 🥤 Cacho (app/dados-cacho.js): cachos de los demás, mi cacho, la apuesta vigente y el selector */
+.rivales-cacho { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin: 4px 0; }
+.rival-cacho { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 8px; border-radius: 10px; border: 2px solid transparent; font-size: 0.8rem; }
+.rival-cacho.turno { border-color: var(--amarillo); background: color-mix(in srgb, var(--amarillo) 22%, transparent); }
+.fila-dados { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; }
+.dado.mini { width: 24px; height: 24px; padding: 3px; border-width: 1px; border-radius: 5px; box-shadow: none; }
+.dado.mini i { width: 4px; height: 4px; }
+.cacho-mio { display: flex; justify-content: center; gap: 6px; margin: 2px auto; padding: 6px; background: none; border: 2px dashed color-mix(in srgb, var(--texto) 35%, transparent); border-radius: 12px; box-shadow: none; min-height: 0; width: auto; }
+.cacho-mio .dado { width: 44px; height: 44px; }
+.apuesta-cacho { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin: 6px 0; font-size: 1.1rem; }
+.apuesta-cacho small { flex-basis: 100%; text-align: center; }
+.apuesta-cacho strong { font-size: 2rem; }
+.aviso-obligo { margin: 0; font-weight: 800; color: var(--texto); background: color-mix(in srgb, var(--rojo) 25%, transparent); padding: 6px 10px; border-radius: 10px; }
+.selector-cacho { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.selector-cacho strong { font-size: 1.8rem; min-width: 2ch; text-align: center; }
+.selector-cacho button { min-width: 48px; font-size: 1.4rem; }
+.pintas-cacho { display: flex; justify-content: center; gap: 6px; margin: 6px 0; }
+.pinta-cacho { padding: 4px; min-height: 0; width: auto; border-radius: 10px; border: 2px solid transparent; background: none; box-shadow: none; }
+.pinta-cacho .dado { width: 38px; height: 38px; padding: 4px; }
+.pinta-cacho .dado i { width: 6px; height: 6px; }
+.pinta-cacho.elegida { border-color: var(--azul); background: color-mix(in srgb, var(--azul) 22%, transparent); }
+.pinta-cacho:disabled { opacity: 0.3; }
