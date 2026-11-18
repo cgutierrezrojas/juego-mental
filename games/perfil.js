@@ -50,8 +50,8 @@ export function cobrarCalendario(registro, hoy) {
 }
 
 // --- Misiones semanales ---
-export const SECCIONES_MISION = ['mentales', 'mesa', 'trivia', 'cartas', 'arcade', 'palabras'];
-const NOMBRE_SECCION = { mentales: 'Mentales', mesa: 'Mesa', trivia: 'Trivia', cartas: 'Cartas', arcade: 'Arcade', palabras: 'Palabras' };
+export const SECCIONES_MISION = ['mentales', 'mesa', 'trivia', 'cartas', 'dados', 'arcade', 'palabras'];
+const NOMBRE_SECCION = { mentales: 'Mentales', mesa: 'Mesa', trivia: 'Trivia', cartas: 'Cartas', dados: 'Dados', arcade: 'Arcade', palabras: 'Palabras' };
 // `conSeccion`: la sección se elige cada semana; `distintas`: cuenta secciones distintas jugadas.
 const MISIONES = {
   facil: [

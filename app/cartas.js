@@ -94,8 +94,10 @@ export function abrirCartas() {
   $('cartas-records').replaceChildren(...(filas.length ? [el('h3', 'categoria', 'Tus récords'), ...filas.map((t) => el('p', 'sin-datos', t))] : []));
 }
 
-export const pantalla = (marcador, tapete, botones, aviso = '') => {
+// `seccion` ('cartas' o 'dados') es a la que vuelve el botón atrás (ver app/ui.js).
+export const pantalla = (marcador, tapete, botones, aviso = '', seccion = 'cartas') => {
   mostrar('cartas-juego');
+  $('cartas-juego').dataset.seccion = seccion;
   $('cartas-marcador').replaceChildren(...marcador);
   $('cartas-tapete').replaceChildren(...tapete);
   $('cartas-aviso').textContent = aviso;

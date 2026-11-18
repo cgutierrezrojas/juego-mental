@@ -1634,3 +1634,55 @@ button.seccion {
 .casilla-naval.tiro-t, .casilla-naval.tiro-h { background: #e2462f; }
 .casilla-naval:disabled { cursor: default; opacity: 1; }
 .tapa-naval { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 40px 12px; }
+
+/* 🎲 Dado dibujado en CSS (app/dados.js): data-cara="1..6"; estados .guardado, .tapado, .cuenta y .rodando */
+.dado {
+  --dado-fondo: #fff;
+  --dado-punto: #1d1d2b;
+  display: inline-grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  width: 48px;
+  height: 48px;
+  padding: 6px;
+  box-sizing: border-box;
+  border: 2px solid var(--dado-punto);
+  border-radius: 10px;
+  background: var(--dado-fondo);
+  box-shadow: var(--relieve);
+  vertical-align: middle;
+}
+[data-tema="oscuro"] .dado { --dado-fondo: #151a45; --dado-punto: var(--texto); }
+.dado i { place-self: center; width: 8px; height: 8px; border-radius: 50%; background: var(--dado-punto); }
+.dado[data-cara="1"] i { grid-area: 2 / 2; }
+.dado[data-cara="2"] i:nth-child(1) { grid-area: 1 / 3; }
+.dado[data-cara="2"] i:nth-child(2) { grid-area: 3 / 1; }
+.dado[data-cara="3"] i:nth-child(1) { grid-area: 1 / 3; }
+.dado[data-cara="3"] i:nth-child(2) { grid-area: 2 / 2; }
+.dado[data-cara="3"] i:nth-child(3) { grid-area: 3 / 1; }
+.dado[data-cara="4"] i:nth-child(1) { grid-area: 1 / 1; }
+.dado[data-cara="4"] i:nth-child(2) { grid-area: 1 / 3; }
+.dado[data-cara="4"] i:nth-child(3) { grid-area: 3 / 1; }
+.dado[data-cara="4"] i:nth-child(4) { grid-area: 3 / 3; }
+.dado[data-cara="5"] i:nth-child(1) { grid-area: 1 / 1; }
+.dado[data-cara="5"] i:nth-child(2) { grid-area: 1 / 3; }
+.dado[data-cara="5"] i:nth-child(3) { grid-area: 2 / 2; }
+.dado[data-cara="5"] i:nth-child(4) { grid-area: 3 / 1; }
+.dado[data-cara="5"] i:nth-child(5) { grid-area: 3 / 3; }
+.dado[data-cara="6"] i:nth-child(1) { grid-area: 1 / 1; }
+.dado[data-cara="6"] i:nth-child(2) { grid-area: 1 / 3; }
+.dado[data-cara="6"] i:nth-child(3) { grid-area: 2 / 1; }
+.dado[data-cara="6"] i:nth-child(4) { grid-area: 2 / 3; }
+.dado[data-cara="6"] i:nth-child(5) { grid-area: 3 / 1; }
+.dado[data-cara="6"] i:nth-child(6) { grid-area: 3 / 3; }
+.dado.guardado { border-color: var(--azul); background: color-mix(in srgb, var(--azul) 22%, var(--dado-fondo)); transform: translateY(-4px); }
+.dado.tapado { background: repeating-linear-gradient(45deg, var(--morado) 0 4px, transparent 4px 8px), var(--dado-fondo); border-color: var(--morado); }
+.dado.tapado i { visibility: hidden; }
+/* .cuenta ya es la cuenta atrás 3-2-1: aquí se anula y solo resalta el dado que cuenta al revelar */
+.dado.cuenta { margin-top: 0; font-size: inherit; color: inherit; animation: none; border-color: var(--amarillo); box-shadow: 0 0 0 3px var(--amarillo); }
+.dado.rodando { animation: rodar-dado 0.4s ease-out; }
+@keyframes rodar-dado {
+  from { transform: rotate(-200deg) scale(0.6); opacity: 0.4; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dado.rodando { animation: none; }
+}

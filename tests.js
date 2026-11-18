@@ -1900,7 +1900,7 @@ probar('perfil: avance de misiones', () => {
   const semanaCon = (id) => { for (let s = 1; s <= 53; s++) { const w = `2027-W${String(s).padStart(2, '0')}`; if (misionesDe(w).some((m) => m.id === id)) return w; } };
   const w = semanaCon('seccion3');
   const m = misionesDe(w).find((x) => x.id === 'seccion3');
-  const otra = ['mentales', 'mesa', 'trivia', 'cartas', 'arcade', 'palabras'].find((s) => s !== m.seccion);
+  const otra = ['mentales', 'mesa', 'trivia', 'cartas', 'dados', 'arcade', 'palabras'].find((s) => s !== m.seccion);
   let r = avanzar(null, 'partida', 2, otra, w).registro;
   assert(!r.avance.seccion3, 'otra sección no cuenta');
   r = avanzar(r, 'partida', 2, m.seccion, w).registro;

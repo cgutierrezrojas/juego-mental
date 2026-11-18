@@ -4,6 +4,8 @@
 // Cada juego da sus reglas (games/ocho.js, games/escoba.js, games/carioca.js), su `pintar` (la mesa del jugador que mira) y su
 // `resumen` de ronda; puede dar `opciones` para la pantalla de modos, `pausa` de la máquina, `menosGana` (gana el de menos puntos),
 // `maquinas` ([[cuántas, texto]]), `nombres(n)` de los jugadores contra la máquina y `equipos(nombres)` si los puntos son por equipo.
+// También `seccion` ('cartas' por defecto o 'dados': a dónde vuelve, a qué cuenta y la clave del récord), `niveles` (['normal', 'dificil']
+// por defecto; los dados usan también 'facil') y `maxLocal` (cuántos pueden jugar en un celular; 2 por defecto).
 import { el, leer, guardar } from '../games/comun.js';
 import { sonar } from '../games/efectos.js';
 import { esRoja } from '../games/cartas.js';
@@ -19,6 +21,7 @@ import { finDePartida } from './anuncios.js';
 import { asegurarDuelista } from './duelos.js';
 import { misPartidas, resultadoMesa, apuntarResultadoAmigo } from './mesa.js';
 import { naipe, pantalla, boton, abrirCartas, alSalir, temblar } from './cartas.js';
+import { abrirDados } from './dados.js';
 import { CARIOCA } from './carioca.js';
 import { BURAKO } from './burako.js';
 
@@ -28,10 +31,17 @@ const FICHA = ['x', 'o'];
 // nombres, vista (a dos: de quién son las cartas a la vista), visto (última ronda cuyo resumen se vio), id, mesa, apuntada, timer }
 let p = null;
 let maquinas = 1; // máquinas elegidas (Ocho locos, Carioca, Burako)
-let nivel = 'normal'; // 'normal' | 'dificil', contra la máquina
-const NIVELES = { normal: 'Normal', dificil: 'Difícil' };
-// Récord contra la máquina por nivel: `cartas:ocho`, `cartas:ocho-dificil`…
-export const claveRecord = (id, nv) => `cartas:${id}${nv === 'dificil' ? '-dificil' : ''}`;
+let nivel = 'normal'; // 'facil' | 'normal' | 'dificil', contra la máquina
+let locales = 2; // jugadores en un celular (juegos con maxLocal > 2)
+const NIVELES = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil' };
+// Récord contra la máquina por nivel: `cartas:ocho`, `cartas:ocho-dificil`, `dados:cacho-facil`…
+export const claveRecord = (id, nv, seccion = 'cartas') => `${seccion}:${id}${nv === 'normal' ? '' : `-${nv}`}`;
+const secDe = (J) => J.seccion ?? 'cartas';
+const secP = () => (p.J ? secDe(p.J) : p.seccion ?? 'cartas');
+// La página de la sección a la que se vuelve.
+const salirA = (seccion) => (seccion === 'dados' ? abrirDados : abrirCartas)();
+const volver = () => salirA(secP());
+const pant = (marcador, tapete, botones, aviso = '') => pantalla(marcador, tapete, botones, aviso, secP());
 
 function pararPartida() {
   clearTimeout(p?.timer);
@@ -186,24 +196,25 @@ export function abrirJuegoMesa(id) {
     credito.innerHTML = J.credito;
     partes.push(credito);
   }
-  for (const nv of Object.keys(NIVELES)) {
-    const r = leerJSON(claveRecord(J.id, nv));
+  const niveles = J.niveles ?? ['normal', 'dificil'];
+  if (!niveles.includes(nivel)) nivel = 'normal';
+  const maxLocal = J.maxLocal ?? 2;
+  if (locales > maxLocal) locales = 2;
+  for (const nv of niveles) {
+    const r = leerJSON(claveRecord(J.id, nv, secDe(J)));
     if (r.partidas) partes.push(el('p', 'sin-datos', `Contra la máquina (${NIVELES[nv]}): ${r.ganadas} de ${r.partidas} ganadas`));
   }
   partes.push(el('h3', 'categoria', '🤖 Contra la máquina'));
-  partes.push(fila('Nivel', Object.entries(NIVELES).map(([nv, t]) => [t, t, nv === nivel, () => (nivel = nv)])));
+  partes.push(fila('Nivel', niveles.map((nv) => [NIVELES[nv], NIVELES[nv], nv === nivel, () => (nivel = nv)])));
   const cuantas = J.maquinas ?? Array.from({ length: J.maxMaquinas }, (_, i) => [i + 1, `${i + 1} 🤖`]);
   if (!cuantas.some(([k]) => k === maquinas)) maquinas = cuantas[0][0];
   if (cuantas.length > 1) partes.push(fila('Cuántas máquinas', cuantas.map(([k, texto]) => [texto, `${k} ${k > 1 ? 'máquinas' : 'máquina'}`, k === maquinas, () => (maquinas = k)])));
-  partes.push(
-    boton('▶ Jugar contra la máquina', 'color', () => empezar(J, 'maquina', maquinas + 1)),
-    el('h3', 'categoria', '📱 Dos en este celular'),
-    boton('▶ Jugar a dos (pasándose el celular)', '', () => empezar(J, 'local', 2)),
-    el('h3', 'categoria', '👥 Contra un amigo'),
-  );
+  partes.push(boton('▶ Jugar contra la máquina', 'color', () => empezar(J, 'maquina', maquinas + 1)), el('h3', 'categoria', maxLocal > 2 ? '📱 En este celular' : '📱 Dos en este celular'));
+  if (maxLocal > 2) partes.push(fila('Cuántos juegan', Array.from({ length: maxLocal - 1 }, (_, i) => [i + 2, `${i + 2} jugadores`, i + 2 === locales, () => (locales = i + 2)])));
+  partes.push(boton(maxLocal > 2 ? '▶ Jugar (pasándose el celular)' : '▶ Jugar a dos (pasándose el celular)', '', () => empezar(J, 'local', locales)), el('h3', 'categoria', '👥 Contra un amigo'));
   const amigos = el('div', 'opciones-duelo');
   partes.push(amigos);
-  pantalla([], partes, [boton('Volver', '', abrirCartas)]);
+  pantalla([], partes, [boton('Volver', '', () => salirA(secDe(J)))], '', secDe(J));
   $('cartas-tapete').className = 'tapete-modos';
   pintarAmigos(J, amigos);
 }
@@ -237,12 +248,13 @@ async function pintarAmigos(J, caja) {
   }
 }
 
-// En la página de Cartas: las partidas con amigos de estos juegos.
-export async function pintarPartidasCartas() {
-  const caja = $('cartas-partidas');
+// En la página de Cartas o de Dados: las partidas con amigos de los juegos de esa sección.
+export const pintarPartidasCartas = () => pintarPartidas('cartas');
+export async function pintarPartidas(seccion) {
+  const caja = $(`${seccion}-partidas`);
   if (!E.usuario || !E.nube?.hayEstados()) return caja.replaceChildren();
   try {
-    const filas = (await misPartidas()).filter(({ mesa }) => juegoDe(mesa.juego));
+    const filas = (await misPartidas()).filter(({ mesa }) => juegoDe(mesa.juego) && secDe(juegoDe(mesa.juego)) === seccion);
     if (!filas.length) return caja.replaceChildren();
     caja.replaceChildren(el('h3', 'categoria', '👥 Tus partidas con amigos'), ...filas.slice(0, 12).map(({ id, mesa, info }) => {
       const J = juegoDe(mesa.juego);
@@ -251,7 +263,7 @@ export async function pintarPartidasCartas() {
       if (resultado) detalle = { v: '🏆 Ganaste', d: 'Perdiste', e: '🤝 Empate' }[resultado];
       const b = el('button', `fila-duelo ${resultado ? `resultado-${resultado}` : detalle.startsWith('▶') ? 'tu-turno' : ''}`);
       b.append(el('span', '', `${J.icono} ${J.nombre} vs ${info.nombreRival}`), el('small', '', detalle));
-      b.onclick = () => abrirAmigo(id);
+      b.onclick = () => abrirAmigo(id, seccion);
       return b;
     }));
   } catch {
@@ -263,7 +275,7 @@ export async function pintarPartidasCartas() {
 
 function empezar(J, modo, n) {
   pararPartida();
-  const nombres = modo === 'local' ? ['Jugador 1', 'Jugador 2'] : J.nombres?.(n) ?? ['Tú', ...Array.from({ length: n - 1 }, (_, i) => (n > 2 ? `🤖 Máquina ${i + 1}` : '🤖 Máquina'))];
+  const nombres = modo === 'local' ? Array.from({ length: n }, (_, i) => `Jugador ${i + 1}`) : J.nombres?.(n) ?? ['Tú', ...Array.from({ length: n - 1 }, (_, i) => (n > 2 ? `🤖 Máquina ${i + 1}` : '🤖 Máquina'))];
   p = { J, modo, nivel, e: J.nueva(n), yo: 0, nombres, vista: null, visto: 0, apuntada: false };
   alSalir(pararPartida);
   pintar();
@@ -279,21 +291,21 @@ async function retarAmigo(J, amigo) {
       nombres: { [E.usuario.uid]: leer('nube:apodo'), [amigo.uid]: amigo.apodo },
       estado: { turno: FICHA[e.turno], datos: JSON.stringify(e) },
     });
-    abrirAmigo(id);
+    abrirAmigo(id, secDe(J));
   } catch {
     $('cartas-aviso').textContent = `No se pudo crear la partida. ¿${amigo.apodo} sigue siendo tu amigo y hay conexión?`;
   }
 }
 
-async function abrirAmigo(id) {
+async function abrirAmigo(id, seccion = 'cartas') {
   if (!(await asegurarDuelista())) return;
   pararPartida();
-  p = { modo: 'amigo', id, e: null, visto: 0, apuntada: false };
+  p = { modo: 'amigo', id, seccion, e: null, visto: 0, apuntada: false };
   alSalir(pararPartida);
-  pantalla([], [el('p', 'sin-datos', 'Cargando la partida…')], [boton('Volver', '', abrirCartas)]);
+  pant([], [el('p', 'sin-datos', 'Cargando la partida…')], [boton('Volver', '', volver)]);
   p.dejar = E.nube.verMesa(id, (mesa) => {
     if (p?.id !== id) return;
-    if (!mesa) return pantalla([], [el('p', 'sin-datos', 'Esta partida ya no existe.')], [boton('Volver', '', abrirCartas)]);
+    if (!mesa) return pant([], [el('p', 'sin-datos', 'Esta partida ya no existe.')], [boton('Volver', '', volver)]);
     const yo = mesa.jugadores.x === E.usuario.uid ? 0 : 1;
     const nombre = (i) => (i === yo ? 'Tú' : mesa.nombres?.[mesa.jugadores[FICHA[i]]] ?? 'Rival');
     const primera = !p.e;
@@ -333,7 +345,7 @@ function pintar() {
   if (e.resumen && e.resumen.ronda > p.visto) return pintarResumen();
   // A dos en un celular: antes de cada turno, una pantalla para pasarlo sin ver las cartas del otro.
   if (p.modo === 'local' && p.vista !== e.turno) {
-    return pantalla([], [el('p', 'turno-trivia', `📱 Turno de ${p.nombres[e.turno]}`), el('p', 'sin-datos', 'Pásale el celular. Toca cuando esté listo.')], [
+    return pant([], [el('p', 'turno-trivia', `📱 Turno de ${p.nombres[e.turno]}`), el('p', 'sin-datos', 'Pásale el celular. Toca cuando esté listo.')], [
       boton('👀 Ver mis cartas', 'color', () => {
         p.vista = e.turno;
         pintar();
@@ -347,7 +359,7 @@ function pintar() {
   const botones = [...vista.botones];
   if (p.modo === 'amigo') botones.push(boton('🏳️ Rendirse', '', rendirse));
   botones.push(boton('Salir', '', salirMesa));
-  pantalla(vista.marcador, vista.tapete, botones);
+  pant(vista.marcador, vista.tapete, botones);
   $('cartas-tapete').className = 'tapete-mesa';
   if (!humano) p.timer = setTimeout(() => actuar(J.maquina(p.e, p.nivel)), J.pausa ?? 900);
 }
@@ -368,13 +380,13 @@ const tablaPuntos = (e) => {
 
 // Contra la máquina o a dos en un celular, la partida solo vive aquí: salir (o atrás) la pierde, así que se pregunta.
 async function salirMesa() {
-  if (p.modo === 'amigo' || (await preguntar({ titulo: '¿Salir de la partida?', texto: 'Se perderá la partida en curso.', boton: 'Salir' }))) abrirCartas();
+  if (p.modo === 'amigo' || (await preguntar({ titulo: '¿Salir de la partida?', texto: 'Se perderá la partida en curso.', boton: 'Salir' }))) volver();
 }
 
 function pintarResumen() {
   const { e } = p;
   const r = e.resumen;
-  pantalla([el('span', '', `${p.J.icono} Ronda ${r.ronda}`), el('span', '', p.J.metaTexto?.(e) ?? `Meta ${p.J.meta(e)}`)], [...p.J.resumen(e, p.nombres), tablaPuntos(e)], [boton('▶ Seguir', 'color', () => {
+  pant([el('span', '', `${p.J.icono} Ronda ${r.ronda}`), el('span', '', p.J.metaTexto?.(e) ?? `Meta ${p.J.meta(e)}`)], [...p.J.resumen(e, p.nombres), tablaPuntos(e)], [boton('▶ Seguir', 'color', () => {
     p.visto = r.ronda;
     p.vista = null;
     pintar();
@@ -386,13 +398,13 @@ function pintarFin(g) {
   if (!p.apuntada) {
     p.apuntada = true;
     if (p.modo === 'maquina') {
-      const r = leerJSON(claveRecord(p.J.id, p.nivel));
-      guardar(claveRecord(p.J.id, p.nivel), JSON.stringify({ partidas: (r.partidas ?? 0) + 1, ganadas: (r.ganadas ?? 0) + (gane ? 1 : 0) }));
+      const r = leerJSON(claveRecord(p.J.id, p.nivel, secP()));
+      guardar(claveRecord(p.J.id, p.nivel, secP()), JSON.stringify({ partidas: (r.partidas ?? 0) + 1, ganadas: (r.ganadas ?? 0) + (gane ? 1 : 0) }));
     }
-    if (p.modo === 'amigo') apuntarResultadoAmigo(p.id, gane ? 'v' : 'd', 'cartas');
+    if (p.modo === 'amigo') apuntarResultadoAmigo(p.id, gane ? 'v' : 'd', secP());
     else {
-      ligaAnotar('partida', 1, 'cartas');
-      if (p.modo === 'maquina' && gane) anotarPerfil('victoria', 1, 'cartas');
+      ligaAnotar('partida', 1, secP());
+      if (p.modo === 'maquina' && gane) anotarPerfil('victoria', 1, secP());
       finDePartida();
     }
     if (gane) {
@@ -402,12 +414,12 @@ function pintarFin(g) {
   }
   const rendido = p.mesa?.rendido?.[E.usuario?.uid];
   const titulo = p.modo === 'local' || g !== p.yo ? (rendido ? 'Te rendiste.' : `🏆 Gana ${conPuntos()[g]}`) : '🏆 ¡Ganaste!';
-  pantalla([el('span', '', `${p.J.icono} ${p.J.nombre}`)], [el('p', 'turno-trivia', titulo), tablaPuntos(p.e)], [
+  pant([el('span', '', `${p.J.icono} ${p.J.nombre}`)], [el('p', 'turno-trivia', titulo), tablaPuntos(p.e)], [
     boton(p.modo === 'amigo' ? '🔄 Revancha' : '🔄 Otra partida', 'color', () => {
       if (p.modo !== 'amigo') return empezar(p.J, p.modo, p.e.n);
       const rival = p.mesa.jugadores[FICHA[1 - p.yo]];
       retarAmigo(p.J, { uid: rival, apodo: p.mesa.nombres?.[rival] ?? 'Rival' });
     }),
-    boton('Volver', '', abrirCartas),
+    boton('Volver', '', volver),
   ]);
 }

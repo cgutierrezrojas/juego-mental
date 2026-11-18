@@ -2,6 +2,7 @@
 import { JUEGOS_TRIVIA, abrirTrivia } from './trivia.js';
 import { JUEGOS_MESA, abrirMesa } from './mesa.js';
 import { JUEGOS_CARTAS, abrirCartas } from './cartas.js';
+import { abrirDados, JUEGOS_DADOS } from './dados.js';
 import { abrirArcade } from './arcade.js';
 import { abrirPalabras } from './palabras.js';
 import { el } from '../games/comun.js';
@@ -20,7 +21,7 @@ export function abrirMentales(selector) {
 }
 
 // Cada sección abre su página (Palabras llega en S6).
-export const ABRIR = { mentales: () => abrirMentales(), mesa: abrirMesa, trivia: abrirTrivia, cartas: abrirCartas, arcade: abrirArcade, palabras: abrirPalabras };
+export const ABRIR = { mentales: () => abrirMentales(), mesa: abrirMesa, trivia: abrirTrivia, cartas: abrirCartas, dados: abrirDados, arcade: abrirArcade, palabras: abrirPalabras };
 
 export function pintarInicio() {
   pintarCabeceraPerfil();
@@ -41,7 +42,7 @@ export function pintarInicio() {
 
   $('aviso-inicio').textContent = '';
   $('secciones').replaceChildren(...SECCIONES.map((s) => {
-    const n = JUEGOS.filter((j) => j.seccion === s.id).length + ({ mesa: JUEGOS_MESA.length, trivia: JUEGOS_TRIVIA - 1, cartas: JUEGOS_CARTAS, arcade: JUEGOS_ARCADE.length, palabras: JUEGOS_PALABRAS.length }[s.id] ?? 0);
+    const n = JUEGOS.filter((j) => j.seccion === s.id).length + ({ mesa: JUEGOS_MESA.length, trivia: JUEGOS_TRIVIA - 1, cartas: JUEGOS_CARTAS, dados: JUEGOS_DADOS, arcade: JUEGOS_ARCADE.length, palabras: JUEGOS_PALABRAS.length }[s.id] ?? 0);
     const b = el('button', n ? 'seccion color' : 'seccion color pronto');
     b.style.setProperty('--c', `var(--${s.color})`);
     b.append(el('span', 'icono-seccion', s.icono), el('strong', '', s.nombre), el('small', '', n ? `${n} juego${n > 1 ? 's' : ''}` : 'Próximamente'));

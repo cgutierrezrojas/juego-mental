@@ -87,7 +87,7 @@ function atras() {
     ?? botones.find((b) => /^(⚔️ )?(Volver|Salir|Cancelar)/.test(b.textContent.trim()))
     ?? botones.find((b) => b.classList.contains('btn-menu'));
   // Sin botón de volver (p. ej. en plena partida): a su sección.
-  const seccion = { granescalera: 'trivia', 'trivia-partida': 'trivia', 'palabras-juego': 'palabras', 'arcade-juego': 'arcade', 'cartas-juego': 'cartas', 'mesa-tablero': 'mesa', 'mesa-modo': 'mesa' }[visible.id];
+  const seccion = { granescalera: 'trivia', 'trivia-partida': 'trivia', 'palabras-juego': 'palabras', 'arcade-juego': 'arcade', 'cartas-juego': visible.dataset.seccion || 'cartas', 'mesa-tablero': 'mesa', 'mesa-modo': 'mesa' }[visible.id];
   if (volver) volver.click();
   else if (seccion) ABRIR[seccion]();
   else $('nav-inicio').click();
@@ -131,7 +131,7 @@ export function mostrar(id) {
   // Barra inferior: oculta en la partida; resalta el botón de la pantalla actual.
   $('navegacion').hidden = enPartida;
   const pestana = {
-    inicio: 'nav-inicio', menu: 'nav-inicio', mesa: 'nav-inicio', 'mesa-modo': 'nav-inicio', 'mesa-tablero': 'nav-inicio', trivia: 'nav-inicio', 'trivia-partida': 'nav-inicio', cartas: 'nav-inicio', 'cartas-juego': 'nav-inicio', arcade: 'nav-inicio', 'arcade-juego': 'nav-inicio', palabras: 'nav-inicio', 'palabras-juego': 'nav-inicio', granescalera: 'nav-inicio', duelos: 'btn-duelos', 'nuevo-duelo': 'btn-duelos', duelo: 'btn-duelos', vivo: 'btn-duelos',
+    inicio: 'nav-inicio', menu: 'nav-inicio', mesa: 'nav-inicio', 'mesa-modo': 'nav-inicio', 'mesa-tablero': 'nav-inicio', trivia: 'nav-inicio', 'trivia-partida': 'nav-inicio', cartas: 'nav-inicio', dados: 'nav-inicio', 'cartas-juego': 'nav-inicio', arcade: 'nav-inicio', 'arcade-juego': 'nav-inicio', palabras: 'nav-inicio', 'palabras-juego': 'nav-inicio', granescalera: 'nav-inicio', duelos: 'btn-duelos', 'nuevo-duelo': 'btn-duelos', duelo: 'btn-duelos', vivo: 'btn-duelos',
     amigos: 'btn-amigos', chat: 'btn-amigos', ranking: 'btn-ranking', estadisticas: 'btn-estadisticas', perfil: 'btn-estadisticas',
   }[id];
   for (const b of document.querySelectorAll('#navegacion button')) b.setAttribute('aria-current', b.id === pestana ? 'page' : 'false');
