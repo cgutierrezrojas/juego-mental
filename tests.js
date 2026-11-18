@@ -2116,6 +2116,113 @@ probar('generala: la máquina siempre hace una acción válida en los 3 niveles,
   }
 });
 
+// --- cacho.js (🎲 Dados) ---
+import * as cacho from './games/cacho.js';
+
+// Cacho con dados fijos: `dados` = lista de listas; turno `t`; apuesta { n, pinta, de } opcional.
+const cachoCon = (dados, t = 0, apuesta = null, extra = {}) => {
+  const e = cacho.nueva(dados.length, 7);
+  dados.forEach((d, i) => { e.jugadores[i].dados = d; });
+  return Object.assign(e, { turno: t, apuesta, apuestas: apuesta ? [apuesta] : [] }, extra);
+};
+const apuestaOk = (e, n, pinta) => cacho.esValida(e, { n, pinta });
+
+probar('cacho: apuestas válidas e inválidas, ases y apertura', () => {
+  const e = cacho.nueva(3, 1);
+  assert(e.jugadores.length === 3 && e.jugadores.every((j) => j.dados.length === 5) && e.ronda === 1 && e.ganador === null);
+  assert(apuestaOk(e, 1, 2) && !apuestaOk(e, 1, 1) && !apuestaOk(e, 0, 2) && !apuestaOk(e, 16, 2) && !apuestaOk(e, 1, 7) && !apuestaOk(e, 1.5, 2), 'apertura');
+  assert(apuestaOk(cachoCon([[1], [2, 2], [3, 3]]), 1, 1), 'abrir en ases con un solo dado');
+  const a = (n, pinta) => cachoCon([[1, 2, 3, 4, 5], [2, 3, 4, 5, 6], [1, 1, 2, 3, 4]], 1, { n, pinta, de: 0 });
+  assert(apuestaOk(a(3, 4), 4, 2) && apuestaOk(a(3, 4), 3, 5) && !apuestaOk(a(3, 4), 3, 4) && !apuestaOk(a(3, 4), 3, 3) && !apuestaOk(a(3, 4), 2, 6), 'subir');
+  assert(apuestaOk(a(7, 5), 4, 1) && !apuestaOk(a(7, 5), 3, 1), 'a ases: ceil(n/2)');
+  assert(apuestaOk(a(3, 4), 2, 1) && !apuestaOk(a(3, 4), 1, 1), 'a ases con 3: 2');
+  assert(apuestaOk(a(4, 1), 9, 2) && !apuestaOk(a(4, 1), 8, 6), 'de ases: 2n+1');
+  assert(apuestaOk(a(4, 1), 5, 1) && !apuestaOk(a(4, 1), 4, 1), 'entre ases: sube la cantidad');
+  assert(cacho.apuestaMinima(a(3, 4)).n === 3 && cacho.apuestaMinima(a(3, 4)).pinta === 5 && cacho.apuestaMinima(cacho.nueva(2, 1)).n === 1);
+});
+
+probar('cacho: dudar cuando hay justo n pierde quien dudó; con n-1 pierde quien apostó', () => {
+  const d = [[2, 2, 3, 4, 5], [2, 6, 6, 6, 6]]; // 3 Dos en total
+  let e = cacho.dudar(cachoCon(d, 1, { n: 3, pinta: 2, de: 0 }));
+  assert(e.jugadores[1].dados.length === 4 && e.jugadores[0].dados.length === 5, 'justo n: pierde quien dudó');
+  assert(e.resumen.tipo === 'dudo' && e.resumen.total === 3 && e.resumen.quien === 1 && e.resumen.delta === -1 && e.resumen.dados[1].join() === '2,6,6,6,6' && e.resumen.ronda === 1 && e.ronda === 2);
+  e = cacho.dudar(cachoCon(d, 1, { n: 4, pinta: 2, de: 0 }));
+  assert(e.jugadores[0].dados.length === 4 && e.jugadores[1].dados.length === 5 && e.turno === 0, 'n-1: pierde quien apostó y empieza');
+  assert(cacho.dudar(cachoCon(d)) === null, 'sin apuesta no se duda');
+});
+
+probar('cacho: los ases cuentan, salvo en obligo', () => {
+  const d = [[1, 1, 3, 4, 5], [2, 6, 6, 6, 6]];
+  assert(cacho.totalDe(d, 6, false) === 6 && cacho.totalDe(d, 6, true) === 4 && cacho.totalDe(d, 1, false) === 2, 'totalDe');
+  const e = cacho.dudar(cachoCon(d, 1, { n: 6, pinta: 6, de: 0 })); // con ases: 6, pierde quien dudó
+  assert(e.jugadores[1].dados.length === 4 && e.resumen.total === 6);
+  const o = cacho.dudar(cachoCon(d, 1, { n: 6, pinta: 6, de: 0 }, { obligo: 0 })); // en obligo: 4 < 6, pierde quien apostó
+  assert(o.jugadores[0].dados.length === 4 && o.resumen.total === 4 && o.resumen.obligo === true);
+});
+
+probar('cacho: calzar exacto recupera (con tope 5) y fallido pierde', () => {
+  let e = cacho.calzar(cachoCon([[2, 2, 3, 4], [2, 6, 6, 6]], 1, { n: 3, pinta: 2, de: 0 }));
+  assert(e.jugadores[1].dados.length === 5 && e.resumen.delta === 1 && e.turno === 1, 'recupera y empieza');
+  const lleno = [[2, 2, 3, 4, 5], [2, 6, 6, 6, 6]];
+  e = cacho.calzar(cachoCon(lleno, 1, { n: 3, pinta: 2, de: 0 }));
+  assert(e.jugadores[1].dados.length === 5 && e.resumen.delta === 0, 'tope de 5');
+  e = cacho.calzar(cachoCon(lleno, 1, { n: 4, pinta: 2, de: 0 }));
+  assert(e.jugadores[1].dados.length === 4 && e.turno === 1, 'fallido');
+  assert(cacho.calzar(cachoCon(lleno, 1, { n: 3, pinta: 2, de: 1 })) === null && cacho.calzar(cachoCon(lleno)) === null, 'no sobre la propia ni sin apuesta');
+});
+
+probar('cacho: el obligo se activa una sola vez y bloquea el cambio de pinta', () => {
+  const e = cacho.dudar(cachoCon([[2, 3], [2, 6, 6, 6, 6]], 1, { n: 4, pinta: 2, de: 0 })); // pierde el 0: queda con 1 dado
+  assert(e.jugadores[0].dados.length === 1 && e.obligo === 0 && e.turno === 0 && e.jugadores[0].obligoUsado === true, 'se activa');
+  const a = cacho.apostar(e, { n: 1, pinta: 3 });
+  assert(a && a.turno === 1 && !apuestaOk(a, 2, 4) && !apuestaOk(a, 1, 4) && apuestaOk(a, 2, 3) && !apuestaOk(a, 2, 1), 'pinta fija y solo sube la cantidad');
+  // Ya usado: perder otro dado hasta quedar con 1 no lo repite.
+  const u = cachoCon([[5, 5], [3, 3, 3]], 1, { n: 3, pinta: 5, de: 0 });
+  u.jugadores[0].obligoUsado = true;
+  const r = cacho.resolver(u, 'dudo', [[5, 5], [3, 3, 3]]); // total 2 < 3: pierde el 0 y queda con 1
+  assert(r.quien === 0 && r.cuantos[0] === 1 && r.obligo === null, 'no se repite');
+  assert(cacho.resolver(cachoCon([[5, 5], [3, 3, 3]], 1, { n: 3, pinta: 5, de: 0 }), 'dudo', [[5, 5], [3, 3, 3]]).obligo === 0, 'la primera vez sí');
+  assert(cacho.dudar(cachoCon([[5], [3, 3, 3]], 1, { n: 3, pinta: 5, de: 0 })).obligo === null, 'perder el último dado no es obligo');
+});
+
+probar('cacho: turno inicial tras una eliminación y final', () => {
+  // El jugador 1 pierde su último dado: empieza el siguiente que tenga dados.
+  const e = cacho.dudar(cachoCon([[2, 2, 2], [3], [4, 4]], 2, { n: 1, pinta: 6, de: 1 }));
+  assert(e.jugadores[1].dados.length === 0 && e.turno === 2 && e.ganador === null, 'salta al eliminado');
+  const f = cacho.dudar(cachoCon([[2, 2, 2], [3], [4, 4]], 0, { n: 1, pinta: 3, de: 1 }));
+  assert(f.jugadores[0].dados.length === 2 && f.turno === 0, 'pierde quien dudó y empieza');
+  // El que apuesta salta a los eliminados.
+  assert(cacho.apostar(cachoCon([[2, 2], [], [4, 4]], 0), { n: 1, pinta: 2 }).turno === 2, 'apostar salta al eliminado');
+  // Final.
+  const z = cacho.dudar(cachoCon([[2, 2], [3]], 0, { n: 1, pinta: 6, de: 1 }));
+  assert(z.ganador === 0 && cacho.ganador(z) === 0 && z.jugadores[1].dados.length === 0 && z.resumen.quien === 1, 'gana el último con dados');
+  assert(cacho.apostar(z, { n: 1, pinta: 2 }) === null && cacho.dudar(z) === null, 'terminada');
+});
+
+probar('cacho: la máquina siempre hace una acción válida en partidas completas de 2 a 6 jugadores', () => {
+  for (const nv of ['facil', 'normal', 'dificil']) {
+    for (const n of [2, 3, 4, 5, 6]) {
+      let e = cacho.nueva(n, 200 + n), pasos = 0;
+      while (e.ganador === null) {
+        const a = cacho.maquina(e, nv, Math.random);
+        e = cacho.accion(e, a);
+        assert(e, `${nv}/${n}: acción inválida ${JSON.stringify(a)}`);
+        assert(++pasos < 5000, 'no termina');
+        assert(e.ganador !== null || e.jugadores[e.turno].dados.length > 0, 'turno de un eliminado');
+      }
+      assert(e.jugadores.filter((j) => j.dados.length).length === 1 && e.jugadores[e.ganador].dados.length > 0, 'ganador');
+    }
+  }
+});
+
+probar('cacho: acciones puras (sin mutar la entrada) y accion rechaza lo inválido', () => {
+  const e = cachoCon([[2, 2, 3, 4, 5], [2, 6, 6, 6, 6]], 0, { n: 2, pinta: 3, de: 1 });
+  const antes = JSON.stringify(e);
+  cacho.apostar(e, { n: 3, pinta: 3 }); cacho.dudar(e); cacho.calzar(e); cacho.maquina(e, 'dificil', Math.random); cacho.resolver(e, 'dudo', e.jugadores.map((j) => j.dados));
+  assert(JSON.stringify(e) === antes, 'no muta');
+  assert(cacho.accion(e, { tipo: 'apostar', n: 1, pinta: 2 }) === null && cacho.accion(e, { tipo: 'x' }) === null && cacho.accion(e, null) === null && cacho.accion(e, { tipo: 'apostar', n: 3, pinta: 3 }));
+});
+
 // --- sw.js: VERSION es la huella de los archivos; si alguno cambia, hay que ponerla al día para que llegue a todos ---
 if (globalThis.process?.versions?.node) {
   const { readFileSync } = await import('node:fs');
