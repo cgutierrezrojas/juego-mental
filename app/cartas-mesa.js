@@ -23,6 +23,7 @@ import { misPartidas, resultadoMesa, apuntarResultadoAmigo } from './mesa.js';
 import { naipe, pantalla, boton, abrirCartas, alSalir, temblar } from './cartas.js';
 import { abrirDados } from './dados.js';
 import { CARIOCA } from './carioca.js';
+import { GENERALA } from './dados-generala.js';
 import { BURAKO } from './burako.js';
 
 const FICHA = ['x', 'o'];
@@ -84,7 +85,7 @@ const ESCOBA = {
     return [el('p', 'turno-trivia', `🧹 Fin de la ronda ${r.ronda}`), tabla];
   },
 };
-export const JUEGOS_MESA_CARTAS = [OCHO, ESCOBA, CARIOCA, BURAKO];
+export const JUEGOS_MESA_CARTAS = [OCHO, ESCOBA, CARIOCA, BURAKO, GENERALA];
 const juegoDe = (id) => JUEGOS_MESA_CARTAS.find((j) => j.id === id);
 
 function pintarOcho(e, quien, miTurno, actuar) {
@@ -322,7 +323,8 @@ async function abrirAmigo(id, seccion = 'cartas') {
 }
 
 // Ganador: índice del jugador, o null. Con un amigo también cuenta quien se rindió.
-const ganador = () => (p.modo === 'amigo' && p.mesa?.ganador ? FICHA.indexOf(p.mesa.ganador) : p.e.ganador);
+// 'empate' (la Generala) termina la partida sin ganador.
+const ganador = () => (p.modo === 'amigo' && p.mesa?.ganador ? (p.mesa.ganador === 'empate' ? 'empate' : FICHA.indexOf(p.mesa.ganador)) : p.e.ganador);
 
 function actuar(nuevo) {
   if (!nuevo) return sonar('fallo');
@@ -330,7 +332,7 @@ function actuar(nuevo) {
   sonar('tic');
   if (p.modo === 'amigo') {
     const g = nuevo.ganador;
-    E.nube.jugarMesa(p.id, { turno: FICHA[nuevo.turno], datos: JSON.stringify(nuevo) }, g === null ? null : FICHA[g]).catch(() => {
+    E.nube.jugarMesa(p.id, { turno: FICHA[nuevo.turno], datos: JSON.stringify(nuevo) }, g === null ? null : g === 'empate' ? 'empate' : FICHA[g]).catch(() => {
       $('cartas-aviso').textContent = 'No se pudo enviar la jugada (¿sin conexión?).';
     });
   }
@@ -341,12 +343,12 @@ function pintar() {
   clearTimeout(p.timer);
   const { e, J } = p;
   const g = ganador();
-  if (g !== null && g >= 0) return pintarFin(g);
+  if (g !== null && (g >= 0 || g === 'empate')) return pintarFin(g);
   if (e.resumen && e.resumen.ronda > p.visto) return pintarResumen();
   // A dos en un celular: antes de cada turno, una pantalla para pasarlo sin ver las cartas del otro.
   if (p.modo === 'local' && p.vista !== e.turno) {
     return pant([], [el('p', 'turno-trivia', `📱 Turno de ${p.nombres[e.turno]}`), el('p', 'sin-datos', 'Pásale el celular. Toca cuando esté listo.')], [
-      boton('👀 Ver mis cartas', 'color', () => {
+      boton(J.verTexto ?? '👀 Ver mis cartas', 'color', () => {
         p.vista = e.turno;
         pintar();
       }),
@@ -355,7 +357,7 @@ function pintar() {
   }
   const quien = p.modo === 'local' ? e.turno : p.yo;
   const humano = p.modo !== 'maquina' || e.turno === p.yo;
-  const vista = J.pintar(e, quien, humano && e.turno === quien, actuar, { nombres: p.nombres, repintar: pintar });
+  const vista = J.pintar(e, quien, humano && e.turno === quien, actuar, { nombres: p.nombres, repintar: pintar, nivel: p.modo === 'maquina' ? p.nivel : null });
   const botones = [...vista.botones];
   if (p.modo === 'amigo') botones.push(boton('🏳️ Rendirse', '', rendirse));
   botones.push(boton('Salir', '', salirMesa));
@@ -394,14 +396,15 @@ function pintarResumen() {
 }
 
 function pintarFin(g) {
-  const gane = p.modo === 'local' || g === p.yo;
+  const empate = g === 'empate';
+  const gane = !empate && (p.modo === 'local' || g === p.yo);
   if (!p.apuntada) {
     p.apuntada = true;
     if (p.modo === 'maquina') {
       const r = leerJSON(claveRecord(p.J.id, p.nivel, secP()));
       guardar(claveRecord(p.J.id, p.nivel, secP()), JSON.stringify({ partidas: (r.partidas ?? 0) + 1, ganadas: (r.ganadas ?? 0) + (gane ? 1 : 0) }));
     }
-    if (p.modo === 'amigo') apuntarResultadoAmigo(p.id, gane ? 'v' : 'd', secP());
+    if (p.modo === 'amigo') apuntarResultadoAmigo(p.id, empate ? 'e' : gane ? 'v' : 'd', secP());
     else {
       ligaAnotar('partida', 1, secP());
       if (p.modo === 'maquina' && gane) anotarPerfil('victoria', 1, secP());
@@ -413,7 +416,7 @@ function pintarFin(g) {
     }
   }
   const rendido = p.mesa?.rendido?.[E.usuario?.uid];
-  const titulo = p.modo === 'local' || g !== p.yo ? (rendido ? 'Te rendiste.' : `🏆 Gana ${conPuntos()[g]}`) : '🏆 ¡Ganaste!';
+  const titulo = empate ? '🤝 Empate' : p.modo === 'local' || g !== p.yo ? (rendido ? 'Te rendiste.' : `🏆 Gana ${conPuntos()[g]}`) : '🏆 ¡Ganaste!';
   pant([el('span', '', `${p.J.icono} ${p.J.nombre}`)], [el('p', 'turno-trivia', titulo), tablaPuntos(p.e)], [
     boton(p.modo === 'amigo' ? '🔄 Revancha' : '🔄 Otra partida', 'color', () => {
       if (p.modo !== 'amigo') return empezar(p.J, p.modo, p.e.n);

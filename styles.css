@@ -1686,3 +1686,20 @@ button.seccion {
 @media (prefers-reduced-motion: reduce) {
   .dado.rodando { animation: none; }
 }
+
+/* 🎲 Generala (app/dados-generala.js): dados grandes y la tabla de todos los jugadores (con scroll horizontal solo dentro de la caja) */
+.dados-generala { display: flex; justify-content: center; gap: 8px; margin: 6px 0; }
+.dado-boton { padding: 0; border: none; background: none; box-shadow: none; min-height: 0; width: auto; }
+.dados-generala .dado { width: 54px; height: 54px; }
+.dados-generala .dado i { width: 9px; height: 9px; }
+.caja-generala { overflow-x: auto; max-width: 100%; }
+.tabla-generala { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.tabla-generala th, .tabla-generala td { padding: 3px 2px; border-bottom: 1px solid color-mix(in srgb, var(--texto) 20%, transparent); text-align: center; }
+.tabla-generala th:first-child { text-align: left; white-space: nowrap; }
+.tabla-generala thead th, .tabla-generala tr:first-child th { font-size: 0.75rem; }
+.tabla-generala .turno { background: color-mix(in srgb, var(--amarillo) 28%, transparent); }
+.tabla-generala .total td, .tabla-generala .total th { font-weight: 900; border-top: 2px solid var(--texto); }
+.casilla-generala { padding: 2px 6px; min-height: 0; width: auto; min-width: 36px; font-size: 0.9rem; font-weight: 800; border-radius: 8px; border: 2px solid var(--azul); background: color-mix(in srgb, var(--azul) 18%, transparent); color: var(--texto); box-shadow: none; }
+.casilla-generala.cero { border-color: color-mix(in srgb, var(--texto) 35%, transparent); background: none; opacity: 0.75; }
+.posible { opacity: 0.7; font-weight: 700; }
+.posible.plan { opacity: 1; padding: 1px 6px; border-radius: 8px; outline: 3px solid var(--amarillo); }
