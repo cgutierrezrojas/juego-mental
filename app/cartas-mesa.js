@@ -368,9 +368,12 @@ function pintar() {
   // Contra la máquina, `J.termino(e, yo)` puede cortar la partida si el jugador ya no sigue (el Chinchón: quedó fuera); da quién va ganando.
   const g = ganador() ?? (p.modo === 'maquina' ? J.termino?.(e, p.yo) ?? null : null);
   const pendiente = e.resumen && e.resumen.ronda > p.visto;
+  const termino = g !== null && (g >= 0 || g === 'empate') && !(justo && p.trampaRival === undefined);
+  // El resultado se anota en cuanto termina, aunque luego se salga desde el último resumen.
+  if (termino) apuntar(g);
   // El resumen de la última ronda va antes del final; con los dados con un amigo, el final (tras la revisión de trampas) va primero.
   if (pendiente && !justo) return pintarResumen();
-  if (g !== null && (g >= 0 || g === 'empate') && !(justo && p.trampaRival === undefined)) return pintarFin(g);
+  if (termino) return pintarFin(g);
   if (pendiente) return pintarResumen();
   // A dos en un celular: antes de cada turno, una pantalla para pasarlo sin ver las cartas del otro.
   if (p.modo === 'local' && p.vista !== e.turno) {
@@ -411,7 +414,7 @@ const tablaPuntos = (e) => {
 
 // Contra la máquina o a dos en un celular, la partida solo vive aquí: salir (o atrás) la pierde, así que se pregunta.
 async function salirMesa() {
-  if (p.modo === 'amigo' || (await preguntar({ titulo: '¿Salir de la partida?', texto: 'Se perderá la partida en curso.', boton: 'Salir' }))) volver();
+  if (p.modo === 'amigo' || p.apuntada || (await preguntar({ titulo: '¿Salir de la partida?', texto: 'Se perderá la partida en curso.', boton: 'Salir' }))) volver();
 }
 
 function pintarResumen() {
@@ -424,28 +427,37 @@ function pintarResumen() {
   }), boton('Salir', '', salirMesa)]);
 }
 
-function pintarFin(g) {
+const resultado = (g) => {
   const trampa = !!p.trampaRival; // dados con un amigo: cuenta como victoria mía
   const empate = g === 'empate' && !trampa;
-  const gane = trampa || (!empate && (p.modo === 'local' || g === p.yo));
-  if (!p.apuntada) {
-    p.apuntada = true;
-    if (p.modo === 'maquina') {
-      const r = leerJSON(claveRecord(p.J.id, p.nivel, secP()));
-      guardar(claveRecord(p.J.id, p.nivel, secP()), JSON.stringify({ partidas: (r.partidas ?? 0) + 1, ganadas: (r.ganadas ?? 0) + (gane ? 1 : 0) }));
-    }
-    if (p.modo === 'amigo') {
-      apuntarResultadoAmigo(p.id, empate ? 'e' : gane ? 'v' : 'd', secP());
-      if (p.J.amigo) AMIGO.borrarMio(p.id); // la semilla ya no hace falta
-    } else {
-      ligaAnotar('partida', 1, secP());
-      if (p.modo === 'maquina' && gane) anotarPerfil('victoria', 1, secP());
-      finDePartida();
-    }
-    if (gane) {
-      confeti();
-      sonar('record');
-    }
+  return { trampa, empate, gane: trampa || (!empate && (p.modo === 'local' || g === p.yo)) };
+};
+
+// Anota la partida terminada una sola vez: récord, liga, perfil o resultado con el amigo.
+function apuntar(g) {
+  if (p.apuntada) return;
+  p.apuntada = true;
+  const { empate, gane } = resultado(g);
+  if (p.modo === 'maquina') {
+    const r = leerJSON(claveRecord(p.J.id, p.nivel, secP()));
+    guardar(claveRecord(p.J.id, p.nivel, secP()), JSON.stringify({ partidas: (r.partidas ?? 0) + 1, ganadas: (r.ganadas ?? 0) + (gane ? 1 : 0) }));
+  }
+  if (p.modo === 'amigo') {
+    apuntarResultadoAmigo(p.id, empate ? 'e' : gane ? 'v' : 'd', secP());
+    if (p.J.amigo) AMIGO.borrarMio(p.id); // la semilla ya no hace falta
+  } else {
+    ligaAnotar('partida', 1, secP());
+    if (p.modo === 'maquina' && gane) anotarPerfil('victoria', 1, secP());
+    finDePartida();
+  }
+}
+
+function pintarFin(g) {
+  const { trampa, empate, gane } = resultado(g);
+  if (gane && !p.festejada) {
+    p.festejada = true;
+    confeti();
+    sonar('record');
   }
   const rendido = p.mesa?.rendido?.[E.usuario?.uid];
   const fuera = p.modo === 'maquina' && p.e.ganador === null; // cortada por J.termino

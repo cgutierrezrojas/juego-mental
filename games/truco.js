@@ -293,6 +293,15 @@ function mejorCarta(e, j, rnd) {
   return mejor;
 }
 
+// La Difícil decide una vez por ronda si miente con el truco: un número fijo en [0, 1) sacado de la ronda y de sus 3 cartas
+// (sin guardar nada oculto en el estado; el rival no ve esas cartas).
+function mentira(e, j) {
+  const clave = `${e.ronda}|${[...e.manos[j], ...e.bazas.map((b) => b.c[j]).filter(Boolean)].map((c) => `${c.v}${c.p}`).sort().join()}`;
+  let h = 2166136261;
+  for (const ch of clave) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return (h >>> 0) / 2 ** 32;
+}
+
 // { carta: i } | { canto } | { quiero } (la máquina nunca se va al mazo: le cuesta lo mismo o más que perder jugando).
 export function maquina(e, nivel = 'normal', rnd = Math.random) {
   const ops = acciones(e).map((a) => JSON.stringify(a));
@@ -326,7 +335,7 @@ export function maquina(e, nivel = 'normal', rnd = Math.random) {
     if (truco && p > 0.8) return { canto: truco };
     return { quiero: p > 1 / (2 * VALOR[tr.cantado]) + 0.15 };
   }
-  if (truco && (probRonda(e, j, null, memoria, rnd) > 0.7 || (memoria && !tr.cantado && rnd() < 0.1))) return { canto: truco };
+  if (truco && (probRonda(e, j, null, memoria, rnd) > 0.7 || (memoria && !tr.cantado && mentira(e, j) < 0.1))) return { canto: truco };
   if (memoria) return { carta: mejorCarta(e, j, rnd) };
   const contra = e.bazas.at(-1).c[1 - j];
   return { carta: politica(e.manos[j].map(JERARQUIA), contra ? JERARQUIA(contra) : null, e.bazas.map((b) => b.gana).filter((x) => x !== null), j) };

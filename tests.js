@@ -2529,8 +2529,9 @@ probar('truco: la máquina en sus tres niveles', () => {
   for (const nv of ['normal', 'dificil']) {
     const g = generador(3);
     const rnd = () => azarDe(g);
-    assert(tru.maquina(fuerte, nv, rnd).canto === 'retruco', `${nv}: sube con lo mejor`);
-    assert(tru.maquina(debil, nv, rnd).quiero === false, `${nv}: no quiere con lo peor`);
+    const af = tru.maquina(fuerte, nv, rnd), ad = tru.maquina(debil, nv, rnd);
+    assert(af.canto === 'retruco' && tru.accion(fuerte, af, rnd), `${nv}: sube con lo mejor`);
+    assert(ad.quiero === false && tru.accion(debil, ad, rnd), `${nv}: no quiere con lo peor`);
   }
   // Partidas enteras entre máquinas, con semilla, por nivel: terminan en 24 o más sin acciones inválidas; ninguna jugada pasa de 60 ms.
   let lento = 0;
@@ -2912,7 +2913,7 @@ probar('generala amigo: tirar solo pide (k + 1), publicar pone los sueltos y no 
 
 await probarAsync('cacho amigo: partidas honestas; cada vuelta de turno es una jugada legítima y al final todo cuadra', async () => {
   const ganadores = new Set();
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 6 || (ganadores.size < 2 && i < 16); i++) {
     const p = await partidaAmigo(cacho, jugarCacho);
     ganadores.add(p.e.ganador);
     assert(p.llegadas.every(([w, e, yo]) => J.jugadaRival(w, e, yo, P_cacho)), 'una vuelta de turno no cuadra');
