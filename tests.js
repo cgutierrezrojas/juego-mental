@@ -2357,6 +2357,170 @@ probar('chinchón: la máquina en sus tres niveles', () => {
   assert(lento < 60, `la difícil tarda ${lento} ms por jugada`);
 });
 
+// --- truco.js ---
+import * as tru from './games/truco.js';
+
+// Estado armado a mano: manos fijas (como en el Chinchón: '1e 7o Rb'), primera baza vacía, mano el jugador 0.
+const truBase = (manos, extra = {}) => ({ n: 2, manos: manos.map(chs), bazas: [{ c: [null, null], gana: null, sale: extra.mano ?? 0 }], mano: 0, turno: 0, juega: 0,
+  puntos: [0, 0], ronda: 1, envido: { cantos: [], quien: null, estado: null }, truco: { nivel: 0, cantado: 0, quien: null, quiero: null, pendiente: false },
+  notas: [], ganador: null, aviso: null, resumen: null, ...extra });
+// Aplica las acciones en orden; cada una debe ser válida. 'envido' → canto, 'Q' / 'NQ' → quiero / no quiero, 0–2 → carta, 'mazo'.
+const truA = (x) => (x === 'Q' ? { quiero: true } : x === 'NQ' ? { quiero: false } : x === 'mazo' ? { mazo: true } : typeof x === 'number' ? { carta: x } : { canto: x });
+const truJugar = (e, ...as) => as.reduce((s, x, k) => {
+  const t = tru.accion(s, truA(x), () => 0.5);
+  assert(t, `acción ${k} (${x}) inválida`);
+  return t;
+}, e);
+const truHay = (e, x) => tru.acciones(e).some((a) => JSON.stringify(a) === JSON.stringify(truA(x)));
+
+probar('truco: jerarquía y tanto del envido', () => {
+  const grupos = ['1e', '1b', '7e', '7o', '3o 3c 3e 3b', '2o 2c 2e 2b', '1c 1o', 'Ro Rc Re Rb', 'Co Cc Ce Cb', 'So Sc Se Sb', '7c 7b', '6o 6c 6e 6b', '5o 5c 5e 5b', '4o 4c 4e 4b'];
+  assert(grupos.join(' ').split(' ').length === 40, 'las 40 cartas');
+  const rangos = grupos.map((g) => chs(g).map(tru.JERARQUIA));
+  rangos.forEach((r, k) => {
+    assert(r.every((x) => x === r[0]), `iguales: ${grupos[k]}`);
+    if (k) assert(rangos[k - 1][0] > r[0], `${grupos[k - 1]} gana a ${grupos[k]}`);
+  });
+  const t = (x) => tru.tanto(chs(x));
+  assert(t('7o 6o Re') === 33 && t('So Co 1o') === 21 && t('Re Se 4b') === 20 && t('1o 2o 3o') === 25, 'con pareja: 20 + números, figuras 0');
+  assert(t('7o 5c 3e') === 7 && t('Ro Ce Sb') === 0 && t('6b Rc 5e') === 6, 'sin pareja: la más alta');
+});
+
+probar('truco: envido querido y no querido, falta envido y quién puede cantarlo', () => {
+  // J0 tiene 33 (7o 6o), J1 tiene 3 (sin pareja).
+  const pts = (...as) => truJugar(truBase(['7o 6o 4c', '1e 2b 3c']), ...as).puntos.join();
+  assert(pts('envido', 'Q') === '2,0' && pts('envido', 'envido', 'Q') === '4,0' && pts('envido', 'real', 'Q') === '5,0');
+  assert(pts('envido', 'envido', 'real', 'Q') === '7,0' && pts('real', 'Q') === '3,0');
+  assert(pts('envido', 'NQ') === '1,0' && pts('envido', 'envido', 'NQ') === '0,2' && pts('envido', 'real', 'NQ') === '0,2');
+  assert(pts('envido', 'envido', 'real', 'NQ') === '4,0' && pts('falta', 'NQ') === '1,0' && pts('real', 'NQ') === '1,0');
+  assert(pts('envido', 'real', 'falta', 'NQ') === '5,0', 'falta no querida: lo querido antes');
+  // Falta envido: lo que le falta al que va ganando (15) para llegar a 24.
+  assert(truJugar(truBase(['7o 6o 4c', '1e 2b 3c'], { puntos: [10, 15] }), 'envido', 'falta', 'Q').puntos.join() === '19,15');
+  // Gana el de mayor tanto; empate: la mano. El juego calcula y guarda los tantos; la ronda sigue con quien debía jugar.
+  let s = truJugar(truBase(['1e 2b 3c', '7o 6o 4c']), 'envido', 'Q');
+  assert(s.puntos.join() === '0,2' && s.envido.tantos.join() === '3,33' && s.envido.estado === 'querido' && s.turno === 0 && s.resumen === null && s.notas[0].j === 1);
+  s = truJugar(truBase(['7o 6o 4c', '7c 6c 4o'], { mano: 1, turno: 1, juega: 1 }), 'envido', 'Q');
+  assert(s.puntos.join() === '0,2', 'empate: gana la mano');
+  // Cadena: un segundo envido solo después del primero; después del real, solo falta; después de la falta, nada.
+  const b = truBase(['7o 6o 4c', '1e 2b 3c']);
+  s = truJugar(b, 'envido', 'envido');
+  assert(!truHay(s, 'envido') && truHay(s, 'real') && truHay(s, 'falta') && truHay(s, 'Q'));
+  s = truJugar(b, 'real');
+  assert(!truHay(s, 'envido') && !truHay(s, 'real') && truHay(s, 'falta'));
+  s = truJugar(b, 'falta');
+  assert(tru.acciones(s).length === 2 && truHay(s, 'Q') && truHay(s, 'NQ'));
+  // La falta puede ganar la partida en medio de la ronda.
+  s = truJugar(truBase(['7o 6o 4c', '1e 2b 3c'], { puntos: [20, 5] }), 'falta', 'Q');
+  assert(s.puntos.join() === '24,5' && s.ganador === 0 && s.resumen.ronda === 1 && s.resumen.lineas.length === 1 && !tru.acciones(s).length);
+  // Quién canta: el mano antes de tirar; el pie después de que el mano tiró (su carta cuenta para el tanto); uno por ronda.
+  assert(truHay(b, 'envido'));
+  s = truJugar(b, 0);
+  assert(s.turno === 1 && truHay(s, 'envido'));
+  s = truJugar(truBase(['1e 2b 3c', '7o 6o 4c']), 0, 'envido', 'Q');
+  assert(s.puntos.join() === '0,2' && s.turno === 1 && !truHay(s, 'envido') && !truHay(s, 'real'));
+  s = truJugar(b, 0, 0);
+  assert(s.bazas.length === 2 && !truHay(s, 'envido'), 'solo en la primera baza');
+  s = truJugar(b, 0, 'truco');
+  assert(s.turno === 0 && !truHay(s, 'envido'), 'el mano ya tiró: no puede decir que el envido está primero');
+});
+
+probar('truco: el envido está primero; truco, retruco y vale cuatro; solo sube quien tiene el quiero', () => {
+  // J0 gana todas las bazas. Tantos: J0 28 (1e 7e), J1 29 (4c 5c).
+  const b = truBase(['1e 1b 7e', '4c 4o 5c']);
+  let s = truJugar(b, 'truco');
+  assert(s.turno === 1 && s.truco.pendiente && truHay(s, 'envido') && truHay(s, 'retruco') && !truHay(s, 'mazo') && !truHay(s, 0));
+  s = truJugar(s, 'envido');
+  assert(s.turno === 0 && !truHay(s, 'retruco') && !truHay(s, 0));
+  s = truJugar(s, 'Q');
+  assert(s.puntos.join() === '0,2' && s.turno === 1 && s.truco.pendiente, 'resuelto el envido, el truco sigue pendiente');
+  assert(truHay(s, 'Q') && truHay(s, 'retruco') && !truHay(s, 'envido'));
+  s = truJugar(s, 'Q');
+  assert(s.turno === 0 && s.truco.nivel === 1 && s.truco.quiero === 1 && !truHay(s, 'retruco') && truHay(s, 0), 'J0 no tiene el quiero');
+  s = truJugar(s, 0);
+  assert(s.turno === 1 && truHay(s, 'retruco'), 'J1 sí');
+  s = truJugar(s, 0, 0, 0);
+  assert(s.puntos.join() === '2,2' && s.resumen.ronda === 1 && s.resumen.lineas.length === 2 && s.resumen.lineas[1].j === 0);
+  assert(s.ronda === 2 && s.mano === 1 && s.turno === 1 && s.manos.every((m) => m.length === 3) && s.truco.cantado === 0 && s.envido.estado === null);
+  const pts = (...as) => truJugar(b, ...as).puntos.join();
+  assert(pts('truco', 'NQ') === '1,0' && pts('truco', 'retruco', 'NQ') === '0,2' && pts('truco', 'Q', 0, 'retruco', 'vale4', 'NQ') === '3,0');
+  assert(pts('truco', 'Q', 0, 0, 0, 0) === '2,0' && pts('truco', 'retruco', 'Q', 0, 0, 0, 0) === '3,0' && pts(0, 0, 0, 0) === '1,0');
+  s = truJugar(b, 'truco', 'Q', 0, 'retruco', 'vale4', 'Q');
+  assert(s.truco.nivel === 3 && s.turno === 1 && !truHay(s, 'vale4'));
+  assert(truJugar(s, 0, 0, 0).puntos.join() === '4,0');
+  // Cualquiera puede cantar el primer truco en su turno.
+  assert(truHay(truJugar(b, 0), 'truco') && !truHay(truJugar(b, 'truco', 'retruco'), 'retruco'));
+});
+
+probar('truco: pardas, irse al mazo y final a 24', () => {
+  const g = tru.ganaRonda;
+  assert(g(['parda', 1], 0) === 1 && g(['parda', 'parda', 0], 1) === 0 && g(['parda', 'parda', 'parda'], 1) === 1, 'primera parda');
+  assert(g([0, 'parda'], 1) === 0 && g([1, 0, 'parda'], 0) === 1 && g([0, 1, 1], 0) === 1 && g([0, 0], 1) === 0, 'parda después');
+  assert(g(['parda'], 0) === null && g([0, 1], 0) === null && g(['parda', 'parda'], 0) === null && g([0], 0) === null);
+  // Parda en la primera: sale el que salió; la segunda decide.
+  let s = truJugar(truBase(['3o 4o 5o', '3c 6c 7c']), 0, 0);
+  assert(s.bazas[0].gana === 'parda' && s.bazas[1].sale === 0 && s.turno === 0);
+  s = truJugar(s, 0, 0);
+  assert(s.puntos.join() === '0,1' && s.ronda === 2);
+  // Al mazo: lo que vale el truco, más 1 si fue en la primera baza sin envido cantado.
+  const b = truBase(['1e 1b 7e', '4c 4o 5c']);
+  assert(truJugar(b, 'mazo').puntos.join() === '0,2' && truJugar(b, 'envido', 'NQ', 'mazo').puntos.join() === '1,1');
+  assert(truJugar(b, 'truco', 'Q', 0, 0, 'mazo').puntos.join() === '0,2');
+  s = truJugar(b, 'truco');
+  assert(!truHay(s, 'mazo') && tru.accion(s, { mazo: true }) === null, 'con un canto pendiente se responde');
+  // Final a 24.
+  s = truJugar(truBase(['1e 1b 7e', '4c 4o 5c'], { puntos: [23, 5] }), 0, 0, 0, 0);
+  assert(s.puntos.join() === '24,5' && s.ganador === 0 && s.resumen.ronda === 1 && !tru.acciones(s).length && tru.accion(s, { carta: 0 }) === null);
+});
+
+probar('truco: accion solo acepta lo de acciones(e) y no modifica la entrada', () => {
+  const g = generador(42);
+  const rnd = () => azarDe(g);
+  const todas = [null, {}, { mazo: true }, { quiero: true }, { quiero: false }, { carta: 0 }, { carta: 1 }, { carta: 2 }, { carta: 3 }, { canto: 'x' },
+    ...['envido', 'real', 'falta', 'truco', 'retruco', 'vale4'].map((canto) => ({ canto }))];
+  let p = tru.nueva(2, rnd);
+  for (let k = 0; k < 3000 && p.ganador === null; k++) {
+    const ops = tru.acciones(p).map((a) => JSON.stringify(a));
+    const foto = JSON.stringify(p);
+    for (const a of todas) assert(!!tru.accion(p, a, rnd) === ops.includes(JSON.stringify(a)), `${JSON.stringify(a)} con ${ops}`);
+    assert(JSON.stringify(p) === foto, 'no muta');
+    p = tru.accion(p, JSON.parse(ops[Math.floor(rnd() * ops.length)]), rnd);
+  }
+  assert(p.ganador !== null && Math.max(...p.puntos) >= 24);
+});
+
+probar('truco: la máquina en sus tres niveles', () => {
+  // Fácil: envido con 30 o más; acepta la mitad de las veces.
+  assert(tru.maquina(truBase(['7o 6o 4c', '1e 2b 3c']), 'facil', () => 0.5).canto === 'envido');
+  const cantado = truJugar(truBase(['4c 5o 6e', '1e 2b 3c']), 'truco');
+  assert(tru.maquina(cantado, 'facil', () => 0.3).quiero === true && tru.maquina(cantado, 'facil', () => 0.7).quiero === false);
+  // Normal: la más baja que gana la baza, o la más baja si no puede.
+  const jugando = (rival, mano) => truBase(['4o 4e', mano], { bazas: [{ c: [chs(rival)[0], null], gana: null, sale: 0 }], turno: 1, juega: 1,
+    envido: { cantos: [], quien: null, estado: 'no' }, truco: { nivel: 3, cantado: 3, quien: 0, quiero: 1, pendiente: false } });
+  assert(tru.maquina(jugando('3o', '2c 1e Rb 7b'), 'normal').carta === 1 && tru.maquina(jugando('3o', '2c 1b 1e'), 'normal').carta === 1);
+  assert(tru.maquina(jugando('1e', '2c 3o 4b'), 'normal').carta === 2);
+  // Normal y Difícil no rechazan un truco con las tres mejores cartas.
+  const fuerte = truJugar(truBase(['4c 5o 6e', '1e 1b 7e']), 'truco');
+  for (const nv of ['normal', 'dificil']) assert(tru.accion(fuerte, tru.maquina(fuerte, nv)) && tru.maquina(fuerte, nv).quiero !== false, nv);
+  // Partidas enteras entre máquinas, con semilla, por nivel: terminan en 24 o más sin acciones inválidas; la Difícil es rápida.
+  let lento = 0;
+  for (const nivel of ['facil', 'normal', 'dificil']) {
+    const g = generador(7 + nivel.length);
+    const rnd = () => azarDe(g);
+    let p = tru.nueva(2, rnd);
+    let jugadas = 0;
+    const t0 = Date.now();
+    for (; jugadas < 5000 && p.ganador === null; jugadas++) {
+      const q = tru.accion(p, tru.maquina(p, nivel, rnd), rnd);
+      assert(q, `acción inválida (${nivel})`);
+      p = q;
+    }
+    if (nivel === 'dificil') lento = (Date.now() - t0) / jugadas;
+    assert(p.ganador !== null && p.puntos[p.ganador] >= 24, `partida ${nivel}`);
+    assert(JSON.stringify(p).length < 8000, 'cabe en la base');
+  }
+  assert(lento < 60, `la difícil tarda ${lento} ms por jugada`);
+});
+
 // --- sw.js: VERSION es la huella de los archivos; si alguno cambia, hay que ponerla al día para que llegue a todos ---
 if (globalThis.process?.versions?.node) {
   const { readFileSync } = await import('node:fs');
