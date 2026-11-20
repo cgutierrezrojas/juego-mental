@@ -1775,3 +1775,11 @@ button.seccion {
 .lienzo-minas { display: block; width: 100%; height: min(60dvh, 560px); min-height: 280px; border-radius: 12px; border: 2px solid color-mix(in srgb, var(--texto) 25%, transparent); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .lienzo-minas:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
 #puzzle-botones .modo-bandera[aria-pressed="true"] { background: var(--acento); color: #fff; }
+
+/* 🏆 Competencia: una tarjeta por competencia con su ranking debajo */
+#competencia-contenido { display: flex; flex-direction: column; gap: 12px; }
+.tarjeta-compe { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 16px; background: var(--superficie); box-shadow: var(--relieve); text-align: left; }
+.tarjeta-compe h3 { margin: 0; }
+.tarjeta-compe .juego-compe { margin: 0; font-size: 1.3rem; font-weight: 800; }
+.tarjeta-compe small { opacity: 0.85; }
+.tarjeta-compe button { margin-top: 6px; }
