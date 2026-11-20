@@ -2257,6 +2257,12 @@ probar('chinchón: juegos, mejor forma, cerrar, agregar sueltas, eliminación y 
   r = chi.agregarSueltas([ch('1o 2o 3o')], ch('5o 4o'));
   assert(r.juegos[0].map((c) => c.v).join() === '1,2,3,4,5' && !r.sueltas.length, 'repite hasta que no cabe ninguna');
   assert(chi.agregarSueltas([ch('5c 5e 5b 5o')], ch('5c')).sueltas.length === 1, 'el cuarteto no admite más');
+  r = chi.agregarSueltas([ch('4c 4e 4b'), ch('1o 2o 3o')], ch('4o 5o'));
+  assert(!r.sueltas.length && r.juegos[1].length === 5, 'el 4o alarga la escala para que entre el 5o, no va al trío');
+  // Al cerrar, el rival elige la forma que deja menos después de agregar: con el trío de 4 (y no la escala 4o 5o 6o) el 6o y
+  // el 5o alargan la escala 7o S C del que cerró y le quedan solo los reyes.
+  const t2 = chi.cerrar(baseChi(['7o So Co 5c 5e 5b 2c Rb', '4o 4c 4e 5o 6o Rc Re'], { robo: 'mazo' }), 7);
+  assert(t2.resumen.filas[1].pts === 24 && t2.puntos[1] === 24, `el rival suma ${t2.resumen.filas[1].pts}`);
   // Reparto.
   const e = chi.nueva(3);
   assert(e.manos.every((m) => m.length === 7) && e.descarte.length === 1 && e.mazo.length === 40 - 22 && e.turno === 0 && e.empieza === 0 && e.ronda === 1);

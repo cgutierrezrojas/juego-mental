@@ -75,21 +75,32 @@ export function esChinchon(cartas) {
 const esTrio = (juego) => juego.every((c) => c.v === juego[0].v);
 const cabe = (juego, c) => (esTrio(juego) ? juego.length === 3 && c.v === juego[0].v : c.p === juego[0].p && (c.v === juego[0].v - 1 || c.v === juego.at(-1).v + 1));
 
-// Agrega las sueltas que caben en juegos ajenos (al trío de 3, o alargando una escala por una punta) hasta que no quepa ninguna.
+// Agrega a juegos ajenos (al trío de 3, o alargando una escala por una punta) las sueltas que dejen menos puntos: prueba cada
+// suelta en cada juego donde cabe, o dejarla suelta (búsqueda exhaustiva; son pocas).
 export function agregarSueltas(juegos, sueltas) {
-  const js = juegos.map((j) => [...j].sort(porV));
-  let quedan = [...sueltas];
-  for (let otra = true; otra; ) {
-    otra = false;
-    quedan = quedan.filter((c) => {
-      const k = js.findIndex((j) => cabe(j, c));
-      if (k < 0) return true;
-      js[k] = [...js[k], c].sort(porV);
-      otra = true;
-      return false;
-    });
+  const buscar = (js, quedan) => {
+    let mejor = { juegos: js, sueltas: quedan, pts: sumar(quedan) };
+    quedan.forEach((c, x) => js.forEach((j, k) => {
+      if (!cabe(j, c)) return;
+      const r = buscar(js.map((g, y) => (y === k ? [...g, c].sort(porV) : g)), sin(quedan, x));
+      if (r.pts < mejor.pts) mejor = r;
+    }));
+    return mejor;
+  };
+  const r = buscar(juegos.map((j) => [...j].sort(porV)), [...sueltas]);
+  return { juegos: r.juegos, sueltas: r.sueltas };
+}
+
+// Todas las formas de ordenar las cartas en juegos (para elegir la que deja menos puntos después de agregar).
+function* formas(cartas, libres = (1 << cartas.length) - 1) {
+  if (!libres) return yield { juegos: [], sueltas: [] };
+  const i = 31 - Math.clz32(libres & -libres);
+  const resto = libres & ~(1 << i);
+  for (const f of formas(cartas, resto)) yield { juegos: f.juegos, sueltas: [cartas[i], ...f.sueltas] };
+  for (const m of juegosCon(cartas, i, resto)) {
+    const juego = cartas.filter((_, k) => (m | (1 << i)) & (1 << k)).sort(porV);
+    for (const f of formas(cartas, resto & ~m)) yield { juegos: [juego, ...f.juegos], sueltas: f.sueltas };
   }
-  return { juegos: js, sueltas: quedan };
 }
 
 // El siguiente que sigue en pie después de `j`.
@@ -174,10 +185,14 @@ export function cerrar(e, i, rnd = Math.random) {
   const filas = [{ j, juegos: propia.juegos, sueltas: propia.sueltas, pts: propia.pts || -10 }];
   let mesa = propia.juegos;
   for (let x = siguiente(s, j); x !== j; x = siguiente(s, x)) {
-    const f = mejorForma(s.manos[x]);
-    const r = agregarSueltas(mesa, f.sueltas);
-    mesa = r.juegos;
-    filas.push({ j: x, juegos: f.juegos, sueltas: r.sueltas, pts: sumar(r.sueltas) });
+    let f = null;
+    for (const forma of formas(s.manos[x])) {
+      const r = agregarSueltas(mesa, forma.sueltas);
+      const pts = sumar(r.sueltas);
+      if (!f || pts < f.pts) f = { juegos: forma.juegos, mesa: r.juegos, sueltas: r.sueltas, pts };
+    }
+    mesa = f.mesa;
+    filas.push({ j: x, juegos: f.juegos, sueltas: f.sueltas, pts: f.pts });
   }
   for (const f of filas) s.puntos[f.j] += f.pts;
   s.resumen = { ronda: s.ronda, cerro: j, chinchon, filas };
