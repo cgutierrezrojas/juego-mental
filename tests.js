@@ -2228,6 +2228,129 @@ probar('cacho: acciones puras (sin mutar la entrada) y accion rechaza lo inváli
   assert(cacho.accion(e, { tipo: 'apostar', n: 1, pinta: 2 }) === null && cacho.accion(e, { tipo: 'x' }) === null && cacho.accion(e, null) === null && cacho.accion(e, { tipo: 'apostar', n: 3, pinta: 3 }));
 });
 
+// --- chinchon.js ---
+import * as chi from './games/chinchon.js';
+
+// Cartas como '7o 5c Rb' (o oros, c copas, e espadas, b bastos; S C R = sota, caballo, rey = 8 9 10).
+const PAL_CHI = { o: 'oros', c: 'copas', e: 'espadas', b: 'bastos' };
+const chs = (t) => t.split(' ').filter(Boolean).map((x) => ({ v: { S: 8, C: 9, R: 10 }[x[0]] ?? Number(x[0]), p: PAL_CHI[x.at(-1)] }));
+const baseChi = (manos, extra = {}) => ({ n: manos.length, manos: manos.map(chs), mazo: chs('1b 2b 3b 4b 5b 6b'), descarte: chs('7b'), turno: 0, robo: null, robada: null,
+  puntos: manos.map(() => 0), fuera: manos.map(() => false), ronda: 1, empieza: 0, vistas: manos.map(() => ({ tomo: [], boto: [] })), ganador: null, aviso: null, resumen: null, ...extra });
+
+probar('chinchón: juegos, mejor forma, cerrar, agregar sueltas, eliminación y mazo', () => {
+  const ch = chs;
+  const base = baseChi;
+  const f = (t) => chi.mejorForma(ch(t));
+  assert(chi.PUNTOS(ch('7o')[0]) === 7 && chi.PUNTOS(ch('So')[0]) === 10 && chi.PUNTOS(ch('Co')[0]) === 11 && chi.PUNTOS(ch('Ro')[0]) === 12);
+  // Escalas: el 7 sigue con la sota; sin vuelta; del mismo palo.
+  assert(f('5o 6o 7o So').pts === 0 && f('5o 6o 7o So').juegos[0].length === 4, '7 → sota');
+  assert(f('Ro 1o 2o').pts === 15 && f('6o 7o Co').pts === 24 && f('1o 2c 3o').pts === 6 && f('4o 5o').pts === 9);
+  // Tríos y cuartetos.
+  assert(f('4o 4c 4e').pts === 0 && f('4o 4c 4e 4b').juegos[0].length === 4);
+  // Mejor forma: la que deja menos puntos.
+  assert(f('3o 4o 5o 5c 5e').pts === 7, 'trío de 5 y sueltos 3 y 4');
+  assert(f('3o 4o 5o 5c 5e 5b').pts === 0 && f('3o 4o 5o 5c 5e 5b').juegos.length === 2, 'escala y trío');
+  assert(chi.esChinchon(ch('5o 6o 7o So Co Ro 4o')) && !chi.esChinchon(ch('1o 2o 3o 4o 5o 6o 7c')) && !chi.esChinchon(ch('1o 2o 3o 4o 5o 6o')));
+  // Agregar sueltas a juegos ajenos: al trío de 3, alargar escalas por una punta, repitiendo.
+  let r = chi.agregarSueltas([ch('5c 5e 5b'), ch('1o 2o 3o')], ch('5o 4o Sb Rb'));
+  assert(r.juegos[0].length === 4 && r.juegos[1].length === 4 && r.sueltas.length === 2);
+  r = chi.agregarSueltas([ch('1o 2o 3o')], ch('5o 4o'));
+  assert(r.juegos[0].map((c) => c.v).join() === '1,2,3,4,5' && !r.sueltas.length, 'repite hasta que no cabe ninguna');
+  assert(chi.agregarSueltas([ch('5c 5e 5b 5o')], ch('5c')).sueltas.length === 1, 'el cuarteto no admite más');
+  // Reparto.
+  const e = chi.nueva(3);
+  assert(e.manos.every((m) => m.length === 7) && e.descarte.length === 1 && e.mazo.length === 40 - 22 && e.turno === 0 && e.empieza === 0 && e.ronda === 1);
+  // Robar y botar; no botar la recién tomada del descarte; el turno pasa.
+  let s = base(['1o 2o 3o 5c 5e 5b 2c', 'Ro'], { descarte: ch('7b Rb') });
+  assert(chi.botar(s, 0) === null && !chi.cerrables(s).length, 'primero se roba');
+  let t = chi.robar(s, 'descarte');
+  assert(t.manos[0].length === 8 && t.robo === 'descarte' && t.robada.v === 10 && t.descarte.length === 1 && t.vistas[0].tomo.length === 1 && t.aviso.j === 0);
+  assert(chi.robar(t, 'mazo') === null && chi.botar(t, 7) === null, 'no se bota la recién robada');
+  assert(!chi.cerrables(t).length && chi.cerrar(t, 7) === null, 'ni se cierra botándola');
+  const u = chi.botar(t, 6);
+  assert(u.turno === 1 && u.robo === null && u.descarte.at(-1).v === 2 && u.vistas[0].boto.length === 1 && u.manos[0].length === 7);
+  // Mazo agotado: se baraja el descarte salvo la de arriba.
+  t = chi.robar(base(['1o 2o', '3o'], { mazo: [], descarte: ch('4c 5c 6c') }), 'mazo');
+  assert(t.manos[0].length === 3 && t.descarte.length === 1 && t.descarte[0].v === 6 && t.mazo.length === 1);
+  assert(chi.robar(base(['1o', '3o'], { mazo: [] }), 'mazo') === null);
+  // Cerrar con 3 o menos: el otro ordena y agrega el 4o a la escala del que cerró.
+  const rival = 'Cb Rc Re Ro 4o Cc Sb';
+  s = base(['1o 2o 3o 5c 5e 5b 2c Rb', rival], { robo: 'mazo' });
+  assert(chi.cerrables(s).join() === '7');
+  const antes = JSON.stringify(s);
+  t = chi.cerrar(s, 7);
+  assert(JSON.stringify(s) === antes, 'cerrar no muta');
+  assert(t.puntos.join() === '2,32' && t.resumen.cerro === 0 && !t.resumen.chinchon && t.resumen.filas[1].sueltas.length === 3 && t.resumen.filas[1].pts === 32);
+  assert(t.ganador === null && t.ronda === 2 && t.empieza === 1 && t.turno === 1 && t.manos.every((m) => m.length === 7) && t.mazo.length === 25 && t.robo === null);
+  // Con 0 sueltas: −10. Con chinchón: gana la partida.
+  t = chi.cerrar(base(['1o 2o 3o 5c 5e 5b 5o Rb', rival], { robo: 'mazo' }), 7);
+  assert(t.puntos[0] === -10 && t.resumen.filas[0].pts === -10);
+  t = chi.cerrar(base(['1o 2o 3o 4o 5o 6o 7o Rb', rival], { robo: 'mazo' }), 7);
+  assert(t.ganador === 0 && t.resumen.chinchon && t.aviso.j === 0);
+  // Con 4 no se cierra.
+  s = base(['1o 2o 3o 5c 5e 5b 4c Rb', rival], { robo: 'mazo' });
+  assert(!chi.cerrables(s).length && chi.cerrar(s, 7) === null);
+  assert(chi.cerrables(base(['1o 2o 3o 5c 5e 5b 3c Rb', rival], { robo: 'mazo' })).join() === '7');
+  // Eliminación al pasar de 100 (100 justo sigue).
+  const cierra = (manos, puntos, extra) => chi.cerrar(base(['1o 2o 3o 5c 5e 5b 2c Rb', ...manos], { robo: 'mazo', puntos, ...extra }), 7);
+  t = cierra([rival], [0, 80]);
+  assert(t.ganador === 0 && t.fuera[1], 'a dos, termina');
+  t = cierra([rival], [0, 68]);
+  assert(t.ganador === null && t.puntos[1] === 100 && !t.fuera[1]);
+  t = cierra([rival], [99, 80]);
+  assert(t.ganador === 0 && t.puntos.join() === '101,112', 'los dos pasan: gana el que tiene menos');
+  t = cierra([rival, '7c 7e 7o Sc Cc Rc 4b'], [0, 80, 0]);
+  assert(t.ganador === null && t.fuera.join() === 'false,true,false' && t.puntos.join() === '2,112,4' && t.empieza === 2 && t.turno === 2 && !t.manos[1].length);
+  assert(chi.botar(base(['1o 2o', '', '3o'], { robo: 'mazo', fuera: [false, true, false] }), 0).turno === 2, 'el eliminado no juega');
+  t = cierra(['', '7c 7e 7o Sc Cc Rc 4b'], [0, 101, 98], { fuera: [false, true, false] });
+  assert(t.ganador === 0 && t.puntos[2] === 102);
+  // Nada modifica la entrada.
+  s = base(['1o 2o 3o 5c 5e 5b 2c', 'Ro'], { descarte: ch('7b Rb') });
+  const foto = JSON.stringify(s);
+  chi.robar(s, 'descarte'); chi.robar(s, 'mazo'); chi.botar(chi.robar(s, 'mazo'), 0); chi.nueva(2);
+  assert(JSON.stringify(s) === foto, 'no muta');
+  assert(chi.accion(s, { robar: 'x' }) === null && chi.accion(s, { botar: 0 }) === null && chi.accion(s, {}) === null);
+});
+
+probar('chinchón: la máquina en sus tres niveles', () => {
+  const ch = chs;
+  const m = (manos, nivel, extra) => chi.maquina(baseChi(manos, extra), nivel);
+  // Fácil: del descarte solo si forma juego; bota la suelta más alta; cierra en cuanto puede.
+  assert(m(['1o 2o 5c Re Rb Ce 7c', 'Ro'], 'facil', { descarte: ch('3o') }).robar === 'descarte');
+  assert(m(['1o 2o 5c Re Rb Ce 7c', 'Ro'], 'facil', { descarte: ch('4c') }).robar === 'mazo');
+  assert(m(['1o 2o 3o 5c 4e Re Ce 7c', 'Ro'], 'facil', { robo: 'mazo' }).botar === 5);
+  assert(m(['1o 2o 3o 4o 5o 6o 1c Rb', 'Ro'], 'facil', { robo: 'mazo' }).cerrar === 7);
+  // Normal: cierra, salvo que le falte una carta para el chinchón.
+  assert(m(['1o 2o 3o 5c 5e 5b 2c Rb', 'Ro'], 'normal', { robo: 'mazo' }).cerrar === 7);
+  assert(m(['1o 2o 3o 4o 5o 6o 1c Rb', 'Ro'], 'normal', { robo: 'mazo' }).botar === 7, 'espera el chinchón');
+  assert(m(['1o 2o 3o 4o 5o 6o 7o Rb', 'Ro'], 'normal', { robo: 'mazo' }).cerrar === 7, 'chinchón');
+  assert(m(['1o 2o 3o 5c 5e 5b Cb Rc', 'Ro'], 'normal', { robo: 'mazo' }).botar === 7, 'bota la que más vale');
+  // Difícil: espera el −10 si le falta una carta y queda mazo; no le da al rival lo que junta del descarte.
+  assert(m(['1o 2o 3o 5c 5e 5b 1c Rb', 'Ro'], 'dificil', { robo: 'mazo' }).botar === 7);
+  assert(m(['1o 2o 3o 5c 5e 5b 1c Rb', 'Ro'], 'dificil', { robo: 'mazo', mazo: [] }).cerrar === 7);
+  assert(m(['1o 2o 3o 5c 5e 5b 5o Rb', 'Ro'], 'dificil', { robo: 'mazo' }).cerrar === 7, '−10');
+  const vistas = [{ tomo: [], boto: [] }, { tomo: ch('Ro'), boto: [] }];
+  assert(m(['1o 2o 3o 5c 5e 5b Cb Rc', 'Ro'], 'dificil', { robo: 'mazo', vistas }).botar === 6, 'el rival junta reyes');
+  // Partidas enteras entre máquinas, con semilla, para cada nivel y de 2 a 4: terminan sin acciones inválidas; la Difícil es rápida.
+  let lento = 0;
+  for (const nivel of ['facil', 'normal', 'dificil']) for (const n of [2, 3, 4]) {
+    const g = generador(n * 7 + nivel.length);
+    const rnd = () => azarDe(g);
+    let p = chi.nueva(n, rnd);
+    let jugadas = 0;
+    const t0 = Date.now();
+    for (; jugadas < 20000 && p.ganador === null; jugadas++) {
+      const q = chi.accion(p, chi.maquina(p, nivel, rnd), rnd);
+      assert(q, `acción inválida (${nivel}, ${n})`);
+      p = q;
+    }
+    if (nivel === 'dificil') lento = Math.max(lento, (Date.now() - t0) / jugadas);
+    assert(p.ganador !== null && (!p.fuera[p.ganador] || p.fuera.every(Boolean)), `partida ${nivel} a ${n}`);
+    assert(JSON.stringify(p).length < 8000, 'cabe en la base');
+  }
+  assert(lento < 60, `la difícil tarda ${lento} ms por jugada`);
+});
+
 // --- sw.js: VERSION es la huella de los archivos; si alguno cambia, hay que ponerla al día para que llegue a todos ---
 if (globalThis.process?.versions?.node) {
   const { readFileSync } = await import('node:fs');
