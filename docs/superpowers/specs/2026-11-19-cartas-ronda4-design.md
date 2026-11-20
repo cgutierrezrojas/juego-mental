@@ -71,11 +71,13 @@ pulsarlo se elige la carta a botar entre las que lo permiten.
 **Ordenar la mano:** botón «Ordenar» que agrupa los juegos a la izquierda y deja las sueltas al final, como ayuda visual.
 
 **Máquina:**
-- **Fácil:** roba del descarte solo si la carta forma juego de inmediato; bota la suelta más alta. Cierra en cuanto puede.
+- **Fácil:** roba del descarte solo si la carta forma juego de inmediato; bota una suelta (la mitad de las veces la más alta, si no,
+  cualquiera). Cierra en cuanto puede.
 - **Normal:** valora cada carta por cuánto le acerca a un juego (pares, escalas abiertas); bota la de menos valor y más puntos.
   Cierra en cuanto puede, salvo que le falte una carta para el chinchón.
-- **Difícil:** lo de Normal, más memoria de lo que el rival robó del descarte y botó: no bota cartas que le sirvan al rival
-  siguiente si tiene otra opción parecida. Espera para cerrar con 0 sueltas (−10) si le falta una carta y quedan cartas en el mazo.
+- **Difícil:** valora cada mano por los puntos sueltos que espera tener después del próximo robo, con memoria del descarte y de lo
+  que el rival tomó (no cuenta cartas que ya no pueden salir); no bota cartas que le sirvan al rival siguiente si tiene otra opción
+  parecida. Cierra en cuanto puede (las simulaciones mostraron que esperar el −10 pierde mucho más de lo que gana).
 
 ## ⚔️ Truco chileno
 
@@ -142,7 +144,7 @@ El aviso dice lo último que pasó («Tu rival cantó Truco», «Envido: 27 cont
 - **Normal:** juega la carta más baja que gana la baza (o la más baja si no puede ganarla); canta y acepta según la fuerza de su
   mano (tanto para el envido; jerarquía y bazas ya ganadas para el truco).
 - **Difícil:** lo de Normal, más memoria de las cartas jugadas (calcula la probabilidad de ganar con lo que queda en la baraja) y
-  mentiras: a veces canta truco o envido con mano débil.
+  mentiras: a veces canta truco (solo el primero de la ronda, 10 % de las veces) o envido (5 %) con mano débil.
 
 ## Récords, perfil y misiones
 
@@ -166,6 +168,8 @@ En `tests.js`:
   quiero; pardas en cada caso; irse al mazo; final a 24.
 - **Simulaciones de niveles** (contra la máquina misma, muchas partidas, semilla fija): en cada juego, Difícil le gana a Normal y
   Normal a Fácil más del 55 % de las partidas.
+- **Resultados** (400 partidas por cruce a 2, semilla fija, alternando quién empieza): Chinchón: Difícil–Normal 65,0 %,
+  Normal–Fácil 77,8 %, Difícil–Fácil 88,8 %. Truco: Difícil–Normal 68,0 %, Normal–Fácil 99,0 %, Difícil–Fácil 99,5 %.
 - Partida completa de cada juego sin errores entre máquinas, para cada nivel.
 
 ## Fuera de esta ronda

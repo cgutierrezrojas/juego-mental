@@ -20,8 +20,13 @@ const sin = (cartas, i) => cartas.filter((_, x) => x !== i);
 // Las máscaras (sin la carta `i`) de las otras cartas libres que forman juego con ella: tríos/cuartetos y escalas que la contienen.
 function juegosCon(cartas, i, libres) {
   const c = cartas[i];
-  const otras = [...cartas.keys()].filter((k) => libres & (1 << k));
-  const mismas = otras.filter((k) => cartas[k].v === c.v);
+  const mismas = [];
+  const delPalo = []; // por valor, el índice de la carta libre del mismo palo
+  for (let k = 0; k < cartas.length; k++) {
+    if (!(libres & (1 << k))) continue;
+    if (cartas[k].v === c.v) mismas.push(k);
+    else if (cartas[k].p === c.p) delPalo[cartas[k].v] = k;
+  }
   const res = [];
   for (let a = 0; a < mismas.length; a++) {
     for (let b = a + 1; b < mismas.length; b++) {
@@ -29,15 +34,14 @@ function juegosCon(cartas, i, libres) {
       for (let d = b + 1; d < mismas.length; d++) res.push((1 << mismas[a]) | (1 << mismas[b]) | (1 << mismas[d]));
     }
   }
-  const delPalo = new Map(otras.filter((k) => cartas[k].p === c.p).map((k) => [cartas[k].v, k]));
   let lo = c.v;
   let hi = c.v;
-  while (delPalo.has(lo - 1)) lo--;
-  while (delPalo.has(hi + 1)) hi++;
+  while (delPalo[lo - 1] !== undefined) lo--;
+  while (delPalo[hi + 1] !== undefined) hi++;
   for (let a = lo; a <= c.v; a++) {
     for (let b = Math.max(c.v, a + 2); b <= hi; b++) {
       let m = 0;
-      for (let v = a; v <= b; v++) if (v !== c.v) m |= 1 << delPalo.get(v);
+      for (let v = a; v <= b; v++) if (v !== c.v) m |= 1 << delPalo[v];
       res.push(m);
     }
   }
@@ -212,21 +216,48 @@ export function cerrar(e, i, rnd = Math.random) {
 }
 
 // --- 🤖 Máquina (solo mira su mano, el descarte y lo que los demás hicieron a la vista) ---
+// Las simulaciones mostraron que aquí manda botar puntos y cerrar primero: guardar cartas altas «porque acercan a un juego» o
+// esperar el −10 pierde. La Normal todavía premia las parejas; la Difícil calcula lo que espera robar.
 
-// Qué tan buena es una mano de 7: puntos sueltos, menos 3 por cada par de sueltas que se acercan a un juego (mismo número, o
-// mismo palo a 1 o 2 de distancia).
-function nota(cartas, forma = mejorForma(cartas)) {
+const TODAS = barajaEs(() => 0);
+const seAcercan = (a, b) => a.v === b.v || (a.p === b.p && Math.abs(a.v - b.v) <= 2);
+
+// Las cartas que la Difícil cree que pueden salir del mazo: no las suyas, ni las del descarte (las vio botar), ni las que los
+// rivales tomaron del descarte (las tienen en la mano).
+function quedan(e) {
+  const vistas = [...e.descarte, ...(e.vistas ?? []).flatMap((v, x) => (x === e.turno ? [] : v.tomo))];
+  return TODAS.filter((c) => ![...e.manos[e.turno], ...vistas].some((x) => igual(x, c)));
+}
+
+// Qué tan buena es una mano de 7 (menos es mejor).
+// Normal: puntos sueltos, menos 2 por cada par de sueltas que se acercan a un juego.
+// Difícil (`q`: lo que puede salir): los puntos sueltos que espera tener después del próximo robo; con cada carta posible, la mejor
+// forma de las 8 menos la suelta más alta, que botaría. ponytail: un solo robo hacia adelante, «botaría la más alta» y «solo
+// cuenta la carta que se acerca a una suelta» son aproximaciones; lo exacto no cabe en 60 ms ni en las simulaciones.
+function nota(cartas, forma, q) {
   const s = forma.sueltas;
-  let cerca = 0;
-  for (let a = 0; a < s.length; a++) for (let b = a + 1; b < s.length; b++) if (s[a].v === s[b].v || (s[a].p === s[b].p && Math.abs(s[a].v - s[b].v) <= 2)) cerca++;
-  return forma.pts - 3 * cerca;
+  if (!q) {
+    let cerca = 0;
+    for (let a = 0; a < s.length; a++) for (let b = a + 1; b < s.length; b++) if (seAcercan(s[a], s[b])) cerca++;
+    return forma.pts - 2 * cerca;
+  }
+  if (!q.length) return forma.pts;
+  const alta = Math.max(0, ...s.map(PUNTOS));
+  let t = 0;
+  for (const c of q) {
+    if (s.some((x) => seAcercan(c, x))) {
+      const f = mejorForma([...cartas, c]);
+      t += f.pts - Math.max(0, ...f.sueltas.map(PUNTOS));
+    } else t += forma.pts - Math.max(0, alta - PUNTOS(c)); // no junta con ninguna suelta: bota la más alta de las dos
+  }
+  return t / q.length;
 }
 
 // Para cada carta que se puede botar: la forma y la nota de las 7 que quedan.
-const opciones = (mano, robada) => [...mano.keys()].filter((i) => !igual(mano[i], robada)).map((i) => {
+const opciones = (mano, robada, q) => [...mano.keys()].filter((i) => !igual(mano[i], robada)).map((i) => {
   const resto = sin(mano, i);
   const forma = mejorForma(resto);
-  return { i, forma, nota: nota(resto, forma), chinchon: esChinchon(resto) };
+  return { i, forma, nota: nota(resto, forma, q), chinchon: esChinchon(resto) };
 });
 const menor = (lista, f) => lista.reduce((a, x) => (f(x) < f(a) ? x : a));
 
@@ -237,7 +268,7 @@ const faltaChinchon = (mano) => mano.some((c) => [1, 2, 3, 4, 5].every((k) => ma
 function peligro(e, c) {
   const v = e.vistas?.[siguiente(e, e.turno)];
   if (!v) return 0;
-  const sirve = v.tomo.filter((x) => x.v === c.v || (x.p === c.p && Math.abs(x.v - c.v) <= 2)).length;
+  const sirve = v.tomo.filter((x) => seAcercan(x, c)).length;
   return v.boto.some((x) => x.v === c.v) ? 0 : sirve;
 }
 
@@ -245,37 +276,33 @@ function peligro(e, c) {
 export function maquina(e, nivel = 'normal', rnd = Math.random) {
   const mano = e.manos[e.turno];
   const arriba = e.descarte.at(-1);
+  const q = nivel === 'dificil' ? quedan(e) : null;
   if (!e.robo) {
     if (!arriba) return { robar: 'mazo' };
     if (!e.mazo.length && e.descarte.length < 2) return { robar: 'descarte' };
     const con = [...mano, arriba];
     if (nivel === 'facil') return { robar: mejorForma(con).juegos.some((j) => j.includes(arriba)) ? 'descarte' : 'mazo' };
-    const mejor = menor(opciones(con, arriba), (o) => o.nota);
-    // La Difícil no siempre bota la de menor nota (espera el −10, evita darle cartas al rival): para no pasarse la misma
-    // carta con otra máquina sin fin, solo toma del descarte lo que entra en un juego.
-    const toma = mejor.nota < nota(mano) - 2 && (nivel !== 'dificil' || mejor.forma.juegos.some((j) => j.includes(arriba)));
+    const mejor = menor(opciones(con, arriba, q), (o) => o.nota);
+    // La Difícil solo toma del descarte lo que entra en un juego: si no, dos máquinas podrían pasarse la misma carta sin fin.
+    const toma = mejor.nota < nota(mano, mejorForma(mano), q) - 2 && (nivel !== 'dificil' || mejor.forma.juegos.some((j) => j.includes(arriba)));
     return { robar: toma ? 'descarte' : 'mazo' };
   }
-  const ops = opciones(mano, e.robada);
+  const ops = opciones(mano, e.robada, q);
   const cierres = ops.filter((o) => o.forma.pts <= 3);
   const chin = cierres.find((o) => o.chinchon);
   if (chin) return { cerrar: chin.i };
   const cierre = cierres.length ? menor(cierres, (o) => o.forma.pts) : null;
-  const quedaMazo = e.mazo.length > 0;
   // ponytail: con el mazo ya rebarajado, a veces bota al azar una de sus 3 mejores opciones: si nadie suelta lo que otro
   // necesita, la ronda no terminaría nunca. Una regla de fin de ronda (como en la Carioca) si llega a hacer falta para personas.
   if (!cierre && e.vueltas && rnd() < 0.3) return { botar: [...ops].sort((a, b) => a.nota - b.nota)[Math.floor(rnd() * Math.min(3, ops.length))].i };
   if (nivel === 'facil') {
     if (cierre) return { cerrar: cierre.i };
+    // Bota una suelta: la mitad de las veces la más alta, si no, cualquiera.
     const sueltas = mejorForma(mano).sueltas.filter((c) => !igual(c, e.robada));
-    if (sueltas.length) return { botar: mano.indexOf(menor(sueltas, (c) => -PUNTOS(c))) };
+    if (sueltas.length) return { botar: mano.indexOf(rnd() < 0.5 ? sueltas[Math.floor(rnd() * sueltas.length)] : menor(sueltas, (c) => -PUNTOS(c))) };
     return { botar: menor(ops, (o) => o.nota).i };
   }
-  if (nivel === 'dificil' && cierre) {
-    // Le falta una carta para el −10: guarda la suelta chica y bota la otra.
-    if (cierre.forma.pts && cierre.forma.sueltas.length === 1 && quedaMazo) return { botar: cierre.i };
-  }
-  if (cierre && !(faltaChinchon(mano) && quedaMazo)) return { cerrar: cierre.i };
+  if (cierre && !(faltaChinchon(mano) && e.mazo.length)) return { cerrar: cierre.i };
   const mejor = menor(ops, (o) => o.nota);
   if (nivel !== 'dificil') return { botar: mejor.i };
   // Difícil: entre las opciones parecidas, la que menos le sirve al siguiente.

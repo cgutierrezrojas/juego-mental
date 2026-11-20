@@ -2320,21 +2320,25 @@ probar('chinchón: juegos, mejor forma, cerrar, agregar sueltas, eliminación y 
 
 probar('chinchón: la máquina en sus tres niveles', () => {
   const ch = chs;
-  const m = (manos, nivel, extra) => chi.maquina(baseChi(manos, extra), nivel);
-  // Fácil: del descarte solo si forma juego; bota la suelta más alta; cierra en cuanto puede.
+  const m = (manos, nivel, extra, rnd = () => 0.9) => chi.maquina(baseChi(manos, extra), nivel, rnd);
+  // Fácil: del descarte solo si forma juego; bota la suelta más alta (o, la mitad de las veces, cualquiera); cierra en cuanto puede.
   assert(m(['1o 2o 5c Re Rb Ce 7c', 'Ro'], 'facil', { descarte: ch('3o') }).robar === 'descarte');
   assert(m(['1o 2o 5c Re Rb Ce 7c', 'Ro'], 'facil', { descarte: ch('4c') }).robar === 'mazo');
   assert(m(['1o 2o 3o 5c 4e Re Ce 7c', 'Ro'], 'facil', { robo: 'mazo' }).botar === 5);
+  assert(m(['1o 2o 3o 5c 4e Re Ce 7c', 'Ro'], 'facil', { robo: 'mazo' }, () => 0).botar === 3, 'al azar: la primera suelta');
   assert(m(['1o 2o 3o 4o 5o 6o 1c Rb', 'Ro'], 'facil', { robo: 'mazo' }).cerrar === 7);
   // Normal: cierra, salvo que le falte una carta para el chinchón.
   assert(m(['1o 2o 3o 5c 5e 5b 2c Rb', 'Ro'], 'normal', { robo: 'mazo' }).cerrar === 7);
   assert(m(['1o 2o 3o 4o 5o 6o 1c Rb', 'Ro'], 'normal', { robo: 'mazo' }).botar === 7, 'espera el chinchón');
   assert(m(['1o 2o 3o 4o 5o 6o 7o Rb', 'Ro'], 'normal', { robo: 'mazo' }).cerrar === 7, 'chinchón');
   assert(m(['1o 2o 3o 5c 5e 5b Cb Rc', 'Ro'], 'normal', { robo: 'mazo' }).botar === 7, 'bota la que más vale');
-  // Difícil: espera el −10 si le falta una carta y queda mazo; no le da al rival lo que junta del descarte.
-  assert(m(['1o 2o 3o 5c 5e 5b 1c Rb', 'Ro'], 'dificil', { robo: 'mazo' }).botar === 7);
-  assert(m(['1o 2o 3o 5c 5e 5b 1c Rb', 'Ro'], 'dificil', { robo: 'mazo', mazo: [] }).cerrar === 7);
+  // Difícil: cierra en cuanto puede (esperar el −10 pierde); recuerda el descarte; no le da al rival lo que junta del descarte.
+  assert(m(['1o 2o 3o 5c 5e 5b 1c Rb', 'Ro'], 'dificil', { robo: 'mazo' }).cerrar === 7);
   assert(m(['1o 2o 3o 5c 5e 5b 5o Rb', 'Ro'], 'dificil', { robo: 'mazo' }).cerrar === 7, '−10');
+  // Dos parejas iguales (6-7 de espadas y de bastos); el 5 y la sota de bastos ya salieron: la Difícil suelta la pareja muerta.
+  const mano8 = ['1o 1e 1c 6e 7e 6b 7b 4o', 'Ro'];
+  assert(m(mano8, 'dificil', { robo: 'mazo', descarte: ch('5b Sb') }).botar === 6, 'muerta la de bastos');
+  assert(m(mano8, 'dificil', { robo: 'mazo', descarte: ch('5e Se') }).botar === 4, 'muerta la de espadas');
   const vistas = [{ tomo: [], boto: [] }, { tomo: ch('Ro'), boto: [] }];
   assert(m(['1o 2o 3o 5c 5e 5b Cb Rc', 'Ro'], 'dificil', { robo: 'mazo', vistas }).botar === 6, 'el rival junta reyes');
   // Partidas enteras entre máquinas, con semilla, para cada nivel y de 2 a 4: terminan sin acciones inválidas; la Difícil es rápida.
@@ -2344,17 +2348,37 @@ probar('chinchón: la máquina en sus tres niveles', () => {
     const rnd = () => azarDe(g);
     let p = chi.nueva(n, rnd);
     let jugadas = 0;
-    const t0 = Date.now();
     for (; jugadas < 20000 && p.ganador === null; jugadas++) {
-      const q = chi.accion(p, chi.maquina(p, nivel, rnd), rnd);
+      const t0 = performance.now();
+      const a = chi.maquina(p, nivel, rnd);
+      lento = Math.max(lento, performance.now() - t0);
+      const q = chi.accion(p, a, rnd);
       assert(q, `acción inválida (${nivel}, ${n})`);
       p = q;
     }
-    if (nivel === 'dificil') lento = Math.max(lento, (Date.now() - t0) / jugadas);
     assert(p.ganador !== null && (!p.fuera[p.ganador] || p.fuera.every(Boolean)), `partida ${nivel} a ${n}`);
     assert(JSON.stringify(p).length < 8000, 'cabe en la base');
   }
-  assert(lento < 60, `la difícil tarda ${lento} ms por jugada`);
+  assert(lento < 60, `la peor jugada tarda ${lento.toFixed(1)} ms`);
+});
+
+// Duelo entre dos niveles con semilla fija, alternando quién empieza: cuántas partidas gana `a`.
+const dueloCartas = (J, a, b, partidas, semilla) => {
+  let gana = 0;
+  for (let k = 0; k < partidas; k++) {
+    const g = generador(semilla + k);
+    const rnd = () => azarDe(g);
+    const nv = k % 2 ? [b, a] : [a, b];
+    let p = J.nueva(2, rnd);
+    for (let i = 0; i < 20000 && p.ganador === null; i++) p = J.accion(p, J.maquina(p, nv[p.turno], rnd), rnd);
+    if (p.ganador !== null && nv[p.ganador] === a) gana++;
+  }
+  return gana / partidas;
+};
+
+probar('chinchón: la Difícil le gana a la Fácil más del 55 % (simulación con semilla)', () => {
+  const r = dueloCartas(chi, 'dificil', 'facil', 20, 500);
+  assert(r > 0.55, `${(100 * r).toFixed(0)} %`);
 });
 
 // --- truco.js ---
@@ -2498,27 +2522,39 @@ probar('truco: la máquina en sus tres niveles', () => {
     envido: { cantos: [], quien: null, estado: 'no' }, truco: { nivel: 3, cantado: 3, quien: 0, quiero: 1, pendiente: false } });
   assert(tru.maquina(jugando('3o', '2c 1e Rb 7b'), 'normal').carta === 1 && tru.maquina(jugando('3o', '2c 1b 1e'), 'normal').carta === 1);
   assert(tru.maquina(jugando('1e', '2c 3o 4b'), 'normal').carta === 2);
-  // Normal y Difícil no rechazan un truco con las tres mejores cartas.
-  const fuerte = truJugar(truBase(['4c 5o 6e', '1e 1b 7e']), 'truco');
-  for (const nv of ['normal', 'dificil']) assert(tru.accion(fuerte, tru.maquina(fuerte, nv)) && tru.maquina(fuerte, nv).quiero !== false, nv);
-  // Partidas enteras entre máquinas, con semilla, por nivel: terminan en 24 o más sin acciones inválidas; la Difícil es rápida.
+  // Normal y Difícil, con el envido ya jugado y azar fijo: con las tres mejores cartas suben a retruco; con las tres peores no quieren.
+  const sinEnvido = { envido: { cantos: [], quien: null, estado: 'no' } };
+  const fuerte = truJugar(truBase(['4c 5o 6e', '1e 1b 7e'], sinEnvido), 'truco');
+  const debil = truJugar(truBase(['1e 1b 7e', '4c 5o 6e'], sinEnvido), 'truco');
+  for (const nv of ['normal', 'dificil']) {
+    const g = generador(3);
+    const rnd = () => azarDe(g);
+    assert(tru.maquina(fuerte, nv, rnd).canto === 'retruco', `${nv}: sube con lo mejor`);
+    assert(tru.maquina(debil, nv, rnd).quiero === false, `${nv}: no quiere con lo peor`);
+  }
+  // Partidas enteras entre máquinas, con semilla, por nivel: terminan en 24 o más sin acciones inválidas; ninguna jugada pasa de 60 ms.
   let lento = 0;
   for (const nivel of ['facil', 'normal', 'dificil']) {
     const g = generador(7 + nivel.length);
     const rnd = () => azarDe(g);
     let p = tru.nueva(2, rnd);
-    let jugadas = 0;
-    const t0 = Date.now();
-    for (; jugadas < 5000 && p.ganador === null; jugadas++) {
-      const q = tru.accion(p, tru.maquina(p, nivel, rnd), rnd);
+    for (let jugadas = 0; jugadas < 5000 && p.ganador === null; jugadas++) {
+      const t0 = performance.now();
+      const a = tru.maquina(p, nivel, rnd);
+      lento = Math.max(lento, performance.now() - t0);
+      const q = tru.accion(p, a, rnd);
       assert(q, `acción inválida (${nivel})`);
       p = q;
     }
-    if (nivel === 'dificil') lento = (Date.now() - t0) / jugadas;
     assert(p.ganador !== null && p.puntos[p.ganador] >= 24, `partida ${nivel}`);
     assert(JSON.stringify(p).length < 8000, 'cabe en la base');
   }
-  assert(lento < 60, `la difícil tarda ${lento} ms por jugada`);
+  assert(lento < 60, `la peor jugada tarda ${lento.toFixed(1)} ms`);
+});
+
+probar('truco: la Difícil le gana a la Fácil más del 55 % (simulación con semilla)', () => {
+  const r = dueloCartas(tru, 'dificil', 'facil', 50, 500);
+  assert(r > 0.55, `${(100 * r).toFixed(0)} %`);
 });
 
 // --- sw.js: VERSION es la huella de los archivos; si alguno cambia, hay que ponerla al día para que llegue a todos ---

@@ -318,7 +318,7 @@ export function maquina(e, nivel = 'normal', rnd = Math.random) {
   // Cantar envido (también como «el envido está primero»); la Difícil a veces miente.
   if (envido) {
     const p = probEnvido(e, j, memoria, rnd);
-    if (p > 0.62 || (memoria && !respondiendo && rnd() < 0.15)) return { canto: p > 0.85 ? 'real' : 'envido' };
+    if (p > 0.62 || (memoria && !respondiendo && rnd() < 0.05)) return { canto: p > 0.85 ? 'real' : 'envido' };
   }
   if (tr.pendiente) {
     // Querer conviene si (2p − 1)·V > −(V − 1), o sea p > 1 / 2V; con margen.
@@ -326,7 +326,7 @@ export function maquina(e, nivel = 'normal', rnd = Math.random) {
     if (truco && p > 0.8) return { canto: truco };
     return { quiero: p > 1 / (2 * VALOR[tr.cantado]) + 0.15 };
   }
-  if (truco && (probRonda(e, j, null, memoria, rnd) > 0.7 || (memoria && rnd() < 0.2))) return { canto: truco };
+  if (truco && (probRonda(e, j, null, memoria, rnd) > 0.7 || (memoria && !tr.cantado && rnd() < 0.1))) return { canto: truco };
   if (memoria) return { carta: mejorCarta(e, j, rnd) };
   const contra = e.bazas.at(-1).c[1 - j];
   return { carta: politica(e.manos[j].map(JERARQUIA), contra ? JERARQUIA(contra) : null, e.bazas.map((b) => b.gana).filter((x) => x !== null), j) };
