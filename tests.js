@@ -3022,3 +3022,99 @@ probar('sudoku: generar un Difícil tarda menos de 1,5 s en promedio', () => {
   if (typeof console !== 'undefined') console.log(`   (difícil: ${ms.toFixed(0)} ms por tablero)`);
   assert(ms < 1500, `${ms} ms`);
 });
+
+// ---- Buscaminas infinito (reglas puras) ----
+import * as mi from './games/minas.js';
+
+const vecinasDe = (x, y) => { const r = []; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) r.push([x + dx, y + dy]); return r; };
+const numDe = (s, n, x, y) => vecinasDe(x, y).filter(([a, b]) => mi.hayMina(s, n, a, b)).length;
+// primera casilla segura y cerrada con valor > 0 (o con minas vecinas) lejos del origen
+const buscar = (e, f) => { for (let y = -12; y <= 12; y++) for (let x = -12; x <= 12; x++) if (!e.abiertas[`${x},${y}`] && e.abiertas[`${x},${y}`] !== 0 && f(x, y)) return [x, y]; return null; };
+
+probar('minas: hayMina es determinista y el 3×3 del origen nunca tiene minas', () => {
+  for (const n of ['facil', 'normal', 'dificil']) for (let x = -1; x <= 1; x++) for (let y = -1; y <= 1; y++) assert(!mi.hayMina(9, n, x, y));
+  assert(mi.hayMina(3, 'normal', 40, 7) === mi.hayMina(3, 'normal', 40, 7));
+  let difiere = false;
+  for (let x = 5; x < 60; x++) if (mi.hayMina(1, 'normal', x, 9) !== mi.hayMina(2, 'normal', x, 9)) difiere = true;
+  assert(difiere, 'otra semilla, otro mapa');
+});
+probar('minas: la densidad observada en 200×200 lejos del origen es la esperada (±2 pp)', () => {
+  for (const n of ['facil', 'normal', 'dificil']) {
+    let m = 0;
+    for (let x = 0; x < 200; x++) for (let y = 0; y < 200; y++) if (mi.hayMina(11, n, 1000 + x, 1000 + y)) m++;
+    const esp = mi.densidad(n, 1100, 1100);
+    assert(Math.abs(m / 40000 - esp) < 0.02, `${n}: ${m / 40000} vs ${esp}`);
+  }
+  assert(mi.densidad('normal', 0, 0) === 0.17 && Math.abs(mi.densidad('normal', 50, -3) - 0.19) < 1e-9 && Math.abs(mi.densidad('facil', 9999, 0) - 0.2) < 1e-9);
+});
+probar('minas: la expansión inicial coincide con una BFS de referencia', () => {
+  for (const [s, n] of [[1, 'facil'], [2, 'normal'], [3, 'dificil']]) {
+    const e = mi.nueva(s, n);
+    const vis = new Set(['0,0']), cola = [[0, 0]];
+    while (cola.length) {
+      const [x, y] = cola.shift();
+      if (numDe(s, n, x, y) !== 0) continue;
+      for (const [a, b] of vecinasDe(x, y)) if (!vis.has(`${a},${b}`)) { vis.add(`${a},${b}`); cola.push([a, b]); }
+    }
+    assert(Object.keys(e.abiertas).sort().join('|') === [...vis].sort().join('|'), `${n}: región`);
+    assert(Object.entries(e.abiertas).every(([k, v]) => { const [x, y] = k.split(',').map(Number); return v === numDe(s, n, x, y); }), `${n}: números`);
+    assert(e.boom === null && !e.fin && e.seguidas === 0);
+  }
+});
+probar('minas: abrir marca boom en una mina, ignora bandera/abierta/boom/fin y no muta la entrada', () => {
+  const e = mi.nueva(5, 'dificil');
+  const [mx, my] = buscar(e, (x, y) => mi.hayMina(5, 'dificil', x, y));
+  const antes = JSON.stringify(e);
+  const b = mi.abrir(e, mx, my);
+  assert(JSON.stringify(e) === antes, 'no muta');
+  assert(b.boom === `${mx},${my}` && b.abiertas[`${mx},${my}`] === undefined);
+  assert(JSON.stringify(mi.abrir(b, 40, 40)) === JSON.stringify(b), 'con boom no abre');
+  const c = mi.bandera(e, mx, my);
+  assert(JSON.stringify(mi.abrir(c, mx, my)) === JSON.stringify(c), 'con bandera no abre');
+  assert(JSON.stringify(mi.bandera(c, mx, my).banderas) === '{}', 'bandera alterna');
+  const [sx, sy] = buscar(e, (x, y) => !mi.hayMina(5, 'dificil', x, y));
+  const d = mi.abrir(e, sx, sy);
+  assert(d.abiertas[`${sx},${sy}`] === numDe(5, 'dificil', sx, sy) && JSON.stringify(e) === antes);
+  const t = mi.terminar(d);
+  assert(t.fin && JSON.stringify(mi.abrir(t, mx, my)) === JSON.stringify(t) && JSON.stringify(mi.bandera(t, sx, sy)) === JSON.stringify(t));
+  assert(mi.seguir(d) === d, 'seguir sin boom');
+});
+probar('minas: acorde abre las vecinas o da boom', () => {
+  // un número 1 con su mina marcada y el resto cerrado
+  let e = mi.nueva(7, 'normal'), hallado = null;
+  for (const k of Object.keys(e.abiertas)) {
+    const [x, y] = k.split(',').map(Number);
+    if (e.abiertas[k] !== 1) continue;
+    const cerr = vecinasDe(x, y).filter(([a, b]) => e.abiertas[`${a},${b}`] === undefined);
+    if (cerr.length >= 2 && cerr.some(([a, b]) => mi.hayMina(7, 'normal', a, b))) { hallado = { x, y, cerr }; break; }
+  }
+  assert(hallado, 'hay un 1 con vecinas cerradas');
+  const { x, y, cerr } = hallado;
+  const [mx, my] = cerr.find(([a, b]) => mi.hayMina(7, 'normal', a, b));
+  assert(JSON.stringify(mi.acorde(e, x, y)) === JSON.stringify(e), 'sin banderas no hace nada');
+  const ok = mi.acorde(mi.bandera(e, mx, my), x, y);
+  assert(ok.boom === null && cerr.every(([a, b]) => (a === mx && b === my) || ok.abiertas[`${a},${b}`] !== undefined), 'abre las demás');
+  const [fx, fy] = cerr.find(([a, b]) => !mi.hayMina(7, 'normal', a, b));
+  const mal = mi.acorde(mi.bandera(e, fx, fy), x, y);
+  assert(mal.boom !== null, 'bandera equivocada: boom');
+  const ex = mi.acorde(mi.seguir({ ...e, boom: `${mx},${my}` }), x, y);
+  assert(ex.boom === null && ex.explotadas[`${mx},${my}`], 'la explotada cuenta como bandera');
+});
+probar('minas: seguir, costoSeguir, terminar y puntaje', () => {
+  assert(mi.costoSeguir(0) === 50 && mi.costoSeguir(1) === 100 && mi.costoSeguir(2) === 200);
+  const e = mi.nueva(5, 'dificil');
+  const [mx, my] = buscar(e, (x, y) => mi.hayMina(5, 'dificil', x, y));
+  const b = mi.abrir(e, mx, my), s = mi.seguir(b);
+  assert(s.boom === null && s.explotadas[`${mx},${my}`] && s.seguidas === 1 && b.boom !== null, 'seguir sin mutar');
+  const base = Object.keys(e.abiertas).length;
+  assert(mi.puntaje(e) === base);
+  assert(mi.puntaje(mi.bandera(e, mx, my)) === base + 5, 'bandera correcta');
+  const [sx, sy] = buscar(e, (x, y) => !mi.hayMina(5, 'dificil', x, y));
+  assert(mi.puntaje(mi.bandera(e, sx, sy)) === base, 'bandera incorrecta');
+  assert(mi.puntaje(s) === base, 'explotada no suma');
+});
+probar('minas: semillaDelDia es estable y distingue fecha y juego', () => {
+  const a = mi.semillaDelDia('2026-11-20', 'minas');
+  assert(Number.isInteger(a) && a === mi.semillaDelDia('2026-11-20', 'minas'));
+  assert(a !== mi.semillaDelDia('2026-11-21', 'minas') && a !== mi.semillaDelDia('2026-11-20', 'sudoku'));
+});
