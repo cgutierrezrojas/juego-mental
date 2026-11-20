@@ -140,7 +140,7 @@ export async function leerProgreso(uid) {
 export const guardarProgreso = (uid, datos, actualizado) => fs.setDoc(documento('usuarios', uid), { datos, actualizado });
 export const guardarRanking = (uid, fila) => fs.setDoc(documento('ranking', uid), fila);
 export const quitarRanking = (uid) => fs.deleteDoc(documento('ranking', uid));
-// Borra todo lo de esta persona en la nube: progreso, ranking, perfil, ligas, puzzles del día, solicitudes, propuestas, duelos
+// Borra todo lo de esta persona en la nube: progreso, ranking, perfil, ligas, puzzles y desafíos del día, torneos, solicitudes, propuestas, duelos
 // y, en la Realtime Database, amigos, bloqueos, leídos, mesas y conversaciones.
 // Quedan solo las denuncias (se revisan y borran a mano) y las salas en vivo a medias (se borran al terminar).
 export async function borrarTodo(uid) {
@@ -154,11 +154,13 @@ export async function borrarTodo(uid) {
   const invitacionesVivo = rt ? [...await misInvitaciones('de'), ...await misInvitaciones('para')] : [];
   const otros = solicitudes.map((s) => (s.de === uid ? s.para : s.de));
   if (rt) await borrarTiempoReal(uid, otros);
-  // 📅 La fila propia de cada día desde que existe el del día (20-11-2026), de los dos juegos; un día de más por la zona horaria.
+  // 📅 La fila propia de cada día desde que existe el del día (20-11-2026), de los dos puzzles y del desafío del Arcade; un día de más por la zona horaria.
   const diario = [];
   for (let f = Date.UTC(2026, 10, 20); f <= Date.now() + 86400000; f += 86400000) {
-    for (const juego of ['sudoku', 'minas']) diario.push(jugadorDiario(`${new Date(f).toISOString().slice(0, 10)}_${juego}`, uid));
+    for (const juego of ['sudoku', 'minas', 'arcade']) diario.push(jugadorDiario(`${new Date(f).toISOString().slice(0, 10)}_${juego}`, uid));
   }
+  // 🏆 La fila propia de cada torneo (desde la semana del 16-11-2026).
+  const torneo = [...semanas].filter((s) => s >= '2026-W47').map((s) => jugadorTorneo(s, uid));
   await Promise.all([
     fs.deleteDoc(documento('usuarios', uid)),
     quitarRanking(uid),
@@ -170,10 +172,11 @@ export async function borrarTodo(uid) {
     ...propuestas.map((p) => fs.deleteDoc(fs.doc(db, 'propuestas', p.id))),
     ...[...new Set([...duelos, ...invitado].map((d) => d.id))].map((id) => borrarDuelo(id)), // sin repetir: borrar dos veces falla
   ]);
-  // Al final y sin fallar: si la regla de /diario no está publicada o falla un lote, lo demás ya se borró.
-  for (let i = 0; i < diario.length; i += 500) {
+  // Al final y sin fallar: si la regla de /diario o /torneo no está publicada o falla un lote, lo demás ya se borró.
+  const extra = [...diario, ...torneo];
+  for (let i = 0; i < extra.length; i += 500) {
     const lote = fs.writeBatch(db);
-    for (const ref of diario.slice(i, i + 500)) lote.delete(ref);
+    for (const ref of extra.slice(i, i + 500)) lote.delete(ref);
     await lote.commit().catch(() => {});
   }
 }
@@ -233,11 +236,12 @@ export async function expulsar(uid, apodo, semana) {
   lote.delete(documento('ranking', uid));
   lote.delete(jugadorLiga(semana, uid));
   await lote.commit();
-  // 📅 Sus filas del puzzle del día de hoy y de ayer, en otro lote: el baneo no depende de él (las de antes se quedan)
+  // 📅 Sus filas del día (puzzles y desafío) de hoy y de ayer y la del torneo de esta semana, en otro lote: el baneo no depende de él
   const dias = fs.writeBatch(db);
   for (const fecha of [fechaLocal(), fechaLocal(new Date(Date.now() - 86400000))]) {
-    for (const juego of ['sudoku', 'minas']) dias.delete(jugadorDiario(`${fecha}_${juego}`, uid));
+    for (const juego of ['sudoku', 'minas', 'arcade']) dias.delete(jugadorDiario(`${fecha}_${juego}`, uid));
   }
+  dias.delete(jugadorTorneo(semana, uid));
   await dias.commit().catch(() => {});
 }
 export const preguntasAprobadas = async () => (await fs.getDocs(fs.collection(db, 'preguntas'))).docs.map((d) => d.data());
@@ -478,6 +482,24 @@ export async function topDiario(dia, menorEsMejor, cuantos = 20) {
 
 export async function puestoDiario(dia, valor, menorEsMejor) {
   const consulta = fs.query(fs.collection(db, 'diario', dia, 'jugadores'), fs.where('valor', menorEsMejor ? '<' : '>', valor));
+  return (await fs.getCountFromServer(consulta)).data().count + 1;
+}
+
+// --- 🏆 Torneo de la semana (`torneo/{semana}/jugadores/{uid}`: { apodo, valor, juego, actualizado, avatar, marco, nivel }) ---
+// El 🕹️ desafío de hoy usa las funciones del día con `dia = '{fecha}_arcade'` (fila con además `intentos` y `juego`).
+
+const jugadorTorneo = (semana, uid) => fs.doc(db, 'torneo', semana, 'jugadores', uid);
+// Solo se acepta si mejora (ver firestore.rules); si no, permission-denied.
+export const guardarTorneo = (semana, uid, fila) => fs.setDoc(jugadorTorneo(semana, uid), fila);
+export const leerTorneo = async (semana, uid) => (await fs.getDoc(jugadorTorneo(semana, uid))).data() ?? null;
+
+export async function topTorneo(semana, menorEsMejor, cuantos = 20) {
+  const consulta = fs.query(fs.collection(db, 'torneo', semana, 'jugadores'), fs.orderBy('valor', menorEsMejor ? 'asc' : 'desc'), fs.limit(cuantos));
+  return (await fs.getDocs(consulta)).docs.map((d) => ({ uid: d.id, ...d.data() }));
+}
+
+export async function puestoTorneo(semana, valor, menorEsMejor) {
+  const consulta = fs.query(fs.collection(db, 'torneo', semana, 'jugadores'), fs.where('valor', menorEsMejor ? '<' : '>', valor));
   return (await fs.getCountFromServer(consulta)).data().count + 1;
 }
 
