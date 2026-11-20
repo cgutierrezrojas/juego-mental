@@ -22,14 +22,14 @@ Las fichas (🪙, `app/premios.js`) dejan de servir solo para los juegos de apue
 
 - Generador con semilla (`games/semilla.js`): tablero completo al azar con backtracking y luego quita casillas
   en orden aleatorio mientras la solución siga siendo **única** (contador de soluciones que corta en 2).
-- Pistas objetivo: Fácil 40, Normal 32, Difícil 26 (si con esa semilla no se llega, se queda con las mínimas logradas ≥ objetivo−2; nunca menos de las que dejan solución única).
+- Pistas objetivo: Fácil 40, Normal 32, Difícil 26 (si con esa semilla no se llega, se queda con lo logrado, a lo más objetivo+4; nunca pierde la unicidad).
 - Jugar: tocar casilla → tocar número del teclado 1–9 (y ⌫ borrar). Modo ✏️ notas alterna escribir candidatos.
   Las casillas dadas no se tocan.
 - Choques: un número repetido en su fila, columna o caja se marca en rojo. No se revela si coincide con la solución.
 - Se resuelve cuando la cuadrícula está llena y coincide con la solución. Marca = tiempo (menos es mejor).
 - **💡 Pista: 20 fichas** — rellena una casilla vacía (o equivocada) con su valor correcto; desactivada si no alcanzan
   las fichas o en el del día. Usar pistas no impide el récord.
-- La partida en curso se guarda (`sudoku:partida`) y se puede retomar (salvo el del día, que cuenta el intento al empezar).
+- La partida en curso se guarda (`sudoku-partida`) y se puede retomar (salvo el del día, que cuenta el intento al empezar).
 - Funciones puras: `generar(semilla, nivel) → { dadas: string81, solucion: string81 }`, `soluciones(tablero, tope)`,
   `choques(tablero) → Set<índice>`, `resuelto(tablero, solucion)`.
 
@@ -50,7 +50,7 @@ Las fichas (🪙, `app/premios.js`) dejan de servir solo para los juegos de apue
     mostrando cuánto falta;
   - **Terminar** — se anota el puntaje.
   Al seguir, la mina queda marcada como bandera correcta (no suma el bonus) y se sigue jugando.
-- La partida en curso se guarda (`minas:partida`: semilla, nivel, abiertas, banderas, continuaciones) y se retoma.
+- La partida en curso se guarda (`minas-partida`: semilla, nivel, abiertas, banderas, continuaciones) y se retoma.
 - Funciones puras: `hayMina(semilla, nivel, x, y)`, `vecinas(…)`, `abrir(e, x, y) → e'` (con expansión y detección de mina),
   `bandera(e, x, y)`, `acorde(e, x, y)`, `puntaje(e)`, `costoSeguir(n) = 50 * 2**n`.
 
