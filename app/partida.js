@@ -129,7 +129,7 @@ export function terminar(puntos) {
     // Otros modos: récord, y la barra compara con tu media (últimas 10 de antes) y tu récord anterior.
     const clave = claveRecord(E.actual.id, E.eleccion.modo, E.eleccion.dificultad);
     const anterior = leerRecord(clave);
-    const nuevo = esRecord(puntos, anterior, E.actual.menorEsMejor);
+    const nuevo = !E.enCompetencia && esRecord(puntos, anterior, E.actual.menorEsMejor);
     if (nuevo) guardar(clave, puntos);
     const previas = leerHistorial(E.actual.id).filter((p) => esDe(p, E.eleccion.modo, E.eleccion.dificultad)).slice(0, -1)
       .filter((p) => !E.actual.menorEsMejor || p.puntos > 0).slice(-10);
@@ -169,6 +169,12 @@ export function terminar(puntos) {
     anotarEnDuelo(puntos);
     $('final-modo').textContent = `⚔️ Duelo${E.enDuelo.rival ? ` vs ${E.enDuelo.rival}` : ''} · juego ${E.enDuelo.numero}/${E.enDuelo.total}`;
     $('btn-repetir').textContent = '⚔️ Volver al duelo';
+    $('btn-mejorar').hidden = true;
+  }
+  if (E.enCompetencia) {
+    premios.push(E.enCompetencia.terminar(puntos)); // se muestra con los logros
+    $('final-modo').textContent = E.enCompetencia.titulo;
+    $('btn-repetir').textContent = '🏆 Volver a Competencia';
     $('btn-mejorar').hidden = true;
   }
   const logros = apuntarLogros();

@@ -229,16 +229,18 @@ export function pararArcade() {
   p = null;
 }
 
-// Antes de jugar: cómo se juega y ▶ Jugar. `duelo`: { semilla } si es un reto.
+// Antes de jugar: cómo se juega y ▶ Jugar. `duelo`: { semilla } si es un reto; { semilla, competencia } en la 🏆 Competencia, con
+// competencia = { etiqueta(), texto, empezar() (false: no se puede jugar), terminar(puntos) → aviso, volver() }.
 export function abrirJuegoArcade(id, duelo = null) {
   pararArcade();
+  const c = duelo?.competencia;
   const info = JUEGOS_ARCADE.find((j) => j.id === id);
   mostrar('arcade-juego');
   const record = Number(leer(`record:${id}`)) || 0;
-  $('arcade-marcador').replaceChildren(el('span', '', `${info.icono} ${info.nombre}`), el('span', '', duelo ? '⚔️ Reto' : `🏆 ${record}`));
-  $('arcade-tapete').replaceChildren(el('p', 'sin-datos', JUEGOS[id].ayuda), ...(duelo ? [el('p', 'sin-datos', `⚔️ Juegas la misma partida que ${E.enDuelo?.rival ?? 'tu rival'}: gana quien hace más puntos.`)] : []));
+  $('arcade-marcador').replaceChildren(el('span', '', `${info.icono} ${info.nombre}`), el('span', '', c ? c.etiqueta() : duelo ? '⚔️ Reto' : `🏆 ${record}`));
+  $('arcade-tapete').replaceChildren(el('p', 'sin-datos', JUEGOS[id].ayuda), ...(c ? [el('p', 'sin-datos', c.texto)] : duelo ? [el('p', 'sin-datos', `⚔️ Juegas la misma partida que ${E.enDuelo?.rival ?? 'tu rival'}: gana quien hace más puntos.`)] : []));
   $('arcade-aviso').textContent = '';
-  const volver = boton('Volver', '', () => (duelo ? volverAlDuelo() : abrirArcade()));
+  const volver = boton('Volver', '', () => (c ? c.volver() : duelo ? volverAlDuelo() : abrirArcade()));
   // Con modalidades (fuera de un reto, que es siempre la primera): un botón por modo, con su récord.
   const modos = !duelo && JUEGOS[id].modos;
   if (!modos) return $('arcade-botones').replaceChildren(boton('▶ Jugar', 'color', () => jugar(id, duelo)), volver);
@@ -273,6 +275,7 @@ function colores() {
 const TECLAS = { ArrowUp: 'arriba', ArrowDown: 'abajo', ArrowLeft: 'izquierda', ArrowRight: 'derecha', w: 'arriba', s: 'abajo', a: 'izquierda', d: 'derecha', ' ': 'arriba' };
 
 function jugar(id, duelo, modo = G_MODO(id)) {
+  if (duelo?.competencia && !duelo.competencia.empezar()) return duelo.competencia.volver();
   pararArcade();
   const G = JUEGOS[id];
   const semilla = duelo?.semilla ?? semillaNueva();
@@ -447,7 +450,7 @@ function marcador() {
   const m = p.G.modos?.[p.modo];
   const record = Number(leer(claveRecord(p.id, p.modo))) || 0;
   const mejor = m?.menorEsMejor || m?.unidad === 'líneas' ? record : Math.max(record, p.e.puntos); // en vivo solo suben los puntos
-  $('arcade-marcador').replaceChildren(el('span', '', `${p.info.icono} ${p.e.puntos} pts`), el('span', '', p.duelo ? '⚔️ Reto' : `🏆 ${!m ? mejor : mejor ? conUnidad(mejor, m) : '—'}`));
+  $('arcade-marcador').replaceChildren(el('span', '', `${p.info.icono} ${p.e.puntos} pts`), el('span', '', p.duelo ? (p.duelo.competencia?.etiqueta() ?? '⚔️ Reto') : `🏆 ${!m ? mejor : mejor ? conUnidad(mejor, m) : '—'}`));
 }
 
 function alternarPausa() {
@@ -460,6 +463,7 @@ function alternarPausa() {
 
 function terminar() {
   const { id, e, duelo, semilla, modo } = p;
+  const c = duelo?.competencia;
   const m = p.G.modos?.[modo];
   cancelAnimationFrame(p.cuadro);
   p.G.dibujar(p.ctx, e, p.colores);
@@ -474,11 +478,15 @@ function terminar() {
   guardar(`arcade:${id}`, JSON.stringify({ partidas: (x.partidas ?? 0) + 1 }));
   ligaAnotar('partida', 1, 'arcade');
   finDePartida();
-  if (duelo) anotarEnDuelo(puntos);
+  if (duelo && !c) anotarEnDuelo(puntos);
   sonar(nuevo ? 'record' : 'fallo');
   if (nuevo) confeti();
   pararArcade();
   const resumen = [valor ? conUnidad(valor, m) : modo === 'contrarreloj' ? `Sin marca: no llegaste a ${B.LINEAS_META} líneas` : conUnidad(0, m), record ? `récord ${conUnidad(record, m)}` : ''];
+  if (c) {
+    $('arcade-aviso').textContent = c.terminar(puntos);
+    return $('arcade-botones').replaceChildren(boton('🏆 Volver a Competencia', 'color', c.volver));
+  }
   $('arcade-aviso').textContent = duelo ? `⚔️ ${puntos} puntos anotados en el reto.` : nuevo ? `🏆 ¡Nuevo récord: ${conUnidad(valor, m)}!` : resumen.filter(Boolean).join(' · ');
   if (duelo) return $('arcade-botones').replaceChildren(boton('⚔️ Volver al duelo', 'color', volverAlDuelo));
   const amigos = el('div', 'opciones-duelo');

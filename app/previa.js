@@ -13,6 +13,7 @@ export function abrirPrevia(j) {
   E.actual = j;
   E.eleccion = leerEleccion(j);
   E.enDuelo = null;
+  E.enCompetencia = null;
   E.enVivo = null;
   E.nivelElegido = siguienteNivel(leerEstrellas(j.id));
   E.mundoVisto = mundoDe(E.nivelElegido);

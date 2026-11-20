@@ -81,7 +81,13 @@ $('tarjeta-jugar').onclick = () => {
 $('tarjeta-nivel').onclick = (e) => {
   if (e.target === e.currentTarget) e.currentTarget.close();
 };
-$('btn-repetir').onclick = () => (E.enDuelo ? volverAlDuelo() : E.enVivo ? verResultadoVivo() : jugar());
+// 🏆 Desde el final de un juego del torneo se vuelve a la Competencia.
+const volverACompetencia = () => {
+  const { volver } = E.enCompetencia;
+  E.enCompetencia = null;
+  volver();
+};
+$('btn-repetir').onclick = () => (E.enDuelo ? volverAlDuelo() : E.enVivo ? verResultadoVivo() : E.enCompetencia ? volverACompetencia() : jugar());
 // 📤 Compartir: el menú de compartir del sistema o, si no lo hay, copiar el texto.
 $('btn-compartir').onclick = async () => {
   if (navigator.share) {
@@ -108,7 +114,14 @@ $('btn-mejorar').onclick = () => {
   jugar();
 };
 // La previa y el final vuelven a la sección del juego (Mentales); el resto de pantallas, al inicio.
-for (const b of document.querySelectorAll('.btn-menu')) b.onclick = () => (!b.closest('#previa, #final') ? mostrar('inicio') : E.actual?.seccion === 'trivia' ? abrirTrivia() : mostrar('menu'));
+for (const b of document.querySelectorAll('.btn-menu')) {
+  b.onclick = () => {
+    E.enCompetencia = null;
+    if (!b.closest('#previa, #final')) mostrar('inicio');
+    else if (E.actual?.seccion === 'trivia') abrirTrivia();
+    else mostrar('menu');
+  };
+}
 $('nav-inicio').onclick = () => mostrar('inicio');
 $('btn-volver-inicio').onclick = () => mostrar('inicio');
 
@@ -152,6 +165,7 @@ $('btn-salir').onclick = async () => {
   if (E.parar) E.parar();
   E.parar = null;
   callar();
+  if (E.enCompetencia) return volverACompetencia(); // salir del torneo no anota nada (se puede jugar otra vez)
   mostrar('menu');
 };
 

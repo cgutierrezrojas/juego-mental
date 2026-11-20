@@ -20,6 +20,7 @@ export const E = {
   temporizadores: [], // sonidos y confeti pendientes del final; se cancelan al salir de él
   textoCompartir: '', // resultado de la última partida, para 📤 Compartir
   enDuelo: null, // { id, juego, rival, numero, total } mientras se juega un juego de un duelo
+  enCompetencia: null, // { titulo, terminar(puntos) → aviso, volver() } mientras se juega el 🏆 torneo con un juego de Mentales
   jugando: null, // { nivel, fecha, diario } del nivel en curso; se fija al empezar (puede acabar pasada la medianoche)
   dueloEnlace: new URLSearchParams(location.search).get('duelo'), // duelo recibido por enlace (?duelo=ID)
   avisoDuelosCuando: 0, // última consulta del aviso del menú (para no preguntar a la nube en cada vuelta)
