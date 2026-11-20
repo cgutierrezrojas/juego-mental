@@ -1,4 +1,4 @@
-// 🃏 Juegos de cartas por turnos (🎱 Ocho locos, 🧹 Escoba y los de app/carioca.js, burako.js, chinchon.js…): contra la máquina, a dos en un celular
+// 🃏 Juegos de cartas por turnos (🎱 Ocho locos, 🧹 Escoba y los de app/carioca.js, burako.js, chinchon.js, truco.js…): contra la máquina, a dos en un celular
 // (con una pantalla para pasarlo sin ver las cartas del otro) o contra un amigo (en `mesas/{id}` como la Mesa:
 // el estado entero va como texto en `estado.datos` y `estado.turno` dice a quién le toca: 'x' es el jugador 0, 'o' el 1).
 // Cada juego da sus reglas (games/ocho.js, games/escoba.js, games/carioca.js), su `pintar` (la mesa del jugador que mira) y su
@@ -28,6 +28,7 @@ import { GENERALA } from './dados-generala.js';
 import { CACHO } from './dados-cacho.js';
 import { BURAKO } from './burako.js';
 import { CHINCHON } from './chinchon.js';
+import { TRUCO } from './truco.js';
 import * as AMIGO from './dados-amigo.js';
 
 const FICHA = ['x', 'o'];
@@ -89,7 +90,7 @@ const ESCOBA = {
     return [el('p', 'turno-trivia', `🧹 Fin de la ronda ${r.ronda}`), tabla];
   },
 };
-export const JUEGOS_MESA_CARTAS = [OCHO, ESCOBA, CARIOCA, BURAKO, CHINCHON, GENERALA, CACHO];
+export const JUEGOS_MESA_CARTAS = [OCHO, ESCOBA, CARIOCA, BURAKO, CHINCHON, TRUCO, GENERALA, CACHO];
 const juegoDe = (id) => JUEGOS_MESA_CARTAS.find((j) => j.id === id);
 
 function pintarOcho(e, quien, miTurno, actuar) {

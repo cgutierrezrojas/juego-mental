@@ -18,7 +18,7 @@ import { anotarPerfil, calendarioHoy, cobrarDia } from './perfil.js';
 import { CALENDARIO } from '../games/perfil.js';
 import { abrirJuegoMesa, pintarPartidasCartas, claveRecord, JUEGOS_MESA_CARTAS } from './cartas-mesa.js';
 
-export const JUEGOS_CARTAS = 8; // para la cuenta del inicio
+export const JUEGOS_CARTAS = 9; // para la cuenta del inicio
 const NOMBRE_PALO = { '♠': 'picas', '♥': 'corazones', '♦': 'diamantes', '♣': 'tréboles' };
 const NOMBRE_VALOR = { 1: 'As', 11: 'J', 12: 'Q', 13: 'K' };
 const reloj = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -75,14 +75,14 @@ export function abrirCartas() {
     b.append(el('span', 'icono', icono), el('span', '', nombre));
     return b;
   };
-  $('cartas-juegos').replaceChildren(tarjeta('🂡', 'Solitario', abrirSolitario), tarjeta('🃏', '21', abrir21), tarjeta('🎴', 'Bacará', abrirBacara), tarjeta('🎱', 'Ocho locos', () => abrirJuegoMesa('ocho')), tarjeta('🧹', 'Escoba', () => abrirJuegoMesa('escoba')), tarjeta('♦️', 'Carioca', () => abrirJuegoMesa('carioca')), tarjeta('🀄', 'Burako', () => abrirJuegoMesa('burako')), tarjeta('♣️', 'Chinchón', () => abrirJuegoMesa('chinchon')));
+  $('cartas-juegos').replaceChildren(tarjeta('🂡', 'Solitario', abrirSolitario), tarjeta('🃏', '21', abrir21), tarjeta('🎴', 'Bacará', abrirBacara), tarjeta('🎱', 'Ocho locos', () => abrirJuegoMesa('ocho')), tarjeta('🧹', 'Escoba', () => abrirJuegoMesa('escoba')), tarjeta('♦️', 'Carioca', () => abrirJuegoMesa('carioca')), tarjeta('🀄', 'Burako', () => abrirJuegoMesa('burako')), tarjeta('♣️', 'Chinchón', () => abrirJuegoMesa('chinchon')), tarjeta('⚔️', 'Truco', () => abrirJuegoMesa('truco')));
   const filas = [];
   const r = leerJSON('cartas:solitario');
   for (const robo of ['1', '3']) {
     const x = r[robo];
     if (x?.partidas) filas.push(`🂡 De a ${robo}: ${x.ganadas} de ${x.partidas} ganadas${x.ganadas ? ` · mejor ${reloj(x.tiempo)} · ${x.movimientos} movimientos` : ''}`);
   }
-  for (const [id, nombre] of [['ocho', '🎱 Ocho locos'], ['escoba', '🧹 Escoba'], ['carioca', '♦️ Carioca'], ['burako', '🀄 Burako'], ['chinchon', '♣️ Chinchón']]) {
+  for (const [id, nombre] of [['ocho', '🎱 Ocho locos'], ['escoba', '🧹 Escoba'], ['carioca', '♦️ Carioca'], ['burako', '🀄 Burako'], ['chinchon', '♣️ Chinchón'], ['truco', '⚔️ Truco']]) {
     for (const nv of JUEGOS_MESA_CARTAS.find((j) => j.id === id).niveles ?? ['normal', 'dificil']) {
       const x = leerJSON(claveRecord(id, nv));
       if (x.partidas) filas.push(`${nombre}${{ facil: ' (fácil)', normal: '', dificil: ' (difícil)' }[nv]}: ${x.ganadas} de ${x.partidas} ganadas contra la máquina`);

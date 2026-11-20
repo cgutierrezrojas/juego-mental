@@ -1413,6 +1413,12 @@ button.seccion {
 .naipe.robada { outline: 2px dashed var(--amarillo); outline-offset: 1px; }
 .centro-chinchon .naipe { aspect-ratio: 208 / 319; }
 .fila-chinchon { display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; }
+/* Truco: las bazas en columnas (rival arriba, tú abajo) */
+.bazas-truco { display: flex; justify-content: center; gap: 10px; }
+.baza-truco { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 64px; font-size: 0.8rem; }
+.baza-truco .naipe, .baza-truco .hueco-carta { width: 48px; aspect-ratio: 208 / 319; }
+.gana-truco { color: var(--ok); font-weight: 800; }
+.mano-truco .naipe { width: 64px; }
 /* Carioca */
 .naipe.comodin { color: #7b2cbf; }
 .naipe.elegida { translate: 0 -8px; outline: 3px solid var(--amarillo); outline-offset: 1px; }
