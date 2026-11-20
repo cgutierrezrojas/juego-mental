@@ -8,6 +8,7 @@ import { leerJSON } from './datos.js';
 import { mostrar, $ } from './ui.js';
 import { boton } from './cartas.js';
 import { jugarSudoku, pararSudoku, partidaSudoku } from './sudoku.js';
+import { jugarMinas, pararMinas, partidaMinas } from './minas.js';
 
 export const JUEGOS_PUZZLES = 2; // para la cuenta del inicio (Sudoku y Buscaminas)
 
@@ -15,11 +16,10 @@ const NIVELES = [['facil', '🙂 Fácil'], ['normal', '😐 Normal'], ['dificil'
 export const NOMBRE_NIVEL = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil' };
 
 // `marca(valor)`: cómo se escribe el récord; `mejor(a, b)`: el mejor de dos. `jugar(nivel, { semilla, delDia })`.
-// `guardada()`: la partida a medias ({ nivel, segundos }) o null; `seguir()` la retoma.
-const pronto = () => ($('puzzles-aviso').textContent = '💣 El Buscaminas llega pronto.');
+// `guardada()`: la partida a medias (con `nivel`) o null; `resumen(g)` la describe; `seguir()` la retoma.
 export const JUEGOS = {
-  sudoku: { icono: '🔢', nombre: 'Sudoku', marca: (s) => reloj(s), menorEsMejor: true, jugar: jugarSudoku, guardada: partidaSudoku, seguir: () => jugarSudoku(null, { seguir: true }) },
-  minas: { icono: '💣', nombre: 'Buscaminas', marca: (n) => `${n} pts`, menorEsMejor: false, jugar: pronto, guardada: () => null },
+  sudoku: { icono: '🔢', nombre: 'Sudoku', marca: (s) => reloj(s), menorEsMejor: true, jugar: jugarSudoku, guardada: partidaSudoku, resumen: (g) => `⏱ ${reloj(g.segundos)}`, seguir: () => jugarSudoku(null, { seguir: true }) },
+  minas: { icono: '💣', nombre: 'Buscaminas', marca: (n) => `${n} pts`, menorEsMejor: false, jugar: jugarMinas, guardada: partidaMinas, resumen: (g) => `⭐ ${g.abiertas} casillas abiertas`, seguir: () => jugarMinas(null, { seguir: true }) },
 };
 
 export const reloj = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -49,7 +49,10 @@ function jugarDia(juego) {
   JUEGOS[juego].jugar('normal', { semilla: semillaDelDia(fechaLocal(), juego), delDia: true });
 }
 
-export const pararPuzzles = () => pararSudoku();
+export const pararPuzzles = () => {
+  pararSudoku();
+  pararMinas();
+};
 
 // El ← de la cabecera vuelve al inicio desde la lista y a la lista desde los modos.
 function cabecera(titulo, volver, etiqueta) {
@@ -112,7 +115,7 @@ function preguntaSeguir(juego, nivel) {
   fila.firstChild.style.setProperty('--c', 'var(--verde)');
   $('puzzles-contenido').replaceChildren(
     el('h3', '', '¿Seguir la partida?'),
-    el('p', 'sin-datos', `Tienes un ${J.nombre} ${NOMBRE_NIVEL[g.nivel]} a medias (⏱ ${reloj(g.segundos)}). Si empiezas otra, se pierde.`),
+    el('p', 'sin-datos', `Tienes un ${J.nombre} ${NOMBRE_NIVEL[g.nivel]} a medias (${J.resumen(g)}). Si empiezas otra, se pierde.`),
     fila,
   );
 }

@@ -813,7 +813,8 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 #dialogo-nube,
 #dialogo-cuenta,
 #dialogo-pregunta,
-#dialogo-vivo {
+#dialogo-vivo,
+#dialogo-minas {
   width: min(420px, 100% - 24px);
   margin: auto auto calc(12px + env(safe-area-inset-bottom));
   padding: 0;
@@ -829,13 +830,15 @@ section:not([hidden]) { animation: entrar 0.25s ease-out; }
 #dialogo-nube[open],
 #dialogo-cuenta[open],
 #dialogo-pregunta[open],
-#dialogo-vivo[open] { animation: subir 0.2s ease-out; }
+#dialogo-vivo[open],
+#dialogo-minas[open] { animation: subir 0.2s ease-out; }
 @keyframes subir { from { translate: 0 40px; opacity: 0; } }
 #tarjeta-nivel::backdrop,
 #dialogo-nube::backdrop,
 #dialogo-cuenta::backdrop,
 #dialogo-pregunta::backdrop,
-#dialogo-vivo::backdrop { background: rgba(0, 0, 0, 0.4); }
+#dialogo-vivo::backdrop,
+#dialogo-minas::backdrop { background: rgba(0, 0, 0, 0.4); }
 .tarjeta-dentro { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
 .tarjeta-dentro h3 { margin: 0 40px 0 0; }
 .tarjeta-dentro p { margin: 0; font-weight: 700; white-space: pre-line; }
@@ -1768,3 +1771,6 @@ button.seccion {
 .acciones-sudoku button[aria-pressed="true"] { background: var(--acento); color: #fff; }
 .acciones-sudoku button:disabled { opacity: 0.45; cursor: default; }
 .fichas-sudoku { margin: 0; font-size: 0.85rem; }
+.lienzo-minas { display: block; width: 100%; height: min(60dvh, 560px); min-height: 280px; border-radius: 12px; border: 2px solid color-mix(in srgb, var(--texto) 25%, transparent); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.lienzo-minas:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+#puzzle-botones .modo-bandera[aria-pressed="true"] { background: var(--acento); color: #fff; }
