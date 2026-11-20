@@ -5,6 +5,8 @@
 import { barajar } from './comun.js';
 
 export const META = 15;
+// Crédito de los dibujos de la baraja española (img/baraja-espanola.webp), para la pantalla de cada juego que la usa.
+export const CREDITO = 'Cartas: <a href="https://commons.wikimedia.org/wiki/File:Baraja_espa%C3%B1ola_completa.png" target="_blank" rel="noopener">Baraja española completa</a> de <a href="https://commons.wikimedia.org/wiki/User:Basquetteur" target="_blank" rel="noopener">Basquetteur</a>, <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.es" target="_blank" rel="noopener">CC BY-SA 3.0</a> (reducida).';
 export const PALOS_ES = ['oros', 'copas', 'espadas', 'bastos'];
 export const EMOJI = { oros: '🪙', copas: '🏆', espadas: '⚔️', bastos: '🪵' };
 export const VALOR_ES = ['1', '2', '3', '4', '5', '6', '7', 'S', 'C', 'R'];

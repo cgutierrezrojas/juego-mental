@@ -1,4 +1,4 @@
-// 🃏 Juegos de cartas por turnos (🎱 Ocho locos y 🧹 Escoba): contra la máquina, a dos en un celular
+// 🃏 Juegos de cartas por turnos (🎱 Ocho locos, 🧹 Escoba y los de app/carioca.js, burako.js, chinchon.js…): contra la máquina, a dos en un celular
 // (con una pantalla para pasarlo sin ver las cartas del otro) o contra un amigo (en `mesas/{id}` como la Mesa:
 // el estado entero va como texto en `estado.datos` y `estado.turno` dice a quién le toca: 'x' es el jugador 0, 'o' el 1).
 // Cada juego da sus reglas (games/ocho.js, games/escoba.js, games/carioca.js), su `pintar` (la mesa del jugador que mira) y su
@@ -27,6 +27,7 @@ import { CARIOCA } from './carioca.js';
 import { GENERALA } from './dados-generala.js';
 import { CACHO } from './dados-cacho.js';
 import { BURAKO } from './burako.js';
+import { CHINCHON } from './chinchon.js';
 import * as AMIGO from './dados-amigo.js';
 
 const FICHA = ['x', 'o'];
@@ -71,7 +72,7 @@ const OCHO = {
 
 const ESCOBA = {
   id: 'escoba', nombre: 'Escoba', icono: '🧹', maxMaquinas: 1, meta: () => ES.META,
-  credito: 'Cartas: <a href="https://commons.wikimedia.org/wiki/File:Baraja_espa%C3%B1ola_completa.png" target="_blank" rel="noopener">Baraja española completa</a> de <a href="https://commons.wikimedia.org/wiki/User:Basquetteur" target="_blank" rel="noopener">Basquetteur</a>, <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.es" target="_blank" rel="noopener">CC BY-SA 3.0</a> (reducida).',
+  credito: ES.CREDITO,
   reglas: 'Baraja española: la sota (10) vale 8, el caballo (11) vale 9 y el rey (12) vale 10. Tira una carta: si con cartas de la mesa suma 15, te las llevas; dejar la mesa vacía es escoba. Cada ronda da 1 punto por escoba y 1 a quien tenga más cartas, más oros, más sietes y el 7 de oros. Gana el primero en llegar a 15.',
   nueva: () => ES.nueva(),
   maquina: (e, nv) => ES.accion(e, ES.maquina(e, nv)),
@@ -88,7 +89,7 @@ const ESCOBA = {
     return [el('p', 'turno-trivia', `🧹 Fin de la ronda ${r.ronda}`), tabla];
   },
 };
-export const JUEGOS_MESA_CARTAS = [OCHO, ESCOBA, CARIOCA, BURAKO, GENERALA, CACHO];
+export const JUEGOS_MESA_CARTAS = [OCHO, ESCOBA, CARIOCA, BURAKO, CHINCHON, GENERALA, CACHO];
 const juegoDe = (id) => JUEGOS_MESA_CARTAS.find((j) => j.id === id);
 
 function pintarOcho(e, quien, miTurno, actuar) {
@@ -140,7 +141,7 @@ function pintarOcho(e, quien, miTurno, actuar) {
 
 // Carta española: un recorte de img/baraja-espanola.webp («Baraja española completa» de Basquetteur, CC BY-SA 3.0,
 // reducida). Filas: oros, copas, espadas, bastos; columnas: 1 a 12 (la sota es el 10, el caballo el 11 y el rey el 12).
-function naipeEs(c) {
+export function naipeEs(c) {
   const n = el('button', 'naipe espanola');
   n.style.setProperty('--col', c.v <= 7 ? c.v - 1 : c.v + 1);
   n.style.setProperty('--fila', ES.PALOS_ES.indexOf(c.p));

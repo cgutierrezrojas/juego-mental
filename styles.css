@@ -1407,6 +1407,12 @@ button.seccion {
   background: url(img/baraja-espanola.webp) calc(var(--col) * 100% / 11) calc(var(--fila) * 100% / 3) / 1200% 400% no-repeat;
 }
 .credito-cartas { margin: 0; font-size: 0.8rem; opacity: 0.75; }
+/* Chinchón: las 8 cartas en una fila a 360 px */
+.mano-chinchon { gap: 3px; }
+.mano-chinchon .naipe { width: 38px; }
+.naipe.robada { outline: 2px dashed var(--amarillo); outline-offset: 1px; }
+.centro-chinchon .naipe { aspect-ratio: 208 / 319; }
+.fila-chinchon { display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; }
 /* Carioca */
 .naipe.comodin { color: #7b2cbf; }
 .naipe.elegida { translate: 0 -8px; outline: 3px solid var(--amarillo); outline-offset: 1px; }
