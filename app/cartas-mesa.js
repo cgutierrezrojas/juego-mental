@@ -364,10 +364,13 @@ function pintar() {
   const justo = p.modo === 'amigo' && J.amigo; // dados con un amigo
   if (justo && !p.e) return pant([], [el('p', 'sin-datos', 'Esta partida tiene datos dañados.')], [boton('Volver', '', volver)]);
   const e = justo ? J.amigo.vista(p) : p.e;
-  const g = ganador();
-  // (con los dados, el final se muestra cuando terminó la revisión de trampas)
+  // Contra la máquina, `J.termino(e, yo)` puede cortar la partida si el jugador ya no sigue (el Chinchón: quedó fuera); da quién va ganando.
+  const g = ganador() ?? (p.modo === 'maquina' ? J.termino?.(e, p.yo) ?? null : null);
+  const pendiente = e.resumen && e.resumen.ronda > p.visto;
+  // El resumen de la última ronda va antes del final; con los dados con un amigo, el final (tras la revisión de trampas) va primero.
+  if (pendiente && !justo) return pintarResumen();
   if (g !== null && (g >= 0 || g === 'empate') && !(justo && p.trampaRival === undefined)) return pintarFin(g);
-  if (e.resumen && e.resumen.ronda > p.visto) return pintarResumen();
+  if (pendiente) return pintarResumen();
   // A dos en un celular: antes de cada turno, una pantalla para pasarlo sin ver las cartas del otro.
   if (p.modo === 'local' && p.vista !== e.turno) {
     return pant([], [el('p', 'turno-trivia', `📱 Turno de ${p.nombres[e.turno]}`), el('p', 'sin-datos', 'Pásale el celular. Toca cuando esté listo.')], [
@@ -444,7 +447,8 @@ function pintarFin(g) {
     }
   }
   const rendido = p.mesa?.rendido?.[E.usuario?.uid];
-  const titulo = trampa ? '⚠️ Tu rival hizo trampa: cuenta como victoria tuya' : empate ? '🤝 Empate' : p.modo === 'local' || g !== p.yo ? (rendido ? 'Te rendiste.' : `🏆 Gana ${conPuntos()[g]}`) : '🏆 ¡Ganaste!';
+  const fuera = p.modo === 'maquina' && p.e.ganador === null; // cortada por J.termino
+  const titulo = fuera ? '❌ Quedaste fuera' : trampa ? '⚠️ Tu rival hizo trampa: cuenta como victoria tuya' : empate ? '🤝 Empate' : p.modo === 'local' || g !== p.yo ? (rendido ? 'Te rendiste.' : `🏆 Gana ${conPuntos()[g]}`) : '🏆 ¡Ganaste!';
   pant([el('span', '', `${p.J.icono} ${p.J.nombre}`)], [el('p', 'turno-trivia', titulo), tablaPuntos(p.e)], [
     boton(p.modo === 'amigo' ? '🔄 Revancha' : '🔄 Otra partida', 'color', () => {
       if (p.modo !== 'amigo') return empezar(p.J, p.modo, p.e.n);

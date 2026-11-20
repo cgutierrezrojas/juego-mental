@@ -87,10 +87,12 @@ function pintar(e, quien, miTurno, actuar, { nombres, repintar }) {
       repintar();
     }));
   }
-  botones.push(boton(ordenada ? 'Sin ordenar' : 'Ordenar', '', () => {
-    ordenada = !ordenada;
-    repintar();
-  }));
+  if (mano.length) {
+    botones.push(boton(ordenada ? 'Sin ordenar' : 'Ordenar', '', () => {
+      ordenada = !ordenada;
+      repintar();
+    }));
+  }
 
   return {
     marcador: [el('span', '', `♣️ Ronda ${e.ronda} · mazo ${e.mazo.length}`), el('span', '', `${nombres[quien]}: ${e.puntos[quien]} / ${C.LIMITE}`)],
@@ -129,6 +131,8 @@ export const CHINCHON = {
   reglas: 'Baraja española de 40, 7 cartas cada uno. En tu turno robas (del mazo o la de arriba del descarte) y botas una (no la que tomaste del descarte). Juegos: 3 o 4 del mismo número, o 3 o más seguidas del mismo palo (el 7 sigue con la sota). Puedes cerrar al botar si te quedan 3 puntos sueltos o menos: sin sueltas te anotas −10, y las 7 en escala del mismo palo (chinchón) ganan la partida. Los demás pueden agregar sus sueltas a tus juegos y se anotan lo que les queda (sota 10, caballo 11, rey 12). Quien pasa de 100 queda fuera; gana el último en pie.',
   nueva: (n) => C.nueva(n),
   maquina: (e, nv) => C.accion(e, C.maquina(e, nv)),
+  // Si quedaste fuera, la partida termina para ti (no sigue entre máquinas): gana por ahora el de menos puntos que sigue.
+  termino: (e, yo) => (e.fuera[yo] ? [...e.fuera.keys()].filter((x) => !e.fuera[x]).reduce((a, x) => (e.puntos[x] < e.puntos[a] ? x : a)) : null),
   pintar,
   resumen,
 };

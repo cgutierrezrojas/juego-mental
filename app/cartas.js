@@ -16,7 +16,7 @@ import { $, mostrar, confeti, preguntar } from './ui.js';
 import { ligaAnotar } from './liga.js';
 import { anotarPerfil, calendarioHoy, cobrarDia } from './perfil.js';
 import { CALENDARIO } from '../games/perfil.js';
-import { abrirJuegoMesa, pintarPartidasCartas, claveRecord } from './cartas-mesa.js';
+import { abrirJuegoMesa, pintarPartidasCartas, claveRecord, JUEGOS_MESA_CARTAS } from './cartas-mesa.js';
 
 export const JUEGOS_CARTAS = 8; // para la cuenta del inicio
 const NOMBRE_PALO = { '♠': 'picas', '♥': 'corazones', '♦': 'diamantes', '♣': 'tréboles' };
@@ -83,9 +83,9 @@ export function abrirCartas() {
     if (x?.partidas) filas.push(`🂡 De a ${robo}: ${x.ganadas} de ${x.partidas} ganadas${x.ganadas ? ` · mejor ${reloj(x.tiempo)} · ${x.movimientos} movimientos` : ''}`);
   }
   for (const [id, nombre] of [['ocho', '🎱 Ocho locos'], ['escoba', '🧹 Escoba'], ['carioca', '♦️ Carioca'], ['burako', '🀄 Burako'], ['chinchon', '♣️ Chinchón']]) {
-    for (const [nv, t] of [['normal', ''], ['dificil', ' (difícil)']]) {
+    for (const nv of JUEGOS_MESA_CARTAS.find((j) => j.id === id).niveles ?? ['normal', 'dificil']) {
       const x = leerJSON(claveRecord(id, nv));
-      if (x.partidas) filas.push(`${nombre}${t}: ${x.ganadas} de ${x.partidas} ganadas contra la máquina`);
+      if (x.partidas) filas.push(`${nombre}${{ facil: ' (fácil)', normal: '', dificil: ' (difícil)' }[nv]}: ${x.ganadas} de ${x.partidas} ganadas contra la máquina`);
     }
   }
   const casino = { '🃏 21': leerJSON('cartas:21'), '🎴 Bacará': leerJSON('cartas:bacara') };
