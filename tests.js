@@ -2960,3 +2960,65 @@ probar('cacho amigo: dudar pasa a revelar (primero quien apostó) y la ronda se 
   LOG = { 1: { g: '00000', j: 'x' } };
   assert(e.ronda === 2 && e.k === 1 && e.turno === 1 && J.igual(cacho.tiradasAmigo(e, LOG), [{ k: 1, j: 0, d: [4, 4, 2, 2, 2] }, { k: 1, j: 1, d: [1, 5, 5, 5, 5] }]));
 });
+
+// ---- Sudoku (reglas puras) ----
+import * as su from './games/sudoku.js';
+
+const sudokuValido = (s) => {
+  const ok = (idx) => idx.map((i) => s[i]).sort().join('') === '123456789';
+  for (let k = 0; k < 9; k++) {
+    if (!ok([...Array(9)].map((_, j) => k * 9 + j))) return false;
+    if (!ok([...Array(9)].map((_, j) => j * 9 + k))) return false;
+    const f = Math.floor(k / 3) * 3, c = (k % 3) * 3;
+    if (!ok([...Array(9)].map((_, j) => (f + Math.floor(j / 3)) * 9 + c + (j % 3)))) return false;
+  }
+  return true;
+};
+const pistasDe = (t) => [...t].filter((c) => c !== '0').length;
+
+probar('sudoku: misma semilla da las mismas dadas', () => {
+  assert(su.generar(7, 'normal').dadas === su.generar(7, 'normal').dadas);
+  assert(su.generar(7, 'normal').dadas !== su.generar(8, 'normal').dadas);
+});
+for (const nivel of ['facil', 'normal', 'dificil']) {
+  probar(`sudoku ${nivel}: solución única, válida, coherente y con las pistas del nivel`, () => {
+    for (const semilla of [1, 2, 3]) {
+      const { dadas, solucion } = su.generar(semilla, nivel);
+      assert(su.soluciones(dadas) === 1, 'única');
+      assert(sudokuValido(solucion), 'solución válida');
+      assert([...dadas].every((c, i) => c === '0' || c === solucion[i]), 'coherente');
+      const p = pistasDe(dadas);
+      assert(p >= su.PISTAS[nivel] && p <= su.PISTAS[nivel] + 4, `pistas ${p}`);
+    }
+  });
+}
+probar('sudoku: soluciones corta en el tope y detecta tableros imposibles', () => {
+  assert(su.soluciones('0'.repeat(81)) === 2);
+  assert(su.soluciones('0'.repeat(81), 3) === 3);
+  assert(su.soluciones('11' + '0'.repeat(79)) === 0);
+});
+probar('sudoku: choques detecta fila, columna y caja, y no marca la solución', () => {
+  const v = (...pares) => { const a = Array(81).fill('0'); for (const [i, n] of pares) a[i] = n; return a.join(''); };
+  assert(su.choques(v([0, '5'], [8, '5'])).size === 2, 'fila');
+  assert(su.choques(v([0, '5'], [72, '5'])).size === 2, 'columna');
+  assert(su.choques(v([0, '5'], [20, '5'])).size === 2, 'caja');
+  assert(su.choques(v([0, '5'], [10, '6'], [80, '5'])).size === 0, 'sin choque');
+  assert(su.choques(su.generar(4, 'facil').solucion).size === 0 && su.choques('0'.repeat(81)).size === 0);
+});
+probar('sudoku: resuelto y pista', () => {
+  const { dadas, solucion } = su.generar(5, 'facil');
+  assert(su.resuelto(solucion, solucion) && !su.resuelto(dadas, solucion));
+  assert(!su.resuelto(solucion.slice(0, 80) + (solucion[80] === '1' ? '2' : '1'), solucion));
+  const i = [...dadas].findIndex((c) => c === '0');
+  assert(su.pista(dadas, solucion) === i);
+  assert(su.pista(solucion, solucion) === -1);
+  const mal = solucion.slice(0, 3) + (solucion[3] === '1' ? '2' : '1') + solucion.slice(4);
+  assert(su.pista(mal, solucion) === 3);
+});
+probar('sudoku: generar un Difícil tarda menos de 1,5 s en promedio', () => {
+  const t0 = Date.now();
+  for (let s = 100; s < 105; s++) su.generar(s, 'dificil');
+  const ms = (Date.now() - t0) / 5;
+  if (typeof console !== 'undefined') console.log(`   (difícil: ${ms.toFixed(0)} ms por tablero)`);
+  assert(ms < 1500, `${ms} ms`);
+});
