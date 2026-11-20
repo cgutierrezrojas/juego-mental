@@ -39,6 +39,7 @@ export function partidaMinas() {
 
 export function pararMinas() {
   if (!p) return;
+  p.lienzo?.onpointercancel?.(); // corta el reloj de la pulsación larga
   if (p.delDia && !p.fin) anotarFin(); // salir del del día también lo termina
   guardarPartida();
   cancelAnimationFrame(p.cuadro);
@@ -212,10 +213,10 @@ function controles() {
     ev.preventDefault();
     lienzo.setPointerCapture?.(ev.pointerId);
     p.cursor = null;
-    const c = casilla(ev);
+    const c = casilla(ev), yo = p;
     t = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, ox: p.ox, oy: p.oy, movido: false, largo: false };
     t.reloj = setTimeout(() => {
-      if (!p || !t || t.movido) return;
+      if (p !== yo || !t || t.movido) return; // la partida pudo pararse o cambiar
       t.largo = true;
       ponerBandera(...c);
     }, LARGO);
@@ -236,7 +237,7 @@ function controles() {
     if (!t.movido && !t.largo) tocar(...casilla(ev));
     t = null;
   };
-  lienzo.onpointercancel = () => {
+  lienzo.onpointercancel = lienzo.onlostpointercapture = () => {
     if (t) clearTimeout(t.reloj);
     t = null;
   };
@@ -267,7 +268,7 @@ function barra() {
   $('puzzle-marcador').lastChild.setAttribute('aria-label', `${abiertas} casillas abiertas`);
   if (p.fin) return;
   const salirB = boton('← Salir', '', salir);
-  salirB.setAttribute('aria-label', 'Terminar y volver a Buscaminas');
+  salirB.setAttribute('aria-label', 'Volver a Buscaminas'); // ← atrás del sistema usa este botón (ui.js atras())
   const banderaB = boton(p.modoBandera ? '🚩 Bandera: sí' : '🚩 Bandera: no', '', () => {
     p.modoBandera = !p.modoBandera;
     barra();
@@ -278,7 +279,7 @@ function barra() {
     centrar();
     pedir();
   });
-  centroB.setAttribute('aria-label', 'Volver al centro');
+  centroB.setAttribute('aria-label', 'Centrar en el origen');
   $('puzzle-botones').replaceChildren(salirB, banderaB, centroB);
 }
 
@@ -293,11 +294,15 @@ function avisoBoom() {
   pagar.disabled = fichas < costo;
   pagar.textContent = `🪙 Seguir por ${costo} fichas${fichas < costo ? ` (te faltan ${costo - fichas})` : ''}`;
   $('minas-texto').textContent = p.delDia ? `Pisaste una mina. Tu puntaje de hoy: ${M.puntaje(p.e)}.` : `Pisaste una mina. Tienes ${fichas} fichas.`;
+  const terminarB = $('minas-terminar');
+  anuncio.disabled = terminarB.disabled = false;
   anuncio.onclick = async () => {
-    anuncio.disabled = true;
+    const yo = p;
+    anuncio.disabled = pagar.disabled = terminarB.disabled = true; // mientras dura el anuncio
     const visto = await verAnuncioPremio();
-    anuncio.disabled = false;
-    if (!p || !visto) return;
+    anuncio.disabled = terminarB.disabled = false;
+    pagar.disabled = leerFichas().fichas < costo;
+    if (p !== yo || p.fin || !p.e.boom || !visto) return;
     p.anuncio = true;
     continuar();
   };
@@ -306,7 +311,7 @@ function avisoBoom() {
     sumarFichas(-costo);
     continuar();
   };
-  $('minas-terminar').onclick = () => {
+  terminarB.onclick = () => {
     d.close();
     terminarPartida();
   };
@@ -366,10 +371,11 @@ function terminarPartida() {
 }
 
 async function salir() {
+  const yo = p;
   const si = await preguntar({
     titulo: '¿Terminar la partida?',
-    texto: p.delDia ? 'Se apunta como tu intento de hoy.' : 'Se anota tu puntaje y la partida termina.',
+    texto: yo.delDia ? 'Se apunta como tu intento de hoy.' : 'Se anota tu puntaje y la partida termina.',
     boton: 'Terminar',
   });
-  if (si && p && !p.fin) terminarPartida();
+  if (si && p === yo && !p.fin) terminarPartida();
 }
