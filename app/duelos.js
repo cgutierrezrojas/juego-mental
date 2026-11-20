@@ -412,6 +412,7 @@ export function pintarDuelo(duelo, aviso) {
 
 // Juega un juego del duelo en modo Normal con la dificultad del duelo; al terminar se anota (ver terminar()).
 export function jugarDuelo(duelo, juego) {
+  E.enCompetencia = null;
   E.enDuelo = { id: duelo.id, juego, rival: nombreRival(duelo), numero: duelo.juegos.indexOf(juego) + 1, total: duelo.juegos.length };
   if (INFO_JUEGOS[juego].arcade) return abrirJuegoArcade(juego, { semilla: duelo.semilla });
   if (INFO_JUEGOS[juego].granEscalera) return abrirGranEscalera({ semilla: duelo.semilla });

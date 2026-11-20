@@ -122,7 +122,10 @@ for (const b of document.querySelectorAll('.btn-menu')) {
     else mostrar('menu');
   };
 }
-$('nav-inicio').onclick = () => mostrar('inicio');
+$('nav-inicio').onclick = () => {
+  E.enCompetencia = null;
+  mostrar('inicio');
+};
 $('btn-volver-inicio').onclick = () => mostrar('inicio');
 
 // ❓: vuelve a activar todos los avisos y muestra el de la pantalla actual.

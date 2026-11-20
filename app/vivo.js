@@ -258,6 +258,7 @@ export function jugarVivo(r) {
   E.actual = INFO_JUEGOS[sala.juegos[r]];
   E.eleccion = { modo: 'normal', dificultad: E.actual.sinDificultad ? 'normal' : sala.dificultad };
   E.enDuelo = null;
+  E.enCompetencia = null;
   E.enVivo = { id, rival: sala.nombres?.[rivalDe(sala, E.usuario.uid)] ?? 'Rival', ronda: r, total: sala.juegos.length };
   E.salaVivo.misPuntos = 0;
   E.nube.prepararAbandono(id, E.usuario.uid);
