@@ -1,5 +1,6 @@
 // Nube con Firebase: sesión con Google, progreso en `usuarios/{uid}` y ranking en `ranking/{uid}`.
 import { semanaDe } from './liga.js';
+import { fechaLocal } from './estadisticas.js';
 import { idChat } from './chat.js';
 import { codigoAmigo, enLinea } from './amigos.js';
 // El SDK se carga desde gstatic solo cuando hay configuración; si falla (sin conexión), la app sigue sin nube.
@@ -230,6 +231,10 @@ export async function expulsar(uid, apodo, semana) {
   lote.set(documento('baneados', uid), { apodo, cuando: fs.serverTimestamp() });
   lote.delete(documento('ranking', uid));
   lote.delete(jugadorLiga(semana, uid));
+  // 📅 Sus filas del puzzle del día de hoy y de ayer (las de antes se quedan: no se pueden recorrer todas)
+  for (const fecha of [fechaLocal(), fechaLocal(new Date(Date.now() - 86400000))]) {
+    for (const juego of ['sudoku', 'minas']) lote.delete(jugadorDiario(`${fecha}_${juego}`, uid));
+  }
   await lote.commit();
 }
 export const preguntasAprobadas = async () => (await fs.getDocs(fs.collection(db, 'preguntas'))).docs.map((d) => d.data());

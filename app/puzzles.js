@@ -42,14 +42,15 @@ export function anotarRecord(juego, nivel, valor) {
 export const yaJugadoHoy = (juego) => leerPuzzle(juego).dia?.fecha === fechaLocal();
 export function apuntarDia(juego, valor) {
   const r = leerPuzzle(juego);
-  r.dia = { fecha: fechaLocal(), valor };
+  // al terminar se conserva la fecha de cuando empezó (un del día que cruza la medianoche es el de ayer)
+  r.dia = { fecha: valor == null ? fechaLocal() : r.dia?.fecha ?? fechaLocal(), valor };
   guardar('puzzles:' + juego, JSON.stringify(r));
   if (valor != null) subirDia(juego);
 }
 
 // Ranking del día en Firestore: `diario/{fecha}_{juego}/jugadores/{uid}`.
 const idDia = (fecha, juego) => `${fecha}_${juego}`;
-const subiendo = {}; // juego → subida en curso (el ranking la espera para salir con tu fila)
+const subiendo = {}; // juego → subida en curso (el ranking la espera un rato para salir con tu fila)
 
 // Sube la fila del día si hay cuenta y apodo. Queda `dia.pendiente` hasta que responda: si falla, se reintenta al abrir Puzzles.
 function subirDia(juego) {
@@ -62,11 +63,13 @@ function subirDia(juego) {
   const fila = { apodo, valor, actualizado: Date.now(), ...filaPublica() };
   subiendo[juego] = E.nube.guardarDiario(idDia(fecha, juego), E.usuario.uid, fila)
     // permission-denied: la fila ya existe (se subió desde otro celular) o las reglas no la admiten; reintentar no sirve
-    .then(() => true, (e) => e?.code === 'permission-denied')
-    .then((hecha) => {
+    .then(() => 'subida', (e) => (e?.code === 'permission-denied' ? 'rechazada' : 'fallo'))
+    .then((fin) => {
+      delete subiendo[juego];
       const ahora = leerPuzzle(juego);
-      if (!hecha || ahora.dia?.fecha !== fecha) return;
+      if (fin === 'fallo' || ahora.dia?.fecha !== fecha) return;
       delete ahora.dia.pendiente;
+      if (fin === 'rechazada') ahora.dia.rechazada = true;
       guardar('puzzles:' + juego, JSON.stringify(ahora));
     });
 }
@@ -84,7 +87,8 @@ export function rankingDia(juego) {
   const tu = el('p', 'tu-dia', 'Cargando…');
   caja.append(lista, tu);
   (async () => {
-    await subiendo[juego];
+    // Sin conexión, Firestore deja la escritura en cola sin fallar: no se espera más de 5 s.
+    await Promise.race([subiendo[juego], new Promise((listo) => setTimeout(listo, 5000))]);
     const fecha = fechaLocal();
     const uid = E.usuario.uid;
     const filas = await E.nube.topDiario(idDia(fecha, juego), J.menorEsMejor, 20);
@@ -100,8 +104,12 @@ export function rankingDia(juego) {
     else if (mio == null) texto = d?.fecha === fecha ? 'Hoy no lo terminaste.' : 'Juégalo para aparecer.';
     else {
       texto = `Tu marca: ${J.marca(mio)}`;
-      if (!filas.some((f) => f.uid === uid)) texto += ` · puesto ${await E.nube.puestoDiario(idDia(fecha, juego), mio, J.menorEsMejor)}`;
-      if (leerPuzzle(juego).dia?.pendiente) texto += ' · ⚠️ No se pudo subir (¿sin conexión?): se reintenta al abrir Puzzles.';
+      const ahora = leerPuzzle(juego).dia;
+      if (!filas.some((f) => f.uid === uid)) {
+        if (ahora?.pendiente) texto += ' · ⚠️ Aún no se sube tu marca (¿sin conexión?); se reintenta sola';
+        else if (ahora?.rechazada) texto += ' · No entró al ranking';
+        else texto += ` · puesto ${await E.nube.puestoDiario(idDia(fecha, juego), mio, J.menorEsMejor)}`;
+      }
     }
     tu.textContent = texto;
   })().catch(() => (tu.textContent = 'No se pudo cargar el ranking del día (¿sin conexión?).'));
@@ -131,7 +139,7 @@ export function abrirPuzzles() {
   mostrar('puzzles');
   cabecera('🧩 Puzzles', () => mostrar('inicio'), 'Volver al inicio');
   $('puzzles-aviso').textContent = '';
-  for (const id of Object.keys(JUEGOS)) if (leerPuzzle(id).dia?.pendiente) subirDia(id);
+  for (const id of Object.keys(JUEGOS)) if (leerPuzzle(id).dia?.pendiente && !subiendo[id]) subirDia(id);
   const rejilla = el('div', 'rejilla');
   rejilla.append(...Object.entries(JUEGOS).map(([id, J]) => {
     const b = boton('', 'tarjeta color', () => abrirModos(id));
