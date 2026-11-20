@@ -1,11 +1,13 @@
 // 🧩 Puzzles: la página de la sección (Sudoku y Buscaminas infinito), los modos de cada juego con su récord y el 📅 Del día.
 // Récords en `puzzles:<juego>` = { facil: { mejor, veces }, normal, dificil, dia: { fecha, valor } } (se copian a la nube).
-import { el, guardar } from '../games/comun.js';
+import { el, guardar, leer } from '../games/comun.js';
 import { fechaLocal } from '../games/estadisticas.js';
 import { semillaDelDia } from '../games/minas.js';
 import { semillaNueva } from '../games/semilla.js';
 import { leerJSON } from './datos.js';
 import { mostrar, $ } from './ui.js';
+import { E } from './estado.js';
+import { filaPublica, nombreConAvatar } from './perfil.js';
 import { boton } from './cartas.js';
 import { jugarSudoku, pararSudoku, partidaSudoku } from './sudoku.js';
 import { jugarMinas, pararMinas, partidaMinas } from './minas.js';
@@ -36,13 +38,76 @@ export function anotarRecord(juego, nivel, valor) {
   return nuevo;
 }
 
-// 📅 Del día: el intento se gasta al empezar (`valor: null`); al terminar se apunta el resultado.
+// 📅 Del día: el intento se gasta al empezar (`valor: null`); al terminar se apunta el resultado y se sube al ranking.
 export const yaJugadoHoy = (juego) => leerPuzzle(juego).dia?.fecha === fechaLocal();
 export function apuntarDia(juego, valor) {
   const r = leerPuzzle(juego);
   r.dia = { fecha: fechaLocal(), valor };
   guardar('puzzles:' + juego, JSON.stringify(r));
+  if (valor != null) subirDia(juego);
 }
+
+// Ranking del día en Firestore: `diario/{fecha}_{juego}/jugadores/{uid}`.
+const idDia = (fecha, juego) => `${fecha}_${juego}`;
+const subiendo = {}; // juego → subida en curso (el ranking la espera para salir con tu fila)
+
+// Sube la fila del día si hay cuenta y apodo. Queda `dia.pendiente` hasta que responda: si falla, se reintenta al abrir Puzzles.
+function subirDia(juego) {
+  const apodo = leer('nube:apodo');
+  const r = leerPuzzle(juego);
+  const { fecha, valor } = r.dia ?? {};
+  if (!E.nube || !E.usuario || !apodo || valor == null) return;
+  r.dia.pendiente = true; // por si la app se cierra antes de que responda
+  guardar('puzzles:' + juego, JSON.stringify(r));
+  const fila = { apodo, valor, actualizado: Date.now(), ...filaPublica() };
+  subiendo[juego] = E.nube.guardarDiario(idDia(fecha, juego), E.usuario.uid, fila)
+    // permission-denied: la fila ya existe (se subió desde otro celular) o las reglas no la admiten; reintentar no sirve
+    .then(() => true, (e) => e?.code === 'permission-denied')
+    .then((hecha) => {
+      const ahora = leerPuzzle(juego);
+      if (!hecha || ahora.dia?.fecha !== fecha) return;
+      delete ahora.dia.pendiente;
+      guardar('puzzles:' + juego, JSON.stringify(ahora));
+    });
+}
+
+// Top 20 del día con tu puesto (como la liga), o el aviso de entrar con la cuenta. Se rellena al llegar de la nube.
+export function rankingDia(juego) {
+  const J = JUEGOS[juego];
+  const caja = el('div', 'caja-dia');
+  caja.append(el('h3', 'categoria', '📅 Ranking de hoy'));
+  if (!E.nube || !E.usuario) {
+    caja.append(el('p', 'sin-datos', 'Entra con tu cuenta para el ranking del día'));
+    return caja;
+  }
+  const lista = el('ol', 'ranking-dia');
+  const tu = el('p', 'tu-dia', 'Cargando…');
+  caja.append(lista, tu);
+  (async () => {
+    await subiendo[juego];
+    const fecha = fechaLocal();
+    const uid = E.usuario.uid;
+    const filas = await E.nube.topDiario(idDia(fecha, juego), J.menorEsMejor, 20);
+    lista.replaceChildren(...(filas.length ? filas.map((f) => {
+      const li = el('li', f.uid === uid ? 'propia' : '');
+      li.append(nombreConAvatar(f), el('span', 'valor', J.marca(f.valor)));
+      return li;
+    }) : [el('li', 'sin-datos', 'Aún nadie lo ha terminado hoy. ¡Sé el primero!')]));
+    const d = leerPuzzle(juego).dia;
+    const mio = d?.fecha === fecha ? d.valor : null;
+    let texto;
+    if (!leer('nube:apodo')) texto = 'No apareces: ponte un apodo en 📊 › ☁️ Nube.';
+    else if (mio == null) texto = d?.fecha === fecha ? 'Hoy no lo terminaste.' : 'Juégalo para aparecer.';
+    else {
+      texto = `Tu marca: ${J.marca(mio)}`;
+      if (!filas.some((f) => f.uid === uid)) texto += ` · puesto ${await E.nube.puestoDiario(idDia(fecha, juego), mio, J.menorEsMejor)}`;
+      if (leerPuzzle(juego).dia?.pendiente) texto += ' · ⚠️ No se pudo subir (¿sin conexión?): se reintenta al abrir Puzzles.';
+    }
+    tu.textContent = texto;
+  })().catch(() => (tu.textContent = 'No se pudo cargar el ranking del día (¿sin conexión?).'));
+  return caja;
+}
+
 function jugarDia(juego) {
   if (yaJugadoHoy(juego)) return;
   apuntarDia(juego, null);
@@ -66,6 +131,7 @@ export function abrirPuzzles() {
   mostrar('puzzles');
   cabecera('🧩 Puzzles', () => mostrar('inicio'), 'Volver al inicio');
   $('puzzles-aviso').textContent = '';
+  for (const id of Object.keys(JUEGOS)) if (leerPuzzle(id).dia?.pendiente) subirDia(id);
   const rejilla = el('div', 'rejilla');
   rejilla.append(...Object.entries(JUEGOS).map(([id, J]) => {
     const b = boton('', 'tarjeta color', () => abrirModos(id));
@@ -99,7 +165,7 @@ export function abrirModos(juego) {
   dia.disabled = hoy;
   const lista = el('div', 'modos-puzzle');
   lista.append(...botones, dia);
-  $('puzzles-contenido').replaceChildren(lista);
+  $('puzzles-contenido').replaceChildren(lista, rankingDia(juego));
 }
 
 function preguntaSeguir(juego, nivel) {

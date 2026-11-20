@@ -992,9 +992,9 @@ button.tarjeta { position: relative; }
 #nube a { color: inherit; font-size: 0.85rem; }
 #dialogo-nube,
 #dialogo-cuenta { border-top-color: var(--azul); }
-#ranking-lista { margin: 0; padding: 0; list-style: none; text-align: left; counter-reset: puesto; }
+:is(#ranking-lista, .ranking-dia) { margin: 0; padding: 0; list-style: none; text-align: left; counter-reset: puesto; }
 /* En fila: puesto, apodo, valor y botones; si no caben, los botones bajan a otra línea */
-#ranking-lista li {
+:is(#ranking-lista, .ranking-dia) li {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1007,13 +1007,13 @@ button.tarjeta { position: relative; }
   box-shadow: var(--relieve);
   font-weight: 700;
 }
-[data-tema="oscuro"] #ranking-lista li { border: 1px solid rgba(255, 255, 255, 0.2); }
-#ranking-lista li.propia { outline: 3px solid var(--acento); }
-#ranking-lista li::before { content: counter(puesto) "."; }
-#ranking-lista li > span:first-of-type { flex: 1 1 9em; min-width: 0; overflow-wrap: anywhere; }
-#ranking-lista .acciones { display: flex; gap: 6px; margin-left: auto; }
-#ranking-lista li.sin-datos { box-shadow: none; background: none; counter-increment: none; }
-#ranking-lista li.sin-datos::before { content: none; }
+[data-tema="oscuro"] :is(#ranking-lista, .ranking-dia) li { border: 1px solid rgba(255, 255, 255, 0.2); }
+:is(#ranking-lista, .ranking-dia) li.propia { outline: 3px solid var(--acento); }
+:is(#ranking-lista, .ranking-dia) li::before { content: counter(puesto) "."; }
+:is(#ranking-lista, .ranking-dia) li > span:first-of-type { flex: 1 1 9em; min-width: 0; overflow-wrap: anywhere; }
+:is(#ranking-lista, .ranking-dia) .acciones { display: flex; gap: 6px; margin-left: auto; }
+:is(#ranking-lista, .ranking-dia) li.sin-datos { box-shadow: none; background: none; counter-increment: none; }
+:is(#ranking-lista, .ranking-dia) li.sin-datos::before { content: none; }
 #ranking-tu { margin: 0; font-weight: 800; }
 #ranking-tu:empty { display: none; }
 #ranking-tipo { font: inherit; font-weight: 700; padding: 10px; border-radius: 12px; }
@@ -1747,6 +1747,8 @@ button.seccion {
 .modos-puzzle { display: flex; flex-direction: column; gap: 10px; }
 .modos-puzzle small { display: block; font-size: 0.8rem; font-weight: 600; opacity: 0.9; }
 .modos-puzzle button:disabled { opacity: 0.6; cursor: default; }
+.caja-dia { width: 100%; margin-top: 6px; }
+.caja-dia .tu-dia { margin: 6px 0 0; font-weight: 800; }
 #puzzle-juego:not([hidden]) { display: flex; flex-direction: column; gap: 10px; }
 #puzzle-tapete { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .sudoku { display: grid; grid-template-columns: repeat(9, 1fr); width: min(100%, 360px); border: 2px solid var(--texto); border-radius: 6px; overflow: hidden; background: var(--superficie); }

@@ -76,6 +76,22 @@ service cloud.firestore {
         && request.resource.data.actualizado is int;
     }
 
+    // 📅 Puzzle del día (`{fecha}_{sudoku|minas}`): lo ve cualquiera con sesión; cada uno crea su fila una sola vez (un intento).
+    // Sudoku: `valor` = segundos; Buscaminas: `valor` = puntaje.
+    match /diario/{dia}/jugadores/{uid} {
+      allow read: if request.auth != null;
+      allow delete: if request.auth != null && (request.auth.uid == uid || esAdmin());
+      allow create: if request.auth != null && request.auth.uid == uid && !baneado()
+        && dia.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}_(sudoku|minas)$')
+        && request.resource.data.keys().hasOnly(['apodo', 'valor', 'actualizado', 'avatar', 'marco', 'nivel'])
+        && adornoValido(request.resource.data)
+        && request.resource.data.apodo is string && request.resource.data.apodo.size() >= 2 && request.resource.data.apodo.size() <= 20
+        && request.resource.data.actualizado is int
+        && request.resource.data.valor is int
+        && ((dia.matches('.*_sudoku$') && request.resource.data.valor >= 60 && request.resource.data.valor <= 86400)
+          || (dia.matches('.*_minas$') && request.resource.data.valor >= 0 && request.resource.data.valor <= 100000));
+    }
+
     // ✍️ Preguntas de los jugadores: cada uno propone y ve las suyas; solo un admin las revisa.
     // Un admin es quien tiene un documento en `admins` (se crea a mano en la consola; desde la app no se puede escribir).
     match /propuestas/{id} {

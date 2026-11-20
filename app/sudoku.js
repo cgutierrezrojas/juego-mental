@@ -10,7 +10,7 @@ import { leerFichas, sumarFichas } from './premios.js';
 import { finDePartida } from './anuncios.js';
 import { ligaAnotar } from './liga.js';
 import { anotarPerfil } from './perfil.js';
-import { abrirModos, anotarRecord, apuntarDia, leerPuzzle, reloj, NOMBRE_NIVEL } from './puzzles.js';
+import { abrirModos, anotarRecord, apuntarDia, leerPuzzle, rankingDia, reloj, NOMBRE_NIVEL } from './puzzles.js';
 
 export const COSTO_PISTA = 20;
 const CLAVE = 'sudoku-partida';
@@ -178,8 +178,8 @@ function resolver() {
   confeti();
   p.elegida = -1;
   pintar();
-  $('puzzle-tapete').append(el('p', 'turno-trivia', `🎉 ¡Resuelto en ${reloj(s)}!`), el('p', 'sin-datos', linea));
   const { nivel, delDia } = p;
+  $('puzzle-tapete').append(el('p', 'turno-trivia', `🎉 ¡Resuelto en ${reloj(s)}!`), el('p', 'sin-datos', linea), ...(delDia ? [rankingDia('sudoku')] : []));
   $('puzzle-botones').replaceChildren(
     ...(delDia ? [] : [boton(`Otro ${NOMBRE_NIVEL[nivel]}`, 'color', () => jugarSudoku(nivel, { semilla: semillaNueva() }))]),
     boton('Volver', '', () => abrirModos('sudoku')),

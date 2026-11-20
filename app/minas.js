@@ -11,7 +11,7 @@ import { leerFichas, sumarFichas } from './premios.js';
 import { finDePartida, hayAnuncios, verAnuncioPremio } from './anuncios.js';
 import { ligaAnotar } from './liga.js';
 import { anotarPerfil } from './perfil.js';
-import { abrirModos, anotarRecord, apuntarDia, leerPuzzle, NOMBRE_NIVEL } from './puzzles.js';
+import { abrirModos, anotarRecord, apuntarDia, leerPuzzle, rankingDia, NOMBRE_NIVEL } from './puzzles.js';
 
 const CLAVE = 'minas-partida';
 const C = 36; // lado de la casilla en px CSS
@@ -361,6 +361,7 @@ function terminarPartida() {
   $('puzzle-tapete').append(
     el('p', 'turno-trivia', `💣 ${s} puntos`),
     el('p', 'sin-datos', `${Object.keys(p.e.abiertas).length} casillas abiertas + ${buenas} banderas bien puestas × 5. ${linea}`),
+    ...(p.delDia ? [rankingDia('minas')] : []),
   );
   const { delDia } = p, nivel = p.e.nivel;
   $('puzzle-botones').replaceChildren(
