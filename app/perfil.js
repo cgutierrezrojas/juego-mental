@@ -196,8 +196,11 @@ function pintarPerfil() {
     return fila;
   }));
 
+  const t = leerJSON('perfil:torneos');
+  const torneos = t.oro || t.plata || t.bronce ? [el('p', 'sin-datos', `🏆 Torneos: 🥇×${t.oro ?? 0} 🥈×${t.plata ?? 0} 🥉×${t.bronce ?? 0}`)] : [];
   $('perfil-contenido').replaceChildren(
     cabeza,
+    ...torneos,
     el('h3', 'categoria', '🎁 Calendario'), dias, cobrar,
     el('h3', 'categoria', '🎯 Misiones de la semana'), misiones, el('p', 'sin-datos', 'Se cobran solas al cumplirlas. Cambian cada lunes.'),
     el('h3', 'categoria', '🙂 Avatar'), avatares,

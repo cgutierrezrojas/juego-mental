@@ -10,6 +10,7 @@ import { filaPublica, nombreConAvatar } from './perfil.js';
 import { ponerEstado, actualizarPerfil, agregarAmigo } from './amigos.js';
 import { apodoOfensivo } from '../games/amigos.js';
 import { hayAnuncios, privacidadAnuncios } from './anuncios.js';
+import { comprobarTorneo } from './competencia.js';
 import { recibirInvitacion } from './vivo.js';
 import { pintarAvisoDuelos, abrirDuelo, abrirNuevoDuelo } from './duelos.js';
 import { datosDelJuego, sustituirProgreso, conUnidad } from './datos.js';
@@ -150,6 +151,7 @@ export async function alCambiarUsuario(u) {
     E.sincro = Promise.race([sincronizar(), hasta(8000)]);
     await E.sincro;
     comprobarPodio();
+    comprobarTorneo();
     actualizarPerfil();
   }
   pintarAvisoDuelos(true);

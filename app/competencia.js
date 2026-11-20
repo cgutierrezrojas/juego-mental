@@ -4,17 +4,17 @@
 // Nube: `diario/{fecha}_arcade/jugadores/{uid}` y `torneo/{semana}/jugadores/{uid}` (ver firestore.rules).
 import { el, guardar, leer } from '../games/comun.js';
 import { fechaLocal } from '../games/estadisticas.js';
-import { semanaDe, diasRestantes } from '../games/liga.js';
+import { semanaDe, semanaAnterior, diasRestantes } from '../games/liga.js';
 import { semillaDelDia } from '../games/minas.js';
 import { MONTOS } from '../games/premios.js';
-import { juegoDelDia, juegoDeLaSemana, anotarIntento, anotarMarca, quedan, mejora, INTENTOS, MENOS_ES_MEJOR, PREMIOS_TORNEO, POR_PARTICIPAR } from '../games/competencia.js';
+import { juegoDelDia, juegoDeLaSemana, haceDias, premioTorneo, sumarMedalla, anotarIntento, anotarMarca, quedan, mejora, INTENTOS, MENOS_ES_MEJOR, PREMIOS_TORNEO, POR_PARTICIPAR } from '../games/competencia.js';
 import { leerJSON } from './datos.js';
 import { E } from './estado.js';
-import { $, mostrar } from './ui.js';
+import { $, mostrar, confeti } from './ui.js';
 import { INFO_JUEGOS } from './juegos.js';
-import { filaPublica, nombreConAvatar } from './perfil.js';
+import { filaPublica, nombreConAvatar, avisarPerfil } from './perfil.js';
 import { soyAdmin, botonesModeracion } from './liga.js';
-import { darPremio } from './premios.js';
+import { darPremio, sumarFichas } from './premios.js';
 import { boton } from './cartas.js';
 import { abrirJuegoArcade } from './arcade.js';
 import { jugar } from './partida.js';
@@ -227,4 +227,34 @@ export function abrirCompetencia() {
   for (const tipo of ['dia', 'torneo']) if (leerJSON('compe:' + tipo).pendiente && !subiendo[tipo]) subir(tipo);
   pintar();
   if (E.nube && E.usuario) traerDia().then((cambio) => cambio && !$('competencia').hidden && pintar());
+}
+
+const PUESTO = { 1: '🥇 ¡Quedaste 1.º', 2: '🥈 ¡Quedaste 2.º', 3: '🥉 ¡Quedaste 3.º' };
+
+// Al empezar una semana nueva se mira el torneo de la anterior (una sola vez por semana, `compe:premio`):
+// podio 500/300/150 fichas y medalla en `perfil:torneos`; si participaste y no quedaste, 25. No cuenta para el tope diario.
+export async function comprobarTorneo() {
+  const hoy = fechaLocal();
+  const anterior = semanaAnterior(hoy);
+  if (!E.nube || !E.usuario || leer('compe:premio') === anterior) return;
+  const juego = juegoDeLaSemana(haceDias(hoy, 7));
+  try {
+    const uid = E.usuario.uid;
+    const [podio, mia] = await Promise.all([E.nube.topTorneo(anterior, MENOS_ES_MEJOR.includes(juego), 3), E.nube.leerTorneo(anterior, uid)]);
+    guardar('compe:premio', anterior);
+    const puesto = podio.findIndex((f) => f.uid === uid) + 1;
+    const fichas = premioTorneo(puesto, Boolean(mia));
+    if (!fichas) return;
+    sumarFichas(fichas);
+    const nombre = INFO_JUEGOS[juego].nombre;
+    if (puesto) {
+      guardar('perfil:torneos', JSON.stringify(sumarMedalla(leerJSON('perfil:torneos'), puesto)));
+      confeti();
+      avisarPerfil([`${PUESTO[puesto]} en el torneo de ${nombre}! +${fichas} fichas`]);
+    } else {
+      avisarPerfil([`🏆 Gracias por jugar el torneo de ${nombre}: +${fichas} fichas`]);
+    }
+  } catch {
+    // sin conexión: se mira la próxima vez
+  }
 }

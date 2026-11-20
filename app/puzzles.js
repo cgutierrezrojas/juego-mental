@@ -9,6 +9,7 @@ import { mostrar, $ } from './ui.js';
 import { E } from './estado.js';
 import { filaPublica, nombreConAvatar } from './perfil.js';
 import { boton } from './cartas.js';
+import { soyAdmin, botonesModeracion } from './liga.js';
 import { jugarSudoku, pararSudoku, partidaSudoku } from './sudoku.js';
 import { jugarMinas, pararMinas, partidaMinas } from './minas.js';
 
@@ -100,11 +101,18 @@ export function rankingDia(juego) {
     const fecha = fechaLocal();
     const uid = E.usuario.uid;
     const filas = await E.nube.topDiario(idDia(fecha, juego), J.menorEsMejor, 20);
-    lista.replaceChildren(...(filas.length ? filas.map((f) => {
+    const esAdmin = await soyAdmin();
+    const pintarLista = (lasFilas) => lista.replaceChildren(...(lasFilas.length ? lasFilas.map((f) => {
       const li = el('li', f.uid === uid ? 'propia' : '');
       li.append(nombreConAvatar(f), el('span', 'valor', J.marca(f.valor)));
+      if (f.uid !== uid) {
+        const acciones = el('span', 'acciones');
+        acciones.append(...botonesModeracion(f, esAdmin, async () => pintarLista(await E.nube.topDiario(idDia(fecha, juego), J.menorEsMejor, 20))));
+        li.append(acciones);
+      }
       return li;
     }) : [el('li', 'sin-datos', 'Aún nadie lo ha terminado hoy. ¡Sé el primero!')]));
+    pintarLista(filas);
     const d = leerPuzzle(juego).dia;
     const mio = d?.fecha === fecha ? d.valor : null;
     let texto;
