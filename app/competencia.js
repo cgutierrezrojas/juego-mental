@@ -32,9 +32,10 @@ function subir(tipo) {
   const clave = 'compe:' + tipo;
   const r = leerJSON(clave);
   const apodo = leer('nube:apodo');
-  if (!E.nube || !E.usuario || !apodo || r.mejor == null) return;
-  r.pendiente = true;
+  if (r.mejor == null) return;
+  r.pendiente = true; // aunque aún no haya cuenta o apodo: abrirCompetencia la sube cuando los haya
   guardar(clave, JSON.stringify(r));
+  if (!E.nube || !E.usuario || !apodo) return;
   const base = { apodo, actualizado: Date.now(), ...filaPublica() };
   const promesa = tipo === 'dia'
     ? E.nube.guardarDiario(`${r.fecha}_arcade`, E.usuario.uid, { ...base, valor: Math.min(r.mejor, 10000000), intentos: r.intentos, juego: juegoDelDia(r.fecha) })
@@ -125,6 +126,8 @@ function jugarTorneo() {
   }
   E.actual = INFO_JUEGOS[juego];
   E.eleccion = { modo: 'normal', dificultad: 'normal' };
+  E.enDuelo = null; // por si quedó un duelo a medias: esta partida es del torneo
+  E.enVivo = null;
   E.enCompetencia = { titulo: '🏆 Torneo de la semana', terminar, volver: abrirCompetencia };
   jugar();
 }
@@ -233,7 +236,12 @@ const PUESTO = { 1: '🥇 ¡Quedaste 1.º', 2: '🥈 ¡Quedaste 2.º', 3: '🥉 
 
 // Al empezar una semana nueva se mira el torneo de la anterior (una sola vez por semana, `compe:premio`):
 // podio 500/300/150 fichas y medalla en `perfil:torneos`; si participaste y no quedaste, 25. No cuenta para el tope diario.
-export async function comprobarTorneo() {
+let revisando = null; // revisión en curso: dos llamadas seguidas no pagan el premio dos veces
+export function comprobarTorneo() {
+  return (revisando ??= revisar().finally(() => (revisando = null)));
+}
+
+async function revisar() {
   const hoy = fechaLocal();
   const anterior = semanaAnterior(hoy);
   if (!E.nube || !E.usuario || leer('compe:premio') === anterior) return;

@@ -85,7 +85,7 @@ function atras() {
   if (visible.id === 'juego') return $('btn-salir').click();
   const botones = [...visible.querySelectorAll('button')].filter((b) => b.getClientRects().length > 0);
   const volver = botones.find((b) => /^Volver/.test(b.getAttribute('aria-label') ?? ''))
-    ?? botones.find((b) => /^(⚔️ )?(Volver|Salir|Cancelar)/.test(b.textContent.trim()))
+    ?? botones.find((b) => /^(⚔️ |🏆 )?(Volver|Salir|Cancelar)/.test(b.textContent.trim()))
     ?? botones.find((b) => b.classList.contains('btn-menu'));
   // Sin botón de volver (p. ej. en plena partida): a su sección.
   const seccion = { granescalera: 'trivia', 'trivia-partida': 'trivia', 'palabras-juego': 'palabras', 'arcade-juego': 'arcade', 'cartas-juego': visible.dataset.seccion || 'cartas', 'mesa-tablero': 'mesa', 'mesa-modo': 'mesa', 'puzzle-juego': 'puzzles' }[visible.id];

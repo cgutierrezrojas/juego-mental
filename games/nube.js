@@ -173,11 +173,13 @@ export async function borrarTodo(uid) {
     ...[...new Set([...duelos, ...invitado].map((d) => d.id))].map((id) => borrarDuelo(id)), // sin repetir: borrar dos veces falla
   ]);
   // Al final y sin fallar: si la regla de /diario o /torneo no está publicada o falla un lote, lo demás ya se borró.
-  const extra = [...diario, ...torneo];
-  for (let i = 0; i < extra.length; i += 500) {
-    const lote = fs.writeBatch(db);
-    for (const ref of extra.slice(i, i + 500)) lote.delete(ref);
-    await lote.commit().catch(() => {});
+  // El torneo va en su propio lote: si su regla falla, las filas del día igual se borran.
+  for (const refs of [diario, torneo]) {
+    for (let i = 0; i < refs.length; i += 500) {
+      const lote = fs.writeBatch(db);
+      for (const ref of refs.slice(i, i + 500)) lote.delete(ref);
+      await lote.commit().catch(() => {});
+    }
   }
 }
 
@@ -236,13 +238,14 @@ export async function expulsar(uid, apodo, semana) {
   lote.delete(documento('ranking', uid));
   lote.delete(jugadorLiga(semana, uid));
   await lote.commit();
-  // 📅 Sus filas del día (puzzles y desafío) de hoy y de ayer y la del torneo de esta semana, en otro lote: el baneo no depende de él
+  // 📅 Sus filas del día (puzzles y desafío) de hoy y de ayer, en otro lote: el baneo no depende de él
   const dias = fs.writeBatch(db);
   for (const fecha of [fechaLocal(), fechaLocal(new Date(Date.now() - 86400000))]) {
     for (const juego of ['sudoku', 'minas', 'arcade']) dias.delete(jugadorDiario(`${fecha}_${juego}`, uid));
   }
-  dias.delete(jugadorTorneo(semana, uid));
   await dias.commit().catch(() => {});
+  // 🏆 La del torneo de esta semana, aparte: si su regla no está publicada, no arrastra a las del día
+  await fs.deleteDoc(jugadorTorneo(semana, uid)).catch(() => {});
 }
 export const preguntasAprobadas = async () => (await fs.getDocs(fs.collection(db, 'preguntas'))).docs.map((d) => d.data());
 
