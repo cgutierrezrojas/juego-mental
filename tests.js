@@ -3149,3 +3149,54 @@ probar('minas: semillaDelDia es estable y distingue fecha y juego', () => {
   assert(Number.isInteger(a) && a === mi.semillaDelDia('2026-11-20', 'minas'));
   assert(a !== mi.semillaDelDia('2026-11-21', 'minas') && a !== mi.semillaDelDia('2026-11-20', 'sudoku'));
 });
+
+// --- competencia.js (🏆 Competencia) ---
+import * as co from './games/competencia.js';
+import * as prem6 from './games/premios.js';
+import * as copia6 from './games/copia.js';
+import * as juegos6 from './app/juegos.js';
+
+probar('competencia: juego del día rota cada día desde el 20-11-2026', () => {
+  assert(co.juegoDelDia('2026-11-20') === 'serpiente' && co.juegoDelDia('2026-11-21') === 'saltar' && co.juegoDelDia('2026-11-24') === 'bloques');
+  assert(co.juegoDelDia('2026-11-25') === 'serpiente' && co.juegoDelDia('2026-11-19') === 'bloques', 'da la vuelta (también hacia atrás)');
+  assert(co.JUEGO_DIA.every((id) => juegos6.JUEGOS_ARCADE.some((j) => j.id === id)), 'todos del Arcade');
+});
+probar('competencia: juego de la semana cambia cada lunes desde el 16-11-2026', () => {
+  assert(co.juegoDeLaSemana('2026-11-16') === 'serpiente' && co.juegoDeLaSemana('2026-11-22') === 'serpiente', 'lunes a domingo');
+  assert(co.juegoDeLaSemana('2026-11-23') === 'calculo' && co.juegoDeLaSemana('2026-11-15') === 'topos', 'semana siguiente y anterior');
+  assert(co.juegoDeLaSemana(co.haceDias('2026-11-16', -7 * 13)) === 'serpiente', 'vuelta de 13 semanas');
+  assert(co.juegoDeLaSemana('2027-01-04') === 'series', 'cruza el año (7 semanas después)');
+  assert(co.haceDias('2026-11-23', 7) === '2026-11-16' && co.haceDias('2026-01-01', 1) === '2025-12-31');
+  assert(co.JUEGOS_TORNEO.every((id) => juegos6.INFO_JUEGOS[id]), 'todos existen');
+});
+probar('competencia: 3 intentos por día y la mejor marca', () => {
+  let r = null;
+  for (let i = 1; i <= 3; i++) {
+    r = co.anotarIntento(r, '2026-11-20');
+    assert(r.intentos === i && r.fecha === '2026-11-20', `intento ${i}`);
+    r = co.anotarMarca(r, [50, 20, 80][i - 1]);
+  }
+  assert(r.mejor === 80 && co.quedan(r, '2026-11-20') === 0);
+  assert(co.anotarIntento(r, '2026-11-20') === null, 'no hay cuarto');
+  const otro = co.anotarIntento(r, '2026-11-21');
+  assert(otro.intentos === 1 && otro.mejor === null && co.quedan(r, '2026-11-21') === 3, 'día nuevo');
+  assert(co.anotarMarca(co.anotarIntento(null, '2026-11-20'), 0).mejor === 0, '0 es marca en el desafío');
+});
+probar('competencia: mejora con «menos es mejor» en puzzle y rayo', () => {
+  assert(co.mejora('autos', 10, null) && co.mejora('autos', 11, 10) && !co.mejora('autos', 10, 10) && !co.mejora('autos', 9, 10));
+  assert(co.mejora('puzzle', 30, null) && co.mejora('puzzle', 29, 30) && !co.mejora('puzzle', 31, 30));
+  assert(co.mejora('rayo', 250, 300) && !co.mejora('rayo', 300, 250));
+  assert(!co.mejora('autos', 0, null) && !co.mejora('puzzle', 0, 30), '0 no es marca en el torneo');
+});
+probar('competencia: premios del torneo y medallero', () => {
+  assert([1, 2, 3].map((p) => co.premioTorneo(p, true)).join() === '500,300,150');
+  assert(co.premioTorneo(0, true) === 25 && co.premioTorneo(0, false) === 0 && co.premioTorneo(4, true) === 25);
+  let t = co.sumarMedalla(undefined, 1);
+  t = co.sumarMedalla(co.sumarMedalla(co.sumarMedalla(t, 3), 1), 0);
+  assert(t.oro === 2 && t.plata === 0 && t.bronce === 1);
+});
+probar('competencia: 30 fichas por el desafío, una vez al día; claves compe: en la copia', () => {
+  const a = prem6.premio(null, 'arcadedia', '2026-11-20');
+  assert(a.fichas === 30 && prem6.premio(a.registro, 'arcadedia', '2026-11-20').fichas === 0);
+  assert(copia6.esClaveDelJuego('compe:dia') && copia6.esClaveDelJuego('compe:torneo') && copia6.esClaveDelJuego('compe:premio'));
+});

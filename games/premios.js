@@ -1,7 +1,7 @@
 // Fichas del casino (21 y Bacará) por desafíos del día. Todo puro.
 // Registro (`cartas:premios`): { fecha, ganadas, hechos: ['tudia', 'palabra'], diarios }.
 
-export const MONTOS = { tudia: 100, palabra: 50, diario: 10 };
+export const MONTOS = { tudia: 100, palabra: 50, diario: 10, arcadedia: 30 };
 export const TOPE = 250; // fichas al día por desafíos
 export const TOPE_DIARIOS = 10; // niveles diarios que dan fichas cada día
 export const ANUNCIO = 100; // por ver un anuncio con premio (solo en la app)

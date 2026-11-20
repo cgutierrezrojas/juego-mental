@@ -4,7 +4,7 @@ import { fechaLocal } from '../games/estadisticas.js';
 import { premio, hoyDe, ANUNCIO } from '../games/premios.js';
 import { leerJSON } from './datos.js';
 
-const NOMBRE = { tudia: 'completar Tu día', palabra: 'la palabra del día', diario: 'un nivel diario' };
+const NOMBRE = { tudia: 'completar Tu día', palabra: 'la palabra del día', diario: 'un nivel diario', arcadedia: 'el desafío de hoy' };
 
 // `cartas:fichas` = { fichas, max }; la primera vez salen de las que había en el 21.
 export function leerFichas() {
