@@ -6,7 +6,7 @@ Fecha: 2026-11-19. Rama: `cartas4`.
 
 Dos juegos nuevos en la sección 🃏 Cartas, junto a Ocho locos, Escoba, Carioca y Burako:
 
-- **🀄 Chinchón clásico**: contra la máquina (tú + 1 a 3 máquinas), local (2 a 4 en un celular) y con un amigo (1 contra 1).
+- **♣️ Chinchón clásico**: contra la máquina (tú + 1 a 3 máquinas), local (2 a 4 en un celular) y con un amigo (1 contra 1).
 - **⚔️ Truco chileno**: 1 contra 1, contra la máquina, local (2 en un celular) y con un amigo.
 
 Los dos usan el motor `app/cartas-mesa.js` tal como está (ganchos `J.*`, pantalla tapada al pasar el celular, récords por nivel,
@@ -35,7 +35,7 @@ se cifran las cartas). Sin dados justos ni sellos.
 `games/rummy.js` no se reutiliza: trabaja con 13 valores que dan la vuelta (K-A-2) y la baraja española de 40 tiene 10 valores sin
 vuelta. El Chinchón tiene su propia búsqueda de juegos, pequeña.
 
-## 🀄 Chinchón clásico
+## ♣️ Chinchón clásico
 
 **Baraja:** 40 cartas (1–7, sota, caballo, rey de oros, copas, espadas y bastos). Orden para escalas: 1, 2, …, 7, sota, caballo, rey
 (el 7 va seguido de la sota). Sin comodines. El rey no da la vuelta al 1.
