@@ -7,6 +7,7 @@ import { $ } from './ui.js';
 import { leerHistorial, conUnidad, historiales, leerRecord, leerLogros, resumenLogros } from './datos.js';
 import { E } from './estado.js';
 import { idsPorCategoria, JUEGOS, HABILIDADES } from './juegos.js';
+import { filasRecords } from './puzzles.js';
 
 // Gráfica de las últimas 20 partidas (la línea sube al mejorar) y media de las últimas 10.
 export function pintarHistorial(j) {
@@ -64,6 +65,8 @@ export function pintarEstadisticas() {
     const r = leerRecord(claveRecord(j.id));
     records.append(el('li', '', `${j.icono} ${j.nombre}: ${r ? conUnidad(j, r) : '—'}`));
   }
+  const puzzles = el('ul', 'records');
+  puzzles.append(...filasRecords().map((t) => el('li', '', t)));
 
   const conseguidos = leerLogros();
   const datos = resumenLogros();
@@ -93,5 +96,6 @@ export function pintarEstadisticas() {
     barras,
     el('h3', 'categoria', 'Récords'),
     records,
+    ...(puzzles.children.length ? [el('h3', 'categoria', 'Récords de 🧩 Puzzles'), puzzles] : []),
   );
 }

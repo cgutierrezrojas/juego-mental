@@ -5,6 +5,7 @@ import { pararCartas } from './cartas.js';
 import { pararArcade } from './arcade.js';
 import { pararPalabras } from './palabras.js';
 import { pararGranEscalera } from './granescalera.js';
+import { pararPuzzles } from './puzzles.js';
 import { pintarInicio, ABRIR } from './inicio.js';
 import { pintarLigaMenu } from './liga.js';
 import { leer, el, guardar } from '../games/comun.js';
@@ -87,7 +88,7 @@ function atras() {
     ?? botones.find((b) => /^(⚔️ )?(Volver|Salir|Cancelar)/.test(b.textContent.trim()))
     ?? botones.find((b) => b.classList.contains('btn-menu'));
   // Sin botón de volver (p. ej. en plena partida): a su sección.
-  const seccion = { granescalera: 'trivia', 'trivia-partida': 'trivia', 'palabras-juego': 'palabras', 'arcade-juego': 'arcade', 'cartas-juego': visible.dataset.seccion || 'cartas', 'mesa-tablero': 'mesa', 'mesa-modo': 'mesa' }[visible.id];
+  const seccion = { granescalera: 'trivia', 'trivia-partida': 'trivia', 'palabras-juego': 'palabras', 'arcade-juego': 'arcade', 'cartas-juego': visible.dataset.seccion || 'cartas', 'mesa-tablero': 'mesa', 'mesa-modo': 'mesa', 'puzzle-juego': 'puzzles' }[visible.id];
   if (volver) volver.click();
   else if (seccion) ABRIR[seccion]();
   else $('nav-inicio').click();
@@ -108,7 +109,7 @@ addEventListener('popstate', () => {
   }
 });
 
-const PARTIDAS = ['juego', 'mesa-tablero', 'trivia-partida', 'arcade-juego', 'palabras-juego', 'cartas-juego', 'granescalera'];
+const PARTIDAS = ['juego', 'mesa-tablero', 'trivia-partida', 'arcade-juego', 'palabras-juego', 'cartas-juego', 'granescalera', 'puzzle-juego'];
 
 export function mostrar(id) {
   if (id !== 'inicio' && !enHistorial) {
@@ -131,7 +132,7 @@ export function mostrar(id) {
   // Barra inferior: oculta en la partida; resalta el botón de la pantalla actual.
   $('navegacion').hidden = enPartida;
   const pestana = {
-    inicio: 'nav-inicio', menu: 'nav-inicio', mesa: 'nav-inicio', 'mesa-modo': 'nav-inicio', 'mesa-tablero': 'nav-inicio', trivia: 'nav-inicio', 'trivia-partida': 'nav-inicio', cartas: 'nav-inicio', dados: 'nav-inicio', 'cartas-juego': 'nav-inicio', arcade: 'nav-inicio', 'arcade-juego': 'nav-inicio', palabras: 'nav-inicio', 'palabras-juego': 'nav-inicio', granescalera: 'nav-inicio', duelos: 'btn-duelos', 'nuevo-duelo': 'btn-duelos', duelo: 'btn-duelos', vivo: 'btn-duelos',
+    inicio: 'nav-inicio', menu: 'nav-inicio', mesa: 'nav-inicio', 'mesa-modo': 'nav-inicio', 'mesa-tablero': 'nav-inicio', trivia: 'nav-inicio', 'trivia-partida': 'nav-inicio', cartas: 'nav-inicio', dados: 'nav-inicio', 'cartas-juego': 'nav-inicio', arcade: 'nav-inicio', 'arcade-juego': 'nav-inicio', palabras: 'nav-inicio', 'palabras-juego': 'nav-inicio', granescalera: 'nav-inicio', puzzles: 'nav-inicio', 'puzzle-juego': 'nav-inicio', duelos: 'btn-duelos', 'nuevo-duelo': 'btn-duelos', duelo: 'btn-duelos', vivo: 'btn-duelos',
     amigos: 'btn-amigos', chat: 'btn-amigos', ranking: 'btn-ranking', estadisticas: 'btn-estadisticas', perfil: 'btn-estadisticas',
   }[id];
   for (const b of document.querySelectorAll('#navegacion button')) b.setAttribute('aria-current', b.id === pestana ? 'page' : 'false');
@@ -155,6 +156,7 @@ export function mostrar(id) {
   if (id !== 'arcade-juego') pararArcade();
   if (id !== 'palabras-juego') pararPalabras();
   if (id !== 'granescalera') pararGranEscalera();
+  if (id !== 'puzzle-juego') pararPuzzles();
   if (id !== 'juego') revisarInvitacionPendiente();
   if (id !== 'juego' && E.estadoApp !== 'conectado') ponerEstado('conectado');
   if (id === 'inicio' || id === 'menu' || id === 'final') subir().catch(() => {}); // sin conexión: se reintenta la próxima vez

@@ -15,7 +15,7 @@ export const misPuntosLiga = () => puntosLiga(registro(semanaActual()));
 const MEDALLA = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
 // Suma a la semana en curso: 'partida', 'estrellas' (n), 'entreno', 'victoria' o 'empate'.
-// `seccion` ('mentales', 'mesa', 'trivia', 'cartas', 'arcade', 'palabras', 'dados' o 'duelos') cuenta para las misiones del perfil.
+// `seccion` ('mentales', 'mesa', 'trivia', 'cartas', 'arcade', 'palabras', 'dados', 'puzzles' o 'duelos') cuenta para las misiones del perfil.
 export function ligaAnotar(tipo, n = 1, seccion = null) {
   if (tipo === 'estrellas' && n <= 0) return;
   const semana = semanaActual();

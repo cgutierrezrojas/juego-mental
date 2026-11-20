@@ -9,7 +9,7 @@ export const LIMITES = {
   palabra: [1, 10000], ahorcado: [1, 100000], sopa: [1, 100000], escalera: [1, 10000], granescalera: [1, 1000000],
 };
 
-const DE_PROGRESO = ['record:', 'historial:', 'estrellas:', 'niveles:', 'diarios:', 'perfil:xp'];
+const DE_PROGRESO = ['record:', 'historial:', 'estrellas:', 'niveles:', 'diarios:', 'perfil:xp', 'puzzles:'];
 
 // ¿Hay progreso de verdad (no solo ajustes o avisos vistos)? `datos`: { clave: valor }.
 export const tieneProgreso = (datos) => Object.keys(datos).some((clave) => DE_PROGRESO.some((p) => clave.startsWith(p)));

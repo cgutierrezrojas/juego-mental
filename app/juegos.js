@@ -31,6 +31,7 @@ export const SECCIONES = [
   { id: 'dados', nombre: 'Dados', icono: '🎲', color: 'amarillo', descripcion: 'cacho y generala' },
   { id: 'trivia', nombre: 'Trivia', icono: '❓', color: 'azul', descripcion: 'preguntas de todo tipo' },
   { id: 'cartas', nombre: 'Cartas', icono: '🃏', color: 'rojo', descripcion: 'solitario, 21, ocho loco…' },
+  { id: 'puzzles', nombre: 'Puzzles', icono: '🧩', color: 'verde', descripcion: 'sudoku, buscaminas…' },
   { id: 'arcade', nombre: 'Arcade', icono: '🏎️', color: 'acento', descripcion: 'autos, serpiente y más' },
   { id: 'palabras', nombre: 'Palabras', icono: '🔤', color: 'amarillo', descripcion: 'palabra del día, ahorcado, charadas…' },
 ];
