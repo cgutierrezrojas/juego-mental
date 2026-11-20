@@ -60,10 +60,18 @@ function subirDia(juego) {
   if (!E.nube || !E.usuario || !apodo || valor == null) return;
   r.dia.pendiente = true; // por si la app se cierra antes de que responda
   guardar('puzzles:' + juego, JSON.stringify(r));
-  const fila = { apodo, valor, actualizado: Date.now(), ...filaPublica() };
+  const fila = { apodo, valor: juego === 'minas' ? Math.min(valor, 100000) : valor, actualizado: Date.now(), ...filaPublica() };
   subiendo[juego] = E.nube.guardarDiario(idDia(fecha, juego), E.usuario.uid, fila)
-    // permission-denied: la fila ya existe (se subió desde otro celular) o las reglas no la admiten; reintentar no sirve
-    .then(() => 'subida', (e) => (e?.code === 'permission-denied' ? 'rechazada' : 'fallo'))
+    // permission-denied: la fila ya existe (desde otro celular, o llegó la escritura en cola de un intento anterior) o las
+    // reglas no la admiten; reintentar no sirve. Si la fila propia está, cuenta como subida.
+    .then(() => 'subida', async (e) => {
+      if (e?.code !== 'permission-denied') return 'fallo';
+      try {
+        return (await E.nube.leerDiario(idDia(fecha, juego), E.usuario.uid)) ? 'subida' : 'rechazada';
+      } catch {
+        return 'fallo';
+      }
+    })
     .then((fin) => {
       delete subiendo[juego];
       const ahora = leerPuzzle(juego);
@@ -138,7 +146,6 @@ function cabecera(titulo, volver, etiqueta) {
 export function abrirPuzzles() {
   mostrar('puzzles');
   cabecera('🧩 Puzzles', () => mostrar('inicio'), 'Volver al inicio');
-  $('puzzles-aviso').textContent = '';
   for (const id of Object.keys(JUEGOS)) if (leerPuzzle(id).dia?.pendiente && !subiendo[id]) subirDia(id);
   const rejilla = el('div', 'rejilla');
   rejilla.append(...Object.entries(JUEGOS).map(([id, J]) => {
@@ -155,7 +162,6 @@ export function abrirModos(juego) {
   const J = JUEGOS[juego];
   mostrar('puzzles');
   cabecera(`${J.icono} ${J.nombre}`, abrirPuzzles, 'Volver a Puzzles');
-  $('puzzles-aviso').textContent = '';
   const r = leerPuzzle(juego);
   const modo = (texto, detalle, alPulsar) => {
     const b = boton('', 'color', alPulsar);
@@ -166,7 +172,7 @@ export function abrirModos(juego) {
   const elegir = (nivel) => () => (J.guardada() ? preguntaSeguir(juego, nivel) : J.jugar(nivel, { semilla: semillaNueva() }));
   const botones = NIVELES.map(([nivel, texto]) => {
     const x = r[nivel];
-    return modo(texto, x?.mejor != null ? `🏆 ${J.marca(x.mejor)} · ${x.veces} vez${x.veces > 1 ? 'es' : ''}` : 'Sin récord', elegir(nivel));
+    return modo(texto, x?.mejor != null ? `🏆 ${J.marca(x.mejor)} · ${x.veces} ${x.veces > 1 ? 'veces' : 'vez'}` : 'Sin récord', elegir(nivel));
   });
   const hoy = yaJugadoHoy(juego);
   const dia = modo('📅 Del día', hoy ? `Ya jugado hoy: ${r.dia.valor == null ? 'sin terminar' : J.marca(r.dia.valor)}` : 'El mismo para todos · un intento', () => jugarDia(juego));
@@ -179,7 +185,6 @@ export function abrirModos(juego) {
 function preguntaSeguir(juego, nivel) {
   const J = JUEGOS[juego];
   const g = J.guardada();
-  $('puzzles-aviso').textContent = '';
   const fila = el('div', 'modos-puzzle');
   fila.append(
     boton('▶ Seguir', 'grande color', J.seguir),

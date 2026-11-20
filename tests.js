@@ -3100,6 +3100,37 @@ probar('minas: acorde abre las vecinas o da boom', () => {
   const ex = mi.acorde(mi.seguir({ ...e, boom: `${mx},${my}` }), x, y);
   assert(ex.boom === null && ex.explotadas[`${mx},${my}`], 'la explotada cuenta como bandera');
 });
+probar('minas: acorde para en la primera mina (no abre las vecinas que siguen)', () => {
+  // un número v con v banderas equivocadas: todas las seguras antes de la primera mina marcadas y una segura después sin marcar
+  let caso = null;
+  for (let sem = 1; sem < 60 && !caso; sem++) {
+    const e = mi.nueva(sem, 'dificil');
+    for (const k of Object.keys(e.abiertas)) {
+      const v = e.abiertas[k], [x, y] = k.split(',').map(Number);
+      if (!v) continue;
+      const cerr = vecinasDe(x, y).filter(([a, b]) => e.abiertas[`${a},${b}`] === undefined);
+      const m = cerr.findIndex(([a, b]) => mi.hayMina(sem, 'dificil', a, b));
+      if (m < 0) continue;
+      const seguras = cerr.filter(([a, b]) => !mi.hayMina(sem, 'dificil', a, b));
+      const antes = seguras.filter((c) => cerr.indexOf(c) < m), despues = seguras.filter((c) => cerr.indexOf(c) > m);
+      if (antes.length > v || antes.length + despues.length < v + 1) continue;
+      const marcar = [...antes, ...despues.slice(0, v - antes.length)];
+      caso = { e: marcar.reduce((r, [a, b]) => mi.bandera(r, a, b), e), x, y, mina: cerr[m] };
+      break;
+    }
+  }
+  assert(caso, 'hay un caso');
+  const r = mi.acorde(caso.e, caso.x, caso.y);
+  assert(r.boom === caso.mina.join(','), 'boom en la primera mina');
+  assert(Object.keys(r.abiertas).length === Object.keys(caso.e.abiertas).length, 'no abre nada tras el boom');
+});
+probar('minas: nueva guarda en inicio las casillas de la apertura gratis', () => {
+  for (const [s, n] of [[1, 'facil'], [2, 'normal'], [3, 'dificil']]) {
+    const e = mi.nueva(s, n);
+    assert(e.inicio === Object.keys(e.abiertas).length && e.inicio >= 1, `${n}: inicio`);
+    assert(mi.abrir(e, 40, 40).inicio === e.inicio && mi.terminar(e).inicio === e.inicio, `${n}: se conserva`);
+  }
+});
 probar('minas: seguir, costoSeguir, terminar y puntaje', () => {
   assert(mi.costoSeguir(0) === 50 && mi.costoSeguir(1) === 100 && mi.costoSeguir(2) === 200);
   const e = mi.nueva(5, 'dificil');

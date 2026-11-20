@@ -53,6 +53,7 @@ export function pararMinas() {
 export function jugarMinas(nivel, { semilla, delDia = false, seguir = false } = {}) {
   pararMinas();
   const g = seguir ? partidaMinas() : null;
+  if (seguir && !g) return abrirModos('minas');
   p = { e: g?.e ?? M.nueva(semilla, nivel), delDia, anuncio: g?.anuncio ?? false, modoBandera: false, cursor: null, fin: false, cuadro: 0 };
   guardarPartida();
   mostrar('puzzle-juego');
@@ -341,7 +342,7 @@ function anotarFin() {
     linea = anotarRecord('minas', p.e.nivel, s) ? '🏆 ¡Nuevo récord!' : `🏆 Récord: ${leerPuzzle('minas')[p.e.nivel].mejor} pts`;
   }
   ligaAnotar('partida', 1, 'puzzles');
-  if (s >= 100) anotarPerfil('victoria', 1, 'puzzles');
+  if (s - (p.e.inicio ?? 0) >= 100) anotarPerfil('victoria', 1, 'puzzles');
   finDePartida();
   return linea;
 }
@@ -360,7 +361,7 @@ function terminarPartida() {
   const buenas = (s - Object.keys(p.e.abiertas).length) / 5;
   $('puzzle-tapete').append(
     el('p', 'turno-trivia', `💣 ${s} puntos`),
-    el('p', 'sin-datos', `${Object.keys(p.e.abiertas).length} casillas abiertas + ${buenas} banderas bien puestas × 5. ${linea}`),
+    el('p', 'sin-datos', `${Object.keys(p.e.abiertas).length} casillas abiertas + ${buenas} ${buenas === 1 ? 'bandera bien puesta' : 'banderas bien puestas'} × 5. ${linea}`),
     ...(p.delDia ? [rankingDia('minas')] : []),
   );
   const { delDia } = p, nivel = p.e.nivel;

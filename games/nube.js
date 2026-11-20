@@ -159,11 +159,6 @@ export async function borrarTodo(uid) {
   for (let f = Date.UTC(2026, 10, 20); f <= Date.now() + 86400000; f += 86400000) {
     for (const juego of ['sudoku', 'minas']) diario.push(jugadorDiario(`${new Date(f).toISOString().slice(0, 10)}_${juego}`, uid));
   }
-  for (let i = 0; i < diario.length; i += 500) {
-    const lote = fs.writeBatch(db);
-    for (const ref of diario.slice(i, i + 500)) lote.delete(ref);
-    await lote.commit();
-  }
   await Promise.all([
     fs.deleteDoc(documento('usuarios', uid)),
     quitarRanking(uid),
@@ -175,6 +170,12 @@ export async function borrarTodo(uid) {
     ...propuestas.map((p) => fs.deleteDoc(fs.doc(db, 'propuestas', p.id))),
     ...[...new Set([...duelos, ...invitado].map((d) => d.id))].map((id) => borrarDuelo(id)), // sin repetir: borrar dos veces falla
   ]);
+  // Al final y sin fallar: si la regla de /diario no está publicada o falla un lote, lo demás ya se borró.
+  for (let i = 0; i < diario.length; i += 500) {
+    const lote = fs.writeBatch(db);
+    for (const ref of diario.slice(i, i + 500)) lote.delete(ref);
+    await lote.commit().catch(() => {});
+  }
 }
 
 async function borrarTiempoReal(uid, otros) {
@@ -231,11 +232,13 @@ export async function expulsar(uid, apodo, semana) {
   lote.set(documento('baneados', uid), { apodo, cuando: fs.serverTimestamp() });
   lote.delete(documento('ranking', uid));
   lote.delete(jugadorLiga(semana, uid));
-  // 📅 Sus filas del puzzle del día de hoy y de ayer (las de antes se quedan: no se pueden recorrer todas)
-  for (const fecha of [fechaLocal(), fechaLocal(new Date(Date.now() - 86400000))]) {
-    for (const juego of ['sudoku', 'minas']) lote.delete(jugadorDiario(`${fecha}_${juego}`, uid));
-  }
   await lote.commit();
+  // 📅 Sus filas del puzzle del día de hoy y de ayer, en otro lote: el baneo no depende de él (las de antes se quedan)
+  const dias = fs.writeBatch(db);
+  for (const fecha of [fechaLocal(), fechaLocal(new Date(Date.now() - 86400000))]) {
+    for (const juego of ['sudoku', 'minas']) dias.delete(jugadorDiario(`${fecha}_${juego}`, uid));
+  }
+  await dias.commit().catch(() => {});
 }
 export const preguntasAprobadas = async () => (await fs.getDocs(fs.collection(db, 'preguntas'))).docs.map((d) => d.data());
 
@@ -466,6 +469,7 @@ export async function puestoLiga(semana, puntos) {
 const jugadorDiario = (dia, uid) => fs.doc(db, 'diario', dia, 'jugadores', uid);
 // Solo se crea: si la fila ya existe (otro celular), las reglas lo rechazan como permission-denied.
 export const guardarDiario = (dia, uid, fila) => fs.setDoc(jugadorDiario(dia, uid), fila);
+export const leerDiario = async (dia, uid) => (await fs.getDoc(jugadorDiario(dia, uid))).data() ?? null;
 
 export async function topDiario(dia, menorEsMejor, cuantos = 20) {
   const consulta = fs.query(fs.collection(db, 'diario', dia, 'jugadores'), fs.orderBy('valor', menorEsMejor ? 'asc' : 'desc'), fs.limit(cuantos));

@@ -43,17 +43,22 @@ export function pararSudoku() {
 export function jugarSudoku(nivel, { semilla, delDia = false, seguir = false } = {}) {
   pararSudoku();
   const g = seguir ? partidaSudoku() : null;
+  if (seguir && !g) return abrirModos('sudoku');
   if (g) ({ nivel, semilla } = g);
   const { dadas, solucion } = S.generar(semilla, nivel);
   p = { nivel, semilla, delDia, dadas, solucion, t: g?.t ?? dadas, notas: g?.notas ?? Array(81).fill(''), segundos: g?.segundos ?? 0, elegida: -1, conNotas: false, fin: false };
   if (!delDia) guardarPartida();
   mostrar('puzzle-juego');
-  // El reloj corre solo con esta pantalla delante: se para al salir (pararSudoku) y con la app en segundo plano.
+  // Normal: el reloj corre solo con esta pantalla delante (se para al salir y con la app en segundo plano) y se guarda
+  // en cada tic. Del día: tiempo real desde que empezó, para que dejar la app en segundo plano no pare la marca.
+  p.inicio = Date.now();
   p.tic = setInterval(() => {
-    if (!p || p.fin || enPausa()) return;
-    p.segundos++;
+    if (!p || p.fin) return;
+    if (p.delDia) p.segundos = Math.floor((Date.now() - p.inicio) / 1000);
+    else if (enPausa()) return;
+    else p.segundos++;
     $('sudoku-tiempo').textContent = `⏱ ${reloj(p.segundos)}`;
-    if (p.segundos % 10 === 0) guardarPartida();
+    guardarPartida();
   }, 1000);
   pintar();
 }
@@ -72,7 +77,6 @@ function rejilla() {
   const malas = S.choques(p.t);
   const valor = p.elegida >= 0 ? p.t[p.elegida] : '0';
   const caja = el('div', 'sudoku');
-  caja.setAttribute('role', 'grid');
   caja.setAttribute('aria-label', 'Tablero de Sudoku');
   for (let i = 0; i < 81; i++) {
     const v = p.t[i];
@@ -143,7 +147,9 @@ function escribir(n) {
 
 function usarPista() {
   if (p.fin || p.delDia || leerFichas().fichas < COSTO_PISTA) return;
-  const i = S.pista(p.t, p.solucion);
+  const e = p.elegida;
+  // la casilla elegida si está vacía o mal; si no, la que diga S.pista
+  const i = e >= 0 && p.dadas[e] === '0' && p.t[e] !== p.solucion[e] ? e : S.pista(p.t, p.solucion);
   if (i < 0) return;
   sumarFichas(-COSTO_PISTA);
   p.t = p.t.slice(0, i) + p.solucion[i] + p.t.slice(i + 1);
@@ -161,6 +167,7 @@ function despues() {
 function resolver() {
   p.fin = true;
   clearInterval(p.tic);
+  if (p.delDia) p.segundos = Math.floor((Date.now() - p.inicio) / 1000);
   const s = p.segundos;
   let linea;
   if (p.delDia) {

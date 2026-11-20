@@ -48,6 +48,7 @@ function abrirEn(r, x, y) {
 export function nueva(semilla, nivel) {
   const r = { semilla, nivel, abiertas: {}, banderas: {}, explotadas: {}, boom: null, seguidas: 0, fin: false };
   abrirEn(r, 0, 0);
+  r.inicio = Object.keys(r.abiertas).length; // la apertura gratis no cuenta para la victoria
   return r;
 }
 
@@ -73,7 +74,10 @@ export function acorde(e, x, y) {
   const vec = vecinas(x, y);
   if (vec.filter(([a, b]) => e.banderas[clave(a, b)] || e.explotadas[clave(a, b)]).length !== v) return e;
   const r = copia(e);
-  for (const [a, b] of vec) abrirEn(r, a, b); // abrirEn ya salta banderas y abiertas
+  for (const [a, b] of vec) {
+    abrirEn(r, a, b); // abrirEn ya salta banderas y abiertas
+    if (r.boom) break; // tras una mina no se sigue abriendo
+  }
   return r;
 }
 
